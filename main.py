@@ -968,8 +968,8 @@ def main():
     print("Press Ctrl+C to terminate.")
     
     try:
-        # debug=False and use_reloader=False is mandatory to prevent duplicate threads!
-        app.run(host="0.0.0.0", port=5000, debug=False, use_reloader=False)
+        port = int(os.environ.get("PORT", 5000))
+        app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
     except KeyboardInterrupt:
         print(Fore.RED + "\n[System] Shutdown requested by user. Terminating process.")
 
