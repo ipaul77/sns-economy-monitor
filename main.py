@@ -873,11 +873,13 @@ def handle_bot_chat():
 @app.route('/api/refresh', methods=['POST'])
 def handle_manual_refresh():
     """
-    API endpoint: Triggers a manual scraping and analysis cycle.
+    API endpoint: Triggers a manual scraping and analysis cycle asynchronously.
     """
     try:
-        run_pipeline(global_config, global_analyzer)
-        return jsonify({"status": "success"})
+        # Run pipeline in a background thread to prevent Gunicorn/WSGI timeout crashes!
+        t = threading.Thread(target=run_pipeline, args=(global_config, global_analyzer))
+        t.start()
+        return jsonify({"status": "success", "message": "Background refresh started"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -924,14 +926,18 @@ setup_database()
 global_config = load_config()
 global_analyzer = GeminiEconomyAnalyzer()
 
+# Pre-generate dashboard.html from cache on startup
+generate_html_dashboard()
+
+# Start background crawler thread immediately on import (WSGI/Gunicorn compatible!)
+t = threading.Thread(target=scheduler_thread, daemon=True)
+t.start()
+
 def main():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--once", action="store_true", help="Run once and exit (for standard Cron triggers)")
     args = parser.parse_args()
-    
-    # Pre-generate dashboard.html from cache
-    generate_html_dashboard()
     
     if args.once:
         print(Fore.BLUE + "\n[Mode] Running once (Cron triggered)...")
@@ -951,10 +957,6 @@ def main():
     print(f"History Database         : {DB_PATH}")
     print(f"Cumulative Log File      : {LOG_PATH}")
     print(f"Web Dashboard URL        : http://localhost:5000")
-    
-    # 4. Launch Background scheduler thread
-    t = threading.Thread(target=scheduler_thread, daemon=True)
-    t.start()
     
     # 5. Automatically launch browser at http://localhost:5000 on startup
     try:
