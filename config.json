@@ -1,0 +1,49 @@
+{
+  "GEMINI_API_KEY": "",
+  "telegram_bot_token": "",
+  "telegram_chat_id": "",
+  "slack_webhook_url": "",
+  "models": {
+    "flash_model": "gemini-3.1-flash-lite",
+    "pro_model": "gemini-3.5-flash"
+  },
+  "scraping_interval_seconds": 60,
+  "rss_feeds": [
+    {
+      "name": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/news/rssindex"
+    },
+    {
+      "name": "CNBC Business",
+      "url": "https://search.cnbc.com/rs/search/combinedfeed.xml?type=news"
+    },
+    {
+      "name": "Reuters Business",
+      "url": "https://www.reutersagency.com/feed/?best-types=business-finance&post_type=best"
+    }
+  ],
+  "target_personalities": [
+    "Elon Musk",
+    "Jensen Huang",
+    "Sam Altman",
+    "Tim Cook",
+    "Jerome Powell"
+  ],
+  "target_keywords": [
+    "South Korea",
+    "Korea",
+    "KOSPI",
+    "Samsung",
+    "SK Hynix",
+    "semiconductor",
+    "Hyundai",
+    "won",
+    "KRW",
+    "battery",
+    "Taiwan",
+    "TSMC",
+    "AI chip",
+    "inflation",
+    "interest rate"
+  ]
+}

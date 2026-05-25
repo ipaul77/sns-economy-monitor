@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.db
+data/monitor.db
+log.txt
+.env
+.idea/
+.vscode/
+.antigravity/
+.gemini/
+*.log

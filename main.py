@@ -1,0 +1,977 @@
+import os
+import sys
+import json
+import time
+import sqlite3
+import threading
+import webbrowser
+from datetime import datetime
+from colorama import init, Fore, Back, Style
+from flask import Flask, request, jsonify
+
+# Initialize colorama for Windows and cross-platform colored terminal logs
+init(autoreset=True)
+
+import scraper
+from analyzer import GeminiEconomyAnalyzer
+from market import get_market_indicators
+from alerts import send_telegram_alert, send_slack_alert
+
+DB_DIR = "data"
+DB_PATH = os.path.join(DB_DIR, "monitor.db")
+LOG_PATH = "log.txt"
+
+# Initialize Flask app
+app = Flask(__name__)
+
+# Global configurations to share between Flask thread and Scraping thread
+global_config = {}
+global_analyzer = None
+
+def setup_database():
+    """
+    Initializes the SQLite database and creates the history table if it doesn't exist.
+    """
+    if not os.path.exists(DB_DIR):
+        os.makedirs(DB_DIR)
+        
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    # Create monitoring history table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS history (
+            url TEXT PRIMARY KEY,
+            title TEXT,
+            content TEXT,
+            source TEXT,
+            published_at TEXT,
+            processed_at TEXT,
+            is_relevant INTEGER,
+            relevance_reason TEXT,
+            sentiment TEXT,
+            sentiment_score REAL,
+            relevance_score INTEGER,
+            impacted_sectors TEXT,
+            impacted_companies TEXT,
+            macro_impacts TEXT,
+            korean_summary TEXT,
+            alert_level TEXT,
+            other_sources TEXT
+        )
+    """)
+    conn.commit()
+    
+    # Migrate existing database columns if any
+    try:
+        cursor.execute("ALTER TABLE history ADD COLUMN other_sources TEXT")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass # Already exists
+        
+    conn.close()
+
+def get_similarity(a, b):
+    import difflib
+    return difflib.SequenceMatcher(None, a.lower(), b.lower()).ratio()
+
+def find_similar_in_db(title):
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT url, title, other_sources, source FROM history")
+    rows = cursor.fetchall()
+    conn.close()
+    
+    for r in rows:
+        if get_similarity(title, r['title']) > 0.75:
+            return r
+    return None
+
+def update_other_sources_in_db(url, new_source):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT other_sources FROM history WHERE url = ?", (url,))
+    row = cursor.fetchone()
+    
+    current_sources = []
+    if row and row[0]:
+        try:
+            current_sources = json.loads(row[0])
+        except:
+            current_sources = [x.strip() for x in row[0].split(",") if x.strip()]
+            
+    if new_source not in current_sources:
+        current_sources.append(new_source)
+        cursor.execute("UPDATE history SET other_sources = ? WHERE url = ?", (json.dumps(current_sources, ensure_ascii=False), url))
+        conn.commit()
+    conn.close()
+
+def generate_html_dashboard():
+    """
+    Reads SQLite analysis history and generates a stunning, premium, modern HTML dashboard.
+    Fetches real-time stock/exchange rate market indicators dynamically on generation!
+    """
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM history ORDER BY processed_at DESC")
+        rows = cursor.fetchall()
+        conn.close()
+    except Exception as e:
+        print(f"[Error] Failed to read database for HTML generation: {str(e)}")
+        return
+
+    # Calculate basic stats
+    total_processed = len(rows)
+    relevant_rows = [r for r in rows if r['is_relevant'] == 1]
+    total_relevant = len(relevant_rows)
+    high_alerts = len([r for r in relevant_rows if r['alert_level'] == 'HIGH'])
+    
+    # Average sentiment
+    sent_scores = [r['sentiment_score'] for r in relevant_rows if r['sentiment_score'] is not None]
+    avg_sentiment = sum(sent_scores) / len(sent_scores) if sent_scores else 0.0
+    
+    # Classify average sentiment text
+    if avg_sentiment > 0.2:
+        sentiment_label = "긍정적 (Positive)"
+        sentiment_class = "text-emerald-400"
+    elif avg_sentiment < -0.2:
+        sentiment_label = "부정적 (Negative)"
+        sentiment_class = "text-rose-400"
+    else:
+        sentiment_label = "중립적 (Neutral)"
+        sentiment_class = "text-slate-400"
+
+    # Fetch real-time market data
+    market_data = get_market_indicators()
+    market_html = ""
+    for label, info in market_data.items():
+        change_sign = "+" if info["change"] > 0 else ""
+        text_color = "text-emerald-400" if info["change"] >= 0 else "text-rose-400"
+        bg_glow = "glow-green" if info["change"] >= 0 else "glow-red"
+        unit = "pt" if label == "KOSPI" else ("원" if label in ["SAMSUNG", "HYNIX"] else "원")
+        
+        display_label = "코스피 지수" if label == "KOSPI" else ("원/달러 환율" if label == "USD_KRW" else ("삼성전자" if label == "SAMSUNG" else "SK하이닉스"))
+        
+        market_html += f"""
+        <div class="glass-card rounded-2xl p-4 {bg_glow} border border-slate-800/80">
+            <p class="text-xs font-semibold text-slate-500">{display_label} ({info['symbol']})</p>
+            <div class="flex items-baseline justify-between mt-1">
+                <span class="text-lg font-bold text-slate-100">{info['price']:,}{unit}</span>
+                <span class="text-xs font-bold {text_color}">{change_sign}{info['change']:,} ({change_sign}{info['percent']}%)</span>
+            </div>
+        </div>
+        """
+
+    # HTML header & template
+    html = f"""<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>한반도 경제 모니터링 대시보드</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {{
+            font-family: 'Outfit', 'Noto Sans KR', sans-serif;
+            background-color: #0b0f19;
+            background-image: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #0b0f19 70%);
+        }}
+        .glass-card {{
+            background: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }}
+        .glow-green {{ box-shadow: 0 0 15px rgba(16, 185, 129, 0.12); }}
+        .glow-red {{ box-shadow: 0 0 15px rgba(244, 63, 94, 0.12); }}
+        .glow-orange {{ box-shadow: 0 0 15px rgba(249, 115, 22, 0.12); }}
+        
+        /* Chatbot styling */
+        .chat-container {{
+            max-height: 400px;
+            overflow-y: auto;
+        }}
+    </style>
+</head>
+<body class="text-slate-200 min-h-screen pb-24">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row md:items-center md:justify-between pb-6 border-b border-slate-800">
+            <div>
+                <h1 class="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                    한반도 경제 모니터링 실시간 대시보드
+                </h1>
+                <p class="mt-2 text-sm text-slate-400">
+                    글로벌 저명인사 SNS 포스팅 및 실시간 비즈니스 뉴스의 대한민국 거시/미시 영향 평가 시스템
+                </p>
+            </div>
+            <div class="mt-4 md:mt-0 flex flex-wrap items-center gap-3">
+                <button onclick="openBriefing()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition duration-200 shadow-lg shadow-indigo-900/40 flex items-center">
+                    📄 일일 AI 종합 브리핑 보기
+                </button>
+                <button onclick="forceRefresh()" id="refreshBtn" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition duration-200 flex items-center gap-1">
+                    🔄 실시간 수동 갱신
+                </button>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400">
+                    ● 실시간 감시 중 (Active)
+                </span>
+            </div>
+        </header>
+
+        <!-- Market Indicators Widget -->
+        <h3 class="text-sm font-semibold text-slate-500 mt-6 mb-3">📈 실시간 금융 시장 지표 (Yahoo Finance 연동)</h3>
+        <section class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {market_html}
+        </section>
+
+        <!-- Stats Grid -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 my-6">
+            <div class="glass-card rounded-2xl p-6 glow-orange">
+                <p class="text-sm font-medium text-slate-400">수집 및 검사 피드</p>
+                <p class="mt-2 text-3xl font-bold text-slate-100">{total_processed} 건</p>
+                <p class="mt-2 text-xs text-slate-500">누적 캐시 체크 포함</p>
+            </div>
+            <div class="glass-card rounded-2xl p-6 glow-green">
+                <p class="text-sm font-medium text-slate-400">한국 경제 연관 기사</p>
+                <p class="mt-2 text-3xl font-bold text-emerald-400">{total_relevant} 건</p>
+                <p class="mt-2 text-xs text-slate-500">전체 수집 항목 중 필터링 통과</p>
+            </div>
+            <div class="glass-card rounded-2xl p-6 glow-red">
+                <p class="text-sm font-medium text-slate-400">고위험 경보 (HIGH)</p>
+                <p class="mt-2 text-3xl font-bold text-rose-500">{high_alerts} 건</p>
+                <p class="mt-2 text-xs text-slate-500">집중 모니터링이 필요한 기사</p>
+            </div>
+            <div class="glass-card rounded-2xl p-6">
+                <p class="text-sm font-medium text-slate-400">평균 감성 지수</p>
+                <p class="mt-2 text-3xl font-bold {sentiment_class}">{avg_sentiment:+.2f}</p>
+                <p class="mt-2 text-xs text-slate-500">동향: {sentiment_label}</p>
+            </div>
+        </section>
+
+        <!-- List Section -->
+        <h2 class="text-xl font-bold text-slate-100 mb-6 flex items-center">
+            <svg class="w-5 h-5 mr-2 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1M19 20a2 2 0 002-2V8a2 2 0 00-2-2h-5M19 20a2 2 0 002-2V8m-5 4h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+            최신 분석 타임라인
+        </h2>
+        
+        <div class="space-y-6">
+    """
+    
+    if not rows:
+        html += """
+            <div class="glass-card rounded-2xl p-12 text-center">
+                <p class="text-slate-400">아직 수집되거나 분석된 항목이 없습니다.</p>
+                <p class="text-xs text-slate-600 mt-2">프로그램을 가동하면 실시간으로 여기에 누적 분석 카드가 생성됩니다.</p>
+            </div>
+        """
+    else:
+        for r in rows:
+            # Format badges
+            is_rel = r['is_relevant'] == 1
+            processed_at = r['processed_at'][:19].replace('T', ' ')
+            
+            if is_rel:
+                # Sentiment Badge
+                sent = r['sentiment']
+                sent_score = r['sentiment_score']
+                if sent == 'POSITIVE':
+                    sent_badge = f'<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 ({sent_score:+.1f})</span>'
+                elif sent == 'NEGATIVE':
+                    sent_badge = f'<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">부정 ({sent_score:+.1f})</span>'
+                else:
+                    sent_badge = f'<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">중립 ({sent_score:+.1f})</span>'
+                
+                # Alert Badge
+                alert = r['alert_level']
+                if alert == 'HIGH':
+                    alert_badge = '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-600 text-white shadow-lg shadow-rose-900/40">경보: 높음 (HIGH)</span>'
+                    glow_class = 'border-rose-500/30'
+                elif alert == 'MEDIUM':
+                    alert_badge = '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>'
+                    glow_class = 'border-amber-500/30'
+                else:
+                    alert_badge = '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-700 text-slate-300">경보: 낮음 (LOW)</span>'
+                    glow_class = 'border-slate-800'
+                
+                # Sectors and Companies
+                try:
+                    sectors = json.loads(r['impacted_sectors'])
+                    sectors_str = ", ".join(sectors)
+                except:
+                    sectors_str = r['impacted_sectors'] or "기타"
+                    
+                try:
+                    companies = json.loads(r['impacted_companies'])
+                    companies_str = ", ".join(companies) if companies else "없음"
+                except:
+                    companies_str = r['impacted_companies'] or "없음"
+                
+                link_btn = f'<a href="{r["url"]}" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>' if r['url'] else ''
+                
+                # Format other sources
+                other_sources_html = ""
+                if 'other_sources' in r.keys() and r['other_sources']:
+                    try:
+                        other_list = json.loads(r['other_sources'])
+                        if other_list:
+                            badges = "".join([f'<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-800/80 text-slate-400 border border-slate-700/80 mr-1.5">{src}</span>' for src in other_list])
+                            other_sources_html = f"""
+                            <div class="mt-3 pt-3 border-t border-slate-800/50 flex flex-wrap items-center text-xs text-slate-500">
+                                <span class="mr-2">동일 보도 매체:</span>
+                                {badges}
+                            </div>
+                            """
+                    except:
+                        pass
+                
+                html += f"""
+                <div class="glass-card rounded-2xl p-6 border {glow_class} transition duration-300 hover:bg-slate-900/50">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
+                        <div class="flex items-center space-x-3">
+                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">{r['source']}</span>
+                            <span class="text-xs text-slate-400">{processed_at}</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            {sent_badge}
+                            {alert_badge}
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-lg font-bold text-slate-100 mb-2">{r['title']}</h3>
+                    <p class="text-sm text-slate-400 line-clamp-3 mb-4">{r['content']}</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
+                            <p class="text-sm text-slate-200">
+                                <span class="text-indigo-300">{sectors_str}</span>
+                                <span class="text-slate-500"> | </span>
+                                <span class="text-purple-300">{companies_str}</span>
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
+                            <p class="text-sm text-slate-200">{r['macro_impacts']}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
+                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">{r['korean_summary']}</p>
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-xs text-slate-500">
+                        <span>관련성 분류 이유: {r['relevance_reason']}</span>
+                        {link_btn}
+                    </div>
+                    {other_sources_html}
+                </div>
+                """
+            else:
+                # Not relevant card
+                html += f"""
+                <div class="glass-card rounded-2xl p-4 border border-slate-900 opacity-60 hover:opacity-100 transition duration-300">
+                    <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">{r['source']}</span>
+                            <span>{processed_at}</span>
+                        </div>
+                        <span class="text-slate-600">● 한국 경제와 관련 없음</span>
+                    </div>
+                    <h4 class="text-sm font-semibold text-slate-300 line-clamp-1">{r['title']}</h4>
+                    <p class="text-xs text-slate-500 mt-1">사유: {r['relevance_reason']}</p>
+                </div>
+                """
+                
+    html += f"""
+        </div>
+    </div>
+
+    <!-- AI Briefing Modal -->
+    <div id="briefingModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+        <div class="glass-card w-full max-w-4xl rounded-3xl p-6 border border-slate-800 shadow-2xl flex flex-col max-h-[85vh]">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+                <h2 class="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-pink-400 bg-clip-text text-transparent flex items-center">
+                    📄 Gemini 일일 거시경제 브리핑 보고서
+                </h2>
+                <button onclick="closeBriefing()" class="text-slate-400 hover:text-slate-200 text-xl font-bold">&times;</button>
+            </div>
+            <div id="briefingContent" class="overflow-y-auto py-6 text-slate-300 text-sm leading-relaxed flex-1">
+                <!-- Loaded dynamically -->
+                <div class="flex flex-col items-center justify-center py-12">
+                    <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-400 mb-4"></div>
+                    <p class="text-slate-400">Gemini AI가 실시간 브리핑을 합성 중입니다...</p>
+                </div>
+            </div>
+            <div class="pt-4 border-t border-slate-800 flex justify-end">
+                <button onclick="closeBriefing()" class="px-5 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+                    닫기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Interactive Chatbot Widget (Floating bottom right) -->
+    <div class="fixed bottom-6 right-6 z-40">
+        <!-- Floating Chat Icon -->
+        <button onclick="toggleChat()" id="chatOpenBtn" class="h-14 w-14 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-xl shadow-indigo-900/50 flex items-center justify-center border border-indigo-400/30 transition duration-300 transform hover:scale-105">
+            <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+        </button>
+
+        <!-- Chat window -->
+        <div id="chatWindow" class="hidden glass-card w-[380px] sm:w-[420px] rounded-3xl border border-indigo-500/20 shadow-2xl flex flex-col max-h-[500px] overflow-hidden transition-all duration-300">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-indigo-950 to-purple-950 p-4 border-b border-indigo-500/10 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <div class="h-2 w-2 rounded-full bg-emerald-400 animate-ping"></div>
+                    <span class="font-bold text-sm text-slate-100 flex items-center">⚖️ K-이코노미 AI 비서 (RAG)</span>
+                </div>
+                <button onclick="toggleChat()" class="text-slate-400 hover:text-slate-200 text-lg font-bold">&times;</button>
+            </div>
+            
+            <!-- Chat logs -->
+            <div id="chatLogs" class="chat-container flex-1 p-4 space-y-3 bg-slate-950/20 text-xs">
+                <div class="bg-indigo-950/20 text-slate-300 p-3 rounded-2xl border border-indigo-500/10 max-w-[85%]">
+                    안녕하세요! 실시간 수집된 뉴스 데이터베이스를 완벽히 숙지하고 있는 **한반도 경제 AI 비서**입니다. 궁금하신 경제 질문이 있으신가요?
+                </div>
+            </div>
+
+            <!-- Input area -->
+            <div class="p-3 bg-slate-950/60 border-t border-indigo-500/10 flex items-center space-x-2">
+                <input type="text" id="chatInput" onkeydown="handleChatKey(event)" placeholder="예: 최근 삼성전자 HBM 관련 뉴스 요약해줘" class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500" />
+                <button onclick="sendChatMessage()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition">
+                    전송
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Frontend Interactive Javascript -->
+    <script>
+        // Toggle chatbot window
+        function toggleChat() {{
+            const window = document.getElementById("chatWindow");
+            const btn = document.getElementById("chatOpenBtn");
+            if (window.classList.contains("hidden")) {{
+                window.classList.remove("hidden");
+                btn.classList.add("hidden");
+                document.getElementById("chatInput").focus();
+            }} else {{
+                window.classList.add("hidden");
+                btn.classList.remove("hidden");
+            }}
+        }}
+
+        // Send Chat Message to Flask backend /api/chat
+        function sendChatMessage() {{
+            const input = document.getElementById("chatInput");
+            const query = input.value.strip ? input.value.trim() : input.value;
+            if (!query) return;
+            
+            input.value = "";
+            
+            // Append User message bubble
+            const logs = document.getElementById("chatLogs");
+            const userBubble = document.createElement("div");
+            userBubble.className = "bg-slate-800 text-slate-200 p-3 rounded-2xl max-w-[85%] ml-auto text-right";
+            userBubble.textContent = query;
+            logs.appendChild(userBubble);
+            logs.scrollTop = logs.scrollHeight;
+            
+            // Append Typing indicator bubble
+            const typingBubble = document.createElement("div");
+            typingBubble.id = "typingIndicator";
+            typingBubble.className = "bg-indigo-950/10 text-slate-400 p-3 rounded-2xl border border-indigo-500/5 max-w-[85%] flex items-center space-x-1";
+            typingBubble.innerHTML = `
+                <div class="h-1.5 w-1.5 bg-slate-400 rounded-full animate-bounce"></div>
+                <div class="h-1.5 w-1.5 bg-slate-400 rounded-full animate-bounce delay-100"></div>
+                <div class="h-1.5 w-1.5 bg-slate-400 rounded-full animate-bounce delay-200"></div>
+            `;
+            logs.appendChild(typingBubble);
+            logs.scrollTop = logs.scrollHeight;
+            
+            // Fetch answer from backend RAG API
+            fetch('/api/chat', {{
+                method: 'POST',
+                headers: {{ 'Content-Type': 'application/json' }},
+                body: JSON.stringify({{ query: query }})
+            }})
+            .then(res => res.json())
+            .then(data => {{
+                // Remove typing bubble
+                document.getElementById("typingIndicator").remove();
+                
+                // Append AI message bubble (parsed as simple HTML since markdown could contain basic blocks)
+                const aiBubble = document.createElement("div");
+                aiBubble.className = "bg-indigo-950/20 text-slate-300 p-3 rounded-2xl border border-indigo-500/10 max-w-[85%] leading-relaxed";
+                
+                // Simple markdown parser for bold and lists
+                let text = data.answer;
+                text = text.replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>');
+                text = text.replace(/\\*(.*?)\\n/g, '• $1<br>');
+                text = text.replace(/\\n/g, '<br>');
+                
+                aiBubble.innerHTML = text;
+                logs.appendChild(aiBubble);
+                logs.scrollTop = logs.scrollHeight;
+            }})
+            .catch(err => {{
+                document.getElementById("typingIndicator").remove();
+                const errBubble = document.createElement("div");
+                errBubble.className = "bg-rose-950/20 text-rose-300 p-3 rounded-2xl border border-rose-500/10 max-w-[85%]";
+                errBubble.textContent = "에러: 답변을 불러오는 과정에 실패했습니다.";
+                logs.appendChild(errBubble);
+                logs.scrollTop = logs.scrollHeight;
+            }});
+        }}
+
+        function handleChatKey(e) {{
+            if (e.key === "Enter") {{
+                sendChatMessage();
+            }}
+        }}
+
+        // Open/Close AI Briefing Modal
+        function openBriefing() {{
+            const modal = document.getElementById("briefingModal");
+            modal.classList.remove("hidden");
+            
+            const content = document.getElementById("briefingContent");
+            // Show loading spinner
+            content.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-12">
+                    <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-400 mb-4"></div>
+                    <p class="text-slate-400">Gemini AI가 실시간 브리핑 보고서를 작성 중입니다...</p>
+                </div>
+            `;
+            
+            // Fetch briefing HTML
+            fetch('/briefing')
+            .then(res => res.text())
+            .then(html => {{
+                content.innerHTML = html;
+            }})
+            .catch(err => {{
+                content.innerHTML = `
+                    <div class="text-center py-12 text-rose-400">
+                        에러: 실시간 브리핑 합성 과정에 실패했습니다.
+                    </div>
+                `;
+            }});
+        }}
+
+        function closeBriefing() {{
+            document.getElementById("briefingModal").classList.add("hidden");
+        }}
+
+        // Force Pipeline Refresh manually via frontend API
+        function forceRefresh() {{
+            const btn = document.getElementById("refreshBtn");
+            btn.disabled = true;
+            btn.innerHTML = `
+                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-slate-300" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                수집 및 분석 중...
+            `;
+            
+            fetch('/api/refresh', {{ method: 'POST' }})
+            .then(res => res.json())
+            .then(data => {{
+                // Reload page to reflect new DB values
+                window.location.reload();
+            }})
+            .catch(err => {{
+                alert("수동 갱신 오류가 발생했습니다.");
+                btn.disabled = false;
+                btn.innerHTML = "🔄 실시간 수동 갱신";
+            }});
+        }}
+        
+        // Dynamic dynamic AJAX Fetch updates! (Runs every 15s in background, checks total item count, reloads if new)
+        let lastCount = {total_processed};
+        setInterval(() => {{
+            fetch('/api/count')
+            .then(res => res.json())
+            .then(data => {{
+                if (data.count > lastCount) {{
+                    console.log("[Pipeline] New news processed! Reloading dashboard page dynamically.");
+                    window.location.reload();
+                }}
+            }})
+            .catch(err => {{}});
+        }}, 15000);
+    </script>
+</body>
+</html>
+"""
+    
+    try:
+        with open("dashboard.html", "w", encoding="utf-8") as f:
+            f.write(html)
+        # print("[Dashboard] HTML Dashboard successfully updated.")
+    except Exception as e:
+        print(f"[Error] Failed to write dashboard.html: {str(e)}")
+
+def is_already_processed(url):
+    """
+    Checks if a URL has already been processed and logged.
+    """
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM history WHERE url = ?", (url,))
+    exists = cursor.fetchone() is not None
+    conn.close()
+    return exists
+
+def save_analysis_result(item, rel_check, analysis, other_sources=None):
+    """
+    Saves the analyzed item to the SQLite database.
+    """
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    now_str = datetime.now().isoformat()
+    
+    is_relevant_int = 1 if rel_check.relevant else 0
+    relevance_reason = rel_check.reason
+    
+    if analysis:
+        sentiment = analysis.sentiment
+        sentiment_score = analysis.sentiment_score
+        relevance_score = analysis.relevance_score
+        impacted_sectors = json.dumps(analysis.impacted_sectors, ensure_ascii=False)
+        impacted_companies = json.dumps(analysis.impacted_companies, ensure_ascii=False)
+        macro_impacts = analysis.macro_impacts
+        korean_summary = analysis.korean_summary
+        alert_level = analysis.alert_level
+    else:
+        sentiment = None
+        sentiment_score = None
+        relevance_score = None
+        impacted_sectors = None
+        impacted_companies = None
+        macro_impacts = None
+        korean_summary = None
+        alert_level = None
+        
+    other_sources_json = json.dumps(other_sources, ensure_ascii=False) if other_sources else None
+        
+    try:
+        cursor.execute("""
+            INSERT OR REPLACE INTO history (
+                url, title, content, source, published_at, processed_at, 
+                is_relevant, relevance_reason, sentiment, sentiment_score, 
+                relevance_score, impacted_sectors, impacted_companies, 
+                macro_impacts, korean_summary, alert_level, other_sources
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            item["url"], item["title"], item["content"], item["source"], item["published_at"], now_str,
+            is_relevant_int, relevance_reason, sentiment, sentiment_score, 
+            relevance_score, impacted_sectors, impacted_companies, 
+            macro_impacts, korean_summary, alert_level, other_sources_json
+        ))
+        conn.commit()
+    except Exception as e:
+        print(f"[Error] Failed to save record to DB: {str(e)}")
+    finally:
+        conn.close()
+
+def append_to_logfile(item, rel_check, analysis, other_sources=None):
+    """
+    Appends cumulative logs to log.txt with beautiful timestamp headings.
+    """
+    timestamp = datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
+    log_lines = []
+    
+    log_lines.append(f"{timestamp} SOURCE: {item['source']}")
+    if other_sources:
+        log_lines.append(f"CO-REPORTING SOURCES: {', '.join(other_sources)}")
+    log_lines.append(f"TITLE: {item['title']}")
+    log_lines.append(f"URL: {item['url']}")
+    log_lines.append(f"ST-1 Relevance: {'YES' if rel_check.relevant else 'NO'}")
+    log_lines.append(f"ST-1 Reason: {rel_check.reason}")
+    
+    if rel_check.relevant and analysis:
+        log_lines.append(f"ST-2 Sentiment: {analysis.sentiment} (Score: {analysis.sentiment_score})")
+        log_lines.append(f"ST-2 Relevance Score: {analysis.relevance_score}/10")
+        log_lines.append(f"ST-2 Sectors: {', '.join(analysis.impacted_sectors)}")
+        log_lines.append(f"ST-2 Companies: {', '.join(analysis.impacted_companies)}")
+        log_lines.append(f"ST-2 Macro Impact: {analysis.macro_impacts}")
+        log_lines.append(f"ST-2 Summary (KR): {analysis.korean_summary}")
+        log_lines.append(f"ST-2 Alert Level: {analysis.alert_level}")
+        
+    log_lines.append("=" * 60 + "\n")
+    
+    try:
+        with open(LOG_PATH, "a", encoding="utf-8") as f:
+            f.write("\n".join(log_lines))
+    except Exception as e:
+        print(f"[Error] Failed writing to log file: {str(e)}")
+
+def load_config():
+    try:
+        with open("config.json", "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"[Error] Failed to load config.json: {str(e)}")
+        sys.exit(1)
+
+def run_pipeline(config, analyzer):
+    """
+    Runs a single cycle of the pipeline: crawl -> check cache -> analyze -> save & log.
+    Sends instant push notifications for HIGH level economic warnings.
+    """
+    cycle_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(Style.BRIGHT + Fore.CYAN + f"\n--- Starting Monitoring Cycle: {cycle_time} ---")
+    
+    # 1. Fetch
+    raw_items = scraper.fetch_all_sources(config)
+    if not raw_items:
+        print(Fore.YELLOW + "[Pipeline] No articles collected in this cycle.")
+        return
+        
+    # 2. Group items in the current batch by title similarity to prevent double processing
+    grouped_items = []
+    for item in raw_items:
+        found_group = False
+        for group in grouped_items:
+            primary = group[0]
+            if get_similarity(item["title"], primary["title"]) > 0.75:
+                group.append(item)
+                found_group = True
+                break
+        if not found_group:
+            grouped_items.append([item])
+            
+    new_processed_count = 0
+    relevant_count = 0
+    
+    for group in grouped_items:
+        primary_item = group[0]
+        url = primary_item.get("url")
+        if not url:
+            continue
+            
+        # Collect other sources in this batch group
+        batch_other_sources = list(set([x["source"] for x in group[1:] if x.get("source") != primary_item.get("source")]))
+        
+        # Check if this primary URL is already processed
+        if is_already_processed(url):
+            # Already analyzed previously, check if we need to add other sources in this batch
+            for src in batch_other_sources:
+                update_other_sources_in_db(url, src)
+            continue
+            
+        # Check if a similar story already exists in the database from a previous run
+        similar_record = find_similar_in_db(primary_item["title"])
+        if similar_record:
+            # We already have an analyzed version of this story!
+            # We don't analyze again. We just append the primary source and all other batch sources to the existing story!
+            existing_url = similar_record["url"]
+            print(Fore.LIGHTBLACK_EX + f"\n[Duplicate Story] '{primary_item['title']}' matches existing story in DB. Merging sources...")
+            
+            update_other_sources_in_db(existing_url, primary_item["source"])
+            for src in batch_other_sources:
+                update_other_sources_in_db(existing_url, src)
+            continue
+            
+        # If it is a completely new story, execute the E2E pipeline!
+        new_processed_count += 1
+        print(Fore.WHITE + f"\n[New Item] {primary_item['title']} ({primary_item['source']})")
+        if batch_other_sources:
+            print(Fore.LIGHTBLUE_EX + f"  └─ Co-reporting sources: {', '.join(batch_other_sources)}")
+            
+        # Run 2-Stage Analyzer
+        rel_check, analysis = analyzer.process_item(primary_item)
+        
+        # Save to SQLite and log.txt
+        save_analysis_result(primary_item, rel_check, analysis, batch_other_sources)
+        append_to_logfile(primary_item, rel_check, analysis, batch_other_sources)
+        
+        # Trigger Slack/Telegram instant notification if it is a high level warning
+        if rel_check.relevant and analysis and analysis.alert_level == "HIGH":
+            # Send Slack webhook
+            slack_url = config.get("slack_webhook_url")
+            if slack_url and slack_url.strip():
+                send_slack_alert(slack_url, primary_item["title"], analysis.korean_summary, analysis.alert_level, analysis.sentiment)
+                
+            # Send Telegram Bot push alert
+            tg_token = config.get("telegram_bot_token")
+            tg_chat_id = config.get("telegram_chat_id")
+            if tg_token and tg_chat_id:
+                send_telegram_alert(tg_token, tg_chat_id, primary_item["title"], analysis.korean_summary, analysis.alert_level, analysis.sentiment)
+        
+        # Visual terminal output
+        if rel_check.relevant:
+            relevant_count += 1
+            alert_color = Fore.RED if analysis.alert_level == "HIGH" else (Fore.YELLOW if analysis.alert_level == "MEDIUM" else Fore.GREEN)
+            
+            print(Fore.GREEN + f"  └─ [RELEVANT] {rel_check.reason}")
+            print(alert_color + f"  └─ Alert Level: {analysis.alert_level} | Sentiment: {analysis.sentiment} (Score: {analysis.sentiment_score})")
+            print(Fore.MAGENTA + f"  └─ Impacted: {', '.join(analysis.impacted_sectors)} | Companies: {', '.join(analysis.impacted_companies)}")
+            print(Fore.CYAN + f"  └─ Macro Impact: {analysis.macro_impacts}")
+            print(Fore.WHITE + Style.DIM + f"  └─ Summary: {analysis.korean_summary}")
+        else:
+            print(Fore.LIGHTBLACK_EX + f"  └─ [NOT RELEVANT] {rel_check.reason}")
+            
+    print(Fore.CYAN + f"\n[Cycle Summary] Processed {new_processed_count} new entries, found {relevant_count} relevant to the Korean Economy.")
+    print(Style.BRIGHT + Fore.CYAN + "---------------------------------------------")
+    
+    # 3. Generate updated HTML dashboard
+    generate_html_dashboard()
+
+
+# --- FLASK APP ENDPOINTS ---
+
+@app.route('/')
+def serve_dashboard():
+    """
+    Serves the live HTML dashboard dynamically.
+    """
+    if os.path.exists("dashboard.html"):
+        with open("dashboard.html", "r", encoding="utf-8") as f:
+            return f.read()
+    return """
+    <html>
+        <body style="background-color: #0b0f19; color: #94a3b8; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0;">
+            <div style="text-align: center;">
+                <h2>대시보드를 생성하고 있습니다...</h2>
+                <p>초기 뉴스 수집이 1회 진행되는 동안 10~15초만 대기한 후 새로고침해 주십시오.</p>
+                <script>setTimeout(() => window.location.reload(), 5000);</script>
+            </div>
+        </body>
+    </html>
+    """
+
+@app.route('/briefing')
+def serve_daily_briefing():
+    """
+    API endpoint: Synthesizes 24-hour relevant news and serves the executive report dynamically.
+    """
+    from briefing import generate_daily_briefing
+    report_html = generate_daily_briefing(global_analyzer)
+    return report_html
+
+@app.route('/api/chat', methods=['POST'])
+def handle_bot_chat():
+    """
+    API endpoint: RAG Chatbot query.
+    """
+    data = request.get_json() or {}
+    query_text = data.get("query", "")
+    from bot import query_local_history
+    answer = query_local_history(query_text, global_analyzer)
+    return jsonify({"answer": answer})
+
+@app.route('/api/refresh', methods=['POST'])
+def handle_manual_refresh():
+    """
+    API endpoint: Triggers a manual scraping and analysis cycle.
+    """
+    try:
+        run_pipeline(global_config, global_analyzer)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/count')
+def handle_item_count():
+    """
+    API endpoint: Returns the total count of processed items to allow dynamic frontend reload triggers.
+    """
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM history")
+        count = cursor.fetchone()[0]
+        conn.close()
+        return jsonify({"count": count})
+    except:
+        return jsonify({"count": 0})
+
+
+# --- SCHEDULER & RUN THREAD ---
+
+def scheduler_thread():
+    """
+    Background daemon thread that continuously crawls, analyzes, and saves news on an interval.
+    """
+    interval = global_config.get("scraping_interval_seconds", 60)
+    print(Fore.BLUE + f"[Scheduler] Background crawler thread active. (Interval: {interval} seconds)...")
+    
+    # Run once immediately on startup
+    try:
+        run_pipeline(global_config, global_analyzer)
+    except Exception as e:
+        print(f"[Error] Initial startup pipeline failed: {str(e)}")
+        
+    while True:
+        time.sleep(interval)
+        try:
+            run_pipeline(global_config, global_analyzer)
+        except Exception as e:
+            print(f"[Error] Periodic background pipeline failed: {str(e)}")
+
+# Setup Database & Load Configurations at module level (WSGI / Cloud compatible)
+setup_database()
+global_config = load_config()
+global_analyzer = GeminiEconomyAnalyzer()
+
+def main():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--once", action="store_true", help="Run once and exit (for standard Cron triggers)")
+    args = parser.parse_args()
+    
+    # Pre-generate dashboard.html from cache
+    generate_html_dashboard()
+    
+    if args.once:
+        print(Fore.BLUE + "\n[Mode] Running once (Cron triggered)...")
+        run_pipeline(global_config, global_analyzer)
+        sys.exit(0)
+        
+    # Check if analyzer is running in Mock/Demo mode and inform the user
+    if not global_analyzer.api_configured:
+        print(Back.YELLOW + Fore.BLACK + " WARNING: GEMINI_API_KEY not found in Environment or config.json. ")
+        print(Fore.YELLOW + "Running in intelligent Offline Heuristic DEMO mode. Add your API key to test live Gemini reasoning.")
+        
+    print(Fore.GREEN + "\n=============================================")
+    print(Fore.GREEN + "   SNS & NEWS ECONOMY MONITOR ACTIVE   ")
+    print(Fore.GREEN + "=============================================")
+    print(f"Monitoring Personalities : {', '.join(global_config.get('target_personalities', []))}")
+    print(f"Monitoring Feeds         : {len(global_config.get('rss_feeds', []))} RSS targets")
+    print(f"History Database         : {DB_PATH}")
+    print(f"Cumulative Log File      : {LOG_PATH}")
+    print(f"Web Dashboard URL        : http://localhost:5000")
+    
+    # 4. Launch Background scheduler thread
+    t = threading.Thread(target=scheduler_thread, daemon=True)
+    t.start()
+    
+    # 5. Automatically launch browser at http://localhost:5000 on startup
+    try:
+        webbrowser.open("http://localhost:5000")
+        print(Fore.GREEN + "[System] Automatically opened Web Dashboard at http://localhost:5000")
+    except Exception as e:
+        print(f"[Warning] Failed to auto-launch browser: {str(e)}")
+        
+    # 6. Start Flask Web Server
+    print(Fore.BLUE + "\n[System] Starting Flask Local Web Server...")
+    print("Press Ctrl+C to terminate.")
+    
+    try:
+        # debug=False and use_reloader=False is mandatory to prevent duplicate threads!
+        app.run(host="0.0.0.0", port=5000, debug=False, use_reloader=False)
+    except KeyboardInterrupt:
+        print(Fore.RED + "\n[System] Shutdown requested by user. Terminating process.")
+
+if __name__ == "__main__":
+    main()

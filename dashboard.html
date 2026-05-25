@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>한반도 경제 모니터링 대시보드</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Outfit', 'Noto Sans KR', sans-serif;
+            background-color: #0b0f19;
+            background-image: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #0b0f19 70%);
+        }
+        .glass-card {
+            background: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .glow-green { box-shadow: 0 0 15px rgba(16, 185, 129, 0.12); }
+        .glow-red { box-shadow: 0 0 15px rgba(244, 63, 94, 0.12); }
+        .glow-orange { box-shadow: 0 0 15px rgba(249, 115, 22, 0.12); }
+        
+        /* Chatbot styling */
+        .chat-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body class="text-slate-200 min-h-screen pb-24">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row md:items-center md:justify-between pb-6 border-b border-slate-800">
+            <div>
+                <h1 class="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                    한반도 경제 모니터링 실시간 대시보드
+                </h1>
+                <p class="mt-2 text-sm text-slate-400">
+                    글로벌 저명인사 SNS 포스팅 및 실시간 비즈니스 뉴스의 대한민국 거시/미시 영향 평가 시스템
+                </p>
+            </div>
+            <div class="mt-4 md:mt-0 flex flex-wrap items-center gap-3">
+                <button onclick="openBriefing()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition duration-200 shadow-lg shadow-indigo-900/40 flex items-center">
+                    📄 일일 AI 종합 브리핑 보기
+                </button>
+                <button onclick="forceRefresh()" id="refreshBtn" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition duration-200 flex items-center gap-1">
+                    🔄 실시간 수동 갱신
+                </button>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400">
+                    ● 실시간 감시 중 (Active)
+                </span>
+            </div>
+        </header>
+
+        <!-- Market Indicators Widget -->
+        <h3 class="text-sm font-semibold text-slate-500 mt-6 mb-3">📈 실시간 금융 시장 지표 (Yahoo Finance 연동)</h3>
+        <section class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            
+        <div class="glass-card rounded-2xl p-4 glow-green border border-slate-800/80">
+            <p class="text-xs font-semibold text-slate-500">코스피 지수 (^KS11)</p>
+            <div class="flex items-baseline justify-between mt-1">
+                <span class="text-lg font-bold text-slate-100">7,847.71pt</span>
+                <span class="text-xs font-bold text-emerald-400">+32.12 (+0.41%)</span>
+            </div>
+        </div>
+        
+        <div class="glass-card rounded-2xl p-4 glow-red border border-slate-800/80">
+            <p class="text-xs font-semibold text-slate-500">원/달러 환율 (USDKRW=X)</p>
+            <div class="flex items-baseline justify-between mt-1">
+                <span class="text-lg font-bold text-slate-100">1,513.91원</span>
+                <span class="text-xs font-bold text-rose-400">-6.62 (-0.44%)</span>
+            </div>
+        </div>
+        
+        <div class="glass-card rounded-2xl p-4 glow-red border border-slate-800/80">
+            <p class="text-xs font-semibold text-slate-500">삼성전자 (005930.KS)</p>
+            <div class="flex items-baseline justify-between mt-1">
+                <span class="text-lg font-bold text-slate-100">292,500원</span>
+                <span class="text-xs font-bold text-rose-400">-7,000 (-2.34%)</span>
+            </div>
+        </div>
+        
+        <div class="glass-card rounded-2xl p-4 glow-green border border-slate-800/80">
+            <p class="text-xs font-semibold text-slate-500">SK하이닉스 (000660.KS)</p>
+            <div class="flex items-baseline justify-between mt-1">
+                <span class="text-lg font-bold text-slate-100">1,941,000원</span>
+                <span class="text-xs font-bold text-emerald-400">+1,000 (+0.05%)</span>
+            </div>
+        </div>
+        
+        </section>
+
+        <!-- Stats Grid -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 my-6">
+            <div class="glass-card rounded-2xl p-6 glow-orange">
+                <p class="text-sm font-medium text-slate-400">수집 및 검사 피드</p>
+                <p class="mt-2 text-3xl font-bold text-slate-100">22 건</p>
+                <p class="mt-2 text-xs text-slate-500">누적 캐시 체크 포함</p>
+            </div>
+            <div class="glass-card rounded-2xl p-6 glow-green">
+                <p class="text-sm font-medium text-slate-400">한국 경제 연관 기사</p>
+                <p class="mt-2 text-3xl font-bold text-emerald-400">8 건</p>
+                <p class="mt-2 text-xs text-slate-500">전체 수집 항목 중 필터링 통과</p>
+            </div>
+            <div class="glass-card rounded-2xl p-6 glow-red">
+                <p class="text-sm font-medium text-slate-400">고위험 경보 (HIGH)</p>
+                <p class="mt-2 text-3xl font-bold text-rose-500">5 건</p>
+                <p class="mt-2 text-xs text-slate-500">집중 모니터링이 필요한 기사</p>
+            </div>
+            <div class="glass-card rounded-2xl p-6">
+                <p class="text-sm font-medium text-slate-400">평균 감성 지수</p>
+                <p class="mt-2 text-3xl font-bold text-slate-400">+0.08</p>
+                <p class="mt-2 text-xs text-slate-500">동향: 중립적 (Neutral)</p>
+            </div>
+        </section>
+
+        <!-- List Section -->
+        <h2 class="text-xl font-bold text-slate-100 mb-6 flex items-center">
+            <svg class="w-5 h-5 mr-2 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1M19 20a2 2 0 002-2V8a2 2 0 00-2-2h-5M19 20a2 2 0 002-2V8m-5 4h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+            최신 분석 타임라인
+        </h2>
+        
+        <div class="space-y-6">
+    
+                <div class="glass-card rounded-2xl p-4 border border-slate-900 opacity-60 hover:opacity-100 transition duration-300">
+                    <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">Yahoo Finance</span>
+                            <span>2026-05-25 20:24:43</span>
+                        </div>
+                        <span class="text-slate-600">● 한국 경제와 관련 없음</span>
+                    </div>
+                    <h4 class="text-sm font-semibold text-slate-300 line-clamp-1">Kevin Warsh Sworn In as Fed Chair With Lowest Senate Votes Ever Amid Independence Concerns</h4>
+                    <p class="text-xs text-slate-500 mt-1">사유: 한국 경제 또는 주요 기업 관련 연관 키워드가 검출되지 않았습니다.</p>
+                </div>
+                
+                <div class="glass-card rounded-2xl p-4 border border-slate-900 opacity-60 hover:opacity-100 transition duration-300">
+                    <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">Yahoo Finance</span>
+                            <span>2026-05-25 20:24:30</span>
+                        </div>
+                        <span class="text-slate-600">● 한국 경제와 관련 없음</span>
+                    </div>
+                    <h4 class="text-sm font-semibold text-slate-300 line-clamp-1">Pfizer's CEO uses AI to make his biggest calls — and 64% of CEOs agree, quietly shifting your portfolio</h4>
+                    <p class="text-xs text-slate-500 mt-1">사유: 한국 경제 또는 주요 기업 관련 연관 키워드가 검출되지 않았습니다.</p>
+                </div>
+                
+                <div class="glass-card rounded-2xl p-6 border border-rose-500/30 transition duration-300 hover:bg-slate-900/50">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
+                        <div class="flex items-center space-x-3">
+                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Yahoo Finance</span>
+                            <span class="text-xs text-slate-400">2026-05-25 20:24:29</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">부정 (-0.3)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-600 text-white shadow-lg shadow-rose-900/40">경보: 높음 (HIGH)</span>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-lg font-bold text-slate-100 mb-2">Bond markets are not so subtly telling the Fed that interest rates aren't high enough</h3>
+                    <p class="text-sm text-slate-400 line-clamp-3 mb-4"></p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
+                            <p class="text-sm text-slate-200">
+                                <span class="text-indigo-300">거시경제, 금융</span>
+                                <span class="text-slate-500"> | </span>
+                                <span class="text-purple-300">금융지주회사</span>
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
+                            <p class="text-sm text-slate-200">미국 연준의 고금리 장기화 기조에 따른 원/달러 환율 상방 압력 가중 및 외인 자금 이탈 가능성 가중 (KOSPI 횡보).</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
+                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">파월 연준 의장이 인플레이션 극복을 위해 고금리 기조를 유지하겠다는 신호를 보이면서 한미 금리 격차에 따른 원화 약세 압력이 고조되고 있습니다. 국내 증시 수급 부담 요소로 작용할 가능성이 큽니다.</p>
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-xs text-slate-500">
+                        <span>관련성 분류 이유: 글로벌 이슈 및 핵심 키워드 (interest rate) 검색 매칭에 따른 한국 경제 관련성 판별 완료 (데모 모드).</span>
+                        <a href="https://finance.yahoo.com/economy/policy/article/bond-markets-are-not-so-subtly-telling-the-fed-that-interest-rates-arent-high-enough-100000809.html" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
+                    </div>
+                    
+                </div>
+                
+                <div class="glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
+                        <div class="flex items-center space-x-3">
+                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Yahoo Finance</span>
+                            <span class="text-xs text-slate-400">2026-05-25 20:24:05</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">중립 (+0.1)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-lg font-bold text-slate-100 mb-2">US move into quantum computing adds to a portfolio that spans semiconductors, steel, nuclear, and rare earths</h3>
+                    <p class="text-sm text-slate-400 line-clamp-3 mb-4"></p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
+                            <p class="text-sm text-slate-200">
+                                <span class="text-indigo-300">Semiconductors, Quantum Computing, Nuclear Energy, Steel, Rare Earths</span>
+                                <span class="text-slate-500"> | </span>
+                                <span class="text-purple-300">Samsung Electronics, SK Hynix, Doosan Enerbility, POSCO Holdings</span>
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
+                            <p class="text-sm text-slate-200">미국의 첨단 기술 중심 공급망 재편은 KOSPI 내 기술주 및 원자력 관련주에 수혜로 작용할 수 있으나, 미중 갈등 심화 시 원/달러 환율 변동성 확대 및 수출 불확실성이 증가할 수 있습니다.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
+                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">미국의 양자 컴퓨팅, 반도체, 원자력, 희토류 등 핵심 전략 산업에 대한 공급망 투자는 한국 첨단 산업에 직간접적 영향을 미칠 것입니다. 한국 기업들은 미국과의 기술 동맹 강화 및 공동 R&D 기회를 모색할 수 있으나, 동시에 기술 유출 방지 및 수출 통제 등 규제 리스크에 대한 대비도 필요합니다.</p>
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-xs text-slate-500">
+                        <span>관련성 분류 이유: 글로벌 이슈 및 핵심 키워드 (semiconductor) 검색 매칭에 따른 한국 경제 관련성 판별 완료 (데모 모드).</span>
+                        <a href="https://finance.yahoo.com/economy/policy/article/us-move-into-quantum-computing-adds-to-a-portfolio-that-spans-semiconductors-steel-nuclear-and-rare-earths-173919828.html" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
+                    </div>
+                    
+                </div>
+                
+                <div class="glass-card rounded-2xl p-4 border border-slate-900 opacity-60 hover:opacity-100 transition duration-300">
+                    <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">SNS (Tim Cook)</span>
+                            <span>2026-05-25 20:22:43</span>
+                        </div>
+                        <span class="text-slate-600">● 한국 경제와 관련 없음</span>
+                    </div>
+                    <h4 class="text-sm font-semibold text-slate-300 line-clamp-1">@Tim Cook post: Apple Vision Pro sales expansion</h4>
+                    <p class="text-xs text-slate-500 mt-1">사유: 한국 경제 또는 주요 기업 관련 연관 키워드가 검출되지 않았습니다.</p>
+                </div>
+                
+                <div class="glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
+                        <div class="flex items-center space-x-3">
+                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">SNS (Elon Musk)</span>
+                            <span class="text-xs text-slate-400">2026-05-25 20:16:23</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 (+0.8)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-lg font-bold text-slate-100 mb-2">@Elon Musk post: Tesla Giga Factory expansion</h3>
+                    <p class="text-sm text-slate-400 line-clamp-3 mb-4">Looking into next locations for Giga factories. Asia is highly competitive. Korea has incredibly advanced battery supply chains and amazing engineering talent. Under high consideration.</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
+                            <p class="text-sm text-slate-200">
+                                <span class="text-indigo-300">Secondary Battery, Automotive, Materials & Components</span>
+                                <span class="text-slate-500"> | </span>
+                                <span class="text-purple-300">LG Energy Solution, Samsung SDI, SK On, LG Chem, POSCO Future M, EcoPro BM, L&F</span>
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
+                            <p class="text-sm text-slate-200">테슬라의 한국 기가팩토리 유치 가능성은 대규모 외국인 직접투자(FDI) 유입 기대를 자극하여 원/달러 환율 하락(원화 강세) 압력으로 작용할 수 있습니다. 또한 관련 이차전지 및 부품 주들의 강세로 코스피(KOSPI) 지수 상승을 견인할 모멘텀이 될 수 있습니다.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
+                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">일론 머스크 테슬라 CEO가 한국의 우수한 배터리 공급망과 기술 인력을 높이 평가하며 차기 기가팩토리 건설 후보지로 한국을 유력하게 검토 중이라고 언급했습니다. 실제 투자 유치 성공 시 국내 전기차 및 이차전지 산업 생태계 전반에 대규모 호재로 작용할 전망입니다.</p>
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-xs text-slate-500">
+                        <span>관련성 분류 이유: 글로벌 이슈 및 핵심 키워드 (Korea, battery) 검색 매칭에 따른 한국 경제 관련성 판별 완료 (데모 모드).</span>
+                        <a href="https://x.com/elonmusk/status/musk-tesla-giga-korea-1779706635" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
+                    </div>
+                    
+                            <div class="mt-3 pt-3 border-t border-slate-800/50 flex flex-wrap items-center text-xs text-slate-500">
+                                <span class="mr-2">동일 보도 매체:</span>
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-800/80 text-slate-400 border border-slate-700/80 mr-1.5">SNS (Elon Musk)</span>
+                            </div>
+                            
+                </div>
+                
+                <div class="glass-card rounded-2xl p-6 border border-rose-500/30 transition duration-300 hover:bg-slate-900/50">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
+                        <div class="flex items-center space-x-3">
+                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">SNS (Jensen Huang)</span>
+                            <span class="text-xs text-slate-400">2026-05-25 20:15:17</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 (+0.8)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-600 text-white shadow-lg shadow-rose-900/40">경보: 높음 (HIGH)</span>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-lg font-bold text-slate-100 mb-2">@Jensen Huang post: NVIDIA Blackwell chips shipping</h3>
+                    <p class="text-sm text-slate-400 line-clamp-3 mb-4">Blackwell production is in full swing. The demand for AI hardware is surging exponentially. We are working closely with our key HBM3e suppliers like Samsung Electronics and SK Hynix in South Korea to secure next-gen memory components.</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
+                            <p class="text-sm text-slate-200">
+                                <span class="text-indigo-300">반도체, IT H/W</span>
+                                <span class="text-slate-500"> | </span>
+                                <span class="text-purple-300">삼성전자, SK하이닉스</span>
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
+                            <p class="text-sm text-slate-200">NVIDIA의 신규 칩 수요 증가로 인한 국내 메모리 반도체 동반 수출 확대 기대로 KOSPI 반등 및 IT 수출 호조세 유입 예상.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
+                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">엔비디아가 HBM3e 공급을 다각화하고 차세대 칩 Blackwell의 대량 생산에 돌입함에 따라, 주요 메모리 공급업체인 삼성전자와 SK하이닉스의 수혜가 강력하게 예상됩니다. 반도체 수출 사이클 개선 신호입니다.</p>
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-xs text-slate-500">
+                        <span>관련성 분류 이유: 글로벌 이슈 및 핵심 키워드 (South Korea, Korea) 검색 매칭에 따른 한국 경제 관련성 판별 완료 (데모 모드).</span>
+                        <a href="https://x.com/jensenhuang/status/huang-nvidia-blackwell-hbm-1779706577" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
+                    </div>
+                    
+                            <div class="mt-3 pt-3 border-t border-slate-800/50 flex flex-wrap items-center text-xs text-slate-500">
+                                <span class="mr-2">동일 보도 매체:</span>
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-800/80 text-slate-400 border border-slate-700/80 mr-1.5">SNS (Jensen Huang)</span>
+                            </div>
+                            
+                </div>
+                
+                <div class="glass-card rounded-2xl p-4 border border-slate-900 opacity-60 hover:opacity-100 transition duration-300">
+                    <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">SNS (Sam Altman)</span>
+                            <span>2026-05-25 20:15:17</span>
+                        </div>
+                        <span class="text-slate-600">● 한국 경제와 관련 없음</span>
+                    </div>
+                    <h4 class="text-sm font-semibold text-slate-300 line-clamp-1">@Sam Altman post: GPT-5 release preparations</h4>
+                    <p class="text-xs text-slate-500 mt-1">사유: 한국 경제 또는 주요 기업 관련 연관 키워드가 검출되지 않았습니다.</p>
+                </div>
+                
+                <div class="glass-card rounded-2xl p-4 border border-slate-900 opacity-60 hover:opacity-100 transition duration-300">
+                    <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">Yahoo Finance</span>
+                            <span>2026-05-25 20:15:17</span>
+                        </div>
+                        <span class="text-slate-600">● 한국 경제와 관련 없음</span>
+                    </div>
+                    <h4 class="text-sm font-semibold text-slate-300 line-clamp-1">India turns to Latin American, African oil after Hormuz disruption</h4>
+                    <p class="text-xs text-slate-500 mt-1">사유: 한국 경제 또는 주요 기업 관련 연관 키워드가 검출되지 않았습니다.</p>
+                </div>
+                
+                <div class="glass-card rounded-2xl p-6 border border-slate-800 transition duration-300 hover:bg-slate-900/50">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
+                        <div class="flex items-center space-x-3">
+                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">SNS (Sam Altman)</span>
+                            <span class="text-xs text-slate-400">2026-05-25 20:14:14</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">중립 (+0.1)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-700 text-slate-300">경보: 낮음 (LOW)</span>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-lg font-bold text-slate-100 mb-2">@Sam Altman post: OpenAI sovereign infrastructure</h3>
+                    <p class="text-sm text-slate-400 line-clamp-3 mb-4">Met with global technology leaders to discuss GPU infrastructure and energy grids. South Korea's chip dominance makes it a core partner for the upcoming global AI infrastructure alliance.</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
+                            <p class="text-sm text-slate-200">
+                                <span class="text-indigo-300">글로벌 기술 IT</span>
+                                <span class="text-slate-500"> | </span>
+                                <span class="text-purple-300">삼성전자</span>
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
+                            <p class="text-sm text-slate-200">글로벌 IT 인프라 투자 모멘텀 유지로 인한 국내 테크 업종에 대한 간접적 센티먼트 개선 지원.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
+                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">소버린 AI 인프라 투자와 핵심 모델 개발 촉진 등 글로벌 기술 트렌드의 강화 흐름은 한국 반도체 및 하드웨어 공급업체에 중장기적으로 긍정적인 산업 센티먼트를 유도합니다.</p>
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-xs text-slate-500">
+                        <span>관련성 분류 이유: 글로벌 이슈 및 핵심 키워드 (South Korea, Korea) 검색 매칭에 따른 한국 경제 관련성 판별 완료 (데모 모드).</span>
+                        <a href="https://x.com/samaltman/status/altman-ai-infrastructure-1779706034" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
+                    </div>
+                    
+                            <div class="mt-3 pt-3 border-t border-slate-800/50 flex flex-wrap items-center text-xs text-slate-500">
+                                <span class="mr-2">동일 보도 매체:</span>
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-800/80 text-slate-400 border border-slate-700/80 mr-1.5">SNS (Sam Altman)</span>
+                            </div>
+                            
+                </div>
+                
+                <div class="glass-card rounded-2xl p-4 border border-slate-900 opacity-60 hover:opacity-100 transition duration-300">
+                    <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">SNS (Elon Musk)</span>
+                            <span>2026-05-25 20:14:14</span>
+                        </div>
+                        <span class="text-slate-600">● 한국 경제와 관련 없음</span>
+                    </div>
+                    <h4 class="text-sm font-semibold text-slate-300 line-clamp-1">@Elon Musk post: Tesla Full Self-Driving progress</h4>
+                    <p class="text-xs text-slate-500 mt-1">사유: 한국 경제 또는 주요 기업 관련 연관 키워드가 검출되지 않았습니다.</p>
+                </div>
+                
+                <div class="glass-card rounded-2xl p-6 border border-rose-500/30 transition duration-300 hover:bg-slate-900/50">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
+                        <div class="flex items-center space-x-3">
+                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">SNS (Jerome Powell)</span>
+                            <span class="text-xs text-slate-400">2026-05-25 20:14:14</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">부정 (-0.3)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-600 text-white shadow-lg shadow-rose-900/40">경보: 높음 (HIGH)</span>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-lg font-bold text-slate-100 mb-2">@Jerome Powell post: FED interest rate policy briefing</h3>
+                    <p class="text-sm text-slate-400 line-clamp-3 mb-4">Inflation is moderating but remains slightly above our 2% target. We will keep interest rates steady until we see clear evidence of soft landing. Strong dollar policies remain.</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
+                            <p class="text-sm text-slate-200">
+                                <span class="text-indigo-300">거시경제, 금융</span>
+                                <span class="text-slate-500"> | </span>
+                                <span class="text-purple-300">금융지주회사</span>
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
+                            <p class="text-sm text-slate-200">미국 연준의 고금리 장기화 기조에 따른 원/달러 환율 상방 압력 가중 및 외인 자금 이탈 가능성 가중 (KOSPI 횡보).</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
+                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">파월 연준 의장이 인플레이션 극복을 위해 고금리 기조를 유지하겠다는 신호를 보이면서 한미 금리 격차에 따른 원화 약세 압력이 고조되고 있습니다. 국내 증시 수급 부담 요소로 작용할 가능성이 큽니다.</p>
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-xs text-slate-500">
+                        <span>관련성 분류 이유: 글로벌 이슈 및 핵심 키워드 (inflation, interest rate) 검색 매칭에 따른 한국 경제 관련성 판별 완료 (데모 모드).</span>
+                        <a href="https://x.com/jeromepowell/status/powell-interest-rate-update-1779707174" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
+                    </div>
+                    
+                            <div class="mt-3 pt-3 border-t border-slate-800/50 flex flex-wrap items-center text-xs text-slate-500">
+                                <span class="mr-2">동일 보도 매체:</span>
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-800/80 text-slate-400 border border-slate-700/80 mr-1.5">SNS (Jerome Powell)</span>
+                            </div>
+                            
+                </div>
+                
+                <div class="glass-card rounded-2xl p-4 border border-slate-900 opacity-60 hover:opacity-100 transition duration-300">
+                    <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">SNS (Jensen Huang)</span>
+                            <span>2026-05-25 20:14:14</span>
+                        </div>
+                        <span class="text-slate-600">● 한국 경제와 관련 없음</span>
+                    </div>
+                    <h4 class="text-sm font-semibold text-slate-300 line-clamp-1">@Jensen Huang post: NVIDIA AI summits globally</h4>
+                    <p class="text-xs text-slate-500 mt-1">사유: 한국 경제 또는 주요 기업 관련 연관 키워드가 검출되지 않았습니다.</p>
+                </div>
+                
+                <div class="glass-card rounded-2xl p-4 border border-slate-900 opacity-60 hover:opacity-100 transition duration-300">
+                    <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">Yahoo Finance</span>
+                            <span>2026-05-25 20:14:14</span>
+                        </div>
+                        <span class="text-slate-600">● 한국 경제와 관련 없음</span>
+                    </div>
+                    <h4 class="text-sm font-semibold text-slate-300 line-clamp-1">Stocks rally, while oil and dollar ease on Middle East peace hopes</h4>
+                    <p class="text-xs text-slate-500 mt-1">사유: 한국 경제 또는 주요 기업 관련 연관 키워드가 검출되지 않았습니다.</p>
+                </div>
+                
+                <div class="glass-card rounded-2xl p-4 border border-slate-900 opacity-60 hover:opacity-100 transition duration-300">
+                    <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">Yahoo Finance</span>
+                            <span>2026-05-25 20:14:14</span>
+                        </div>
+                        <span class="text-slate-600">● 한국 경제와 관련 없음</span>
+                    </div>
+                    <h4 class="text-sm font-semibold text-slate-300 line-clamp-1">Nancy Pelosi caught heat for $59M in trades over 3 years. Trump just disclosed up to $750M in 3 months.</h4>
+                    <p class="text-xs text-slate-500 mt-1">사유: 한국 경제 또는 주요 기업 관련 연관 키워드가 검출되지 않았습니다.</p>
+                </div>
+                
+                <div class="glass-card rounded-2xl p-6 border border-rose-500/30 transition duration-300 hover:bg-slate-900/50">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
+                        <div class="flex items-center space-x-3">
+                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Yahoo Finance</span>
+                            <span class="text-xs text-slate-400">2026-05-25 20:14:14</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">부정 (-0.3)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-600 text-white shadow-lg shadow-rose-900/40">경보: 높음 (HIGH)</span>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-lg font-bold text-slate-100 mb-2">Mortgage and refinance interest rates today, Monday, May 25, 2026: Will rates rise or fall this week?</h3>
+                    <p class="text-sm text-slate-400 line-clamp-3 mb-4"></p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
+                            <p class="text-sm text-slate-200">
+                                <span class="text-indigo-300">거시경제, 금융</span>
+                                <span class="text-slate-500"> | </span>
+                                <span class="text-purple-300">금융지주회사</span>
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
+                            <p class="text-sm text-slate-200">미국 연준의 고금리 장기화 기조에 따른 원/달러 환율 상방 압력 가중 및 외인 자금 이탈 가능성 가중 (KOSPI 횡보).</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
+                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">파월 연준 의장이 인플레이션 극복을 위해 고금리 기조를 유지하겠다는 신호를 보이면서 한미 금리 격차에 따른 원화 약세 압력이 고조되고 있습니다. 국내 증시 수급 부담 요소로 작용할 가능성이 큽니다.</p>
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-xs text-slate-500">
+                        <span>관련성 분류 이유: 글로벌 이슈 및 핵심 키워드 (interest rate) 검색 매칭에 따른 한국 경제 관련성 판별 완료 (데모 모드).</span>
+                        <a href="https://finance.yahoo.com/personal-finance/mortgages/article/mortgage-refinance-rates-today-monday-may-25-2026-100000249.html" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
+                    </div>
+                    
+                </div>
+                
+                <div class="glass-card rounded-2xl p-4 border border-slate-900 opacity-60 hover:opacity-100 transition duration-300">
+                    <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">Yahoo Finance</span>
+                            <span>2026-05-25 20:14:14</span>
+                        </div>
+                        <span class="text-slate-600">● 한국 경제와 관련 없음</span>
+                    </div>
+                    <h4 class="text-sm font-semibold text-slate-300 line-clamp-1">Which Cryptos Could Turn $1,000 Into $100,000 by 2030?</h4>
+                    <p class="text-xs text-slate-500 mt-1">사유: 한국 경제 또는 주요 기업 관련 연관 키워드가 검출되지 않았습니다.</p>
+                </div>
+                
+                <div class="glass-card rounded-2xl p-4 border border-slate-900 opacity-60 hover:opacity-100 transition duration-300">
+                    <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">Yahoo Finance</span>
+                            <span>2026-05-25 20:14:14</span>
+                        </div>
+                        <span class="text-slate-600">● 한국 경제와 관련 없음</span>
+                    </div>
+                    <h4 class="text-sm font-semibold text-slate-300 line-clamp-1">HELOC and home equity loan rates, Monday, May 25, 2026: With rates at yearly lows, learn how quickly you can close</h4>
+                    <p class="text-xs text-slate-500 mt-1">사유: 한국 경제 또는 주요 기업 관련 연관 키워드가 검출되지 않았습니다.</p>
+                </div>
+                
+                <div class="glass-card rounded-2xl p-6 border border-rose-500/30 transition duration-300 hover:bg-slate-900/50">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
+                        <div class="flex items-center space-x-3">
+                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Yahoo Finance</span>
+                            <span class="text-xs text-slate-400">2026-05-25 20:14:14</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">부정 (-0.3)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-600 text-white shadow-lg shadow-rose-900/40">경보: 높음 (HIGH)</span>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-lg font-bold text-slate-100 mb-2">Best high-yield savings interest rates today, Monday, May 25, 2026: Earn up to 4.1% APY</h3>
+                    <p class="text-sm text-slate-400 line-clamp-3 mb-4"></p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
+                            <p class="text-sm text-slate-200">
+                                <span class="text-indigo-300">거시경제, 금융</span>
+                                <span class="text-slate-500"> | </span>
+                                <span class="text-purple-300">금융지주회사</span>
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
+                            <p class="text-sm text-slate-200">미국 연준의 고금리 장기화 기조에 따른 원/달러 환율 상방 압력 가중 및 외인 자금 이탈 가능성 가중 (KOSPI 횡보).</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
+                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">파월 연준 의장이 인플레이션 극복을 위해 고금리 기조를 유지하겠다는 신호를 보이면서 한미 금리 격차에 따른 원화 약세 압력이 고조되고 있습니다. 국내 증시 수급 부담 요소로 작용할 가능성이 큽니다.</p>
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-xs text-slate-500">
+                        <span>관련성 분류 이유: 글로벌 이슈 및 핵심 키워드 (interest rate) 검색 매칭에 따른 한국 경제 관련성 판별 완료 (데모 모드).</span>
+                        <a href="https://finance.yahoo.com/personal-finance/banking/article/best-high-yield-savings-interest-rates-today-monday-may-25-2026-100000125.html" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
+                    </div>
+                    
+                </div>
+                
+                <div class="glass-card rounded-2xl p-4 border border-slate-900 opacity-60 hover:opacity-100 transition duration-300">
+                    <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">Yahoo Finance</span>
+                            <span>2026-05-25 20:14:14</span>
+                        </div>
+                        <span class="text-slate-600">● 한국 경제와 관련 없음</span>
+                    </div>
+                    <h4 class="text-sm font-semibold text-slate-300 line-clamp-1">Best CD rates today, May 25, 2026: Lock in up to 4% APY</h4>
+                    <p class="text-xs text-slate-500 mt-1">사유: 한국 경제 또는 주요 기업 관련 연관 키워드가 검출되지 않았습니다.</p>
+                </div>
+                
+                <div class="glass-card rounded-2xl p-4 border border-slate-900 opacity-60 hover:opacity-100 transition duration-300">
+                    <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">Yahoo Finance</span>
+                            <span>2026-05-25 20:14:14</span>
+                        </div>
+                        <span class="text-slate-600">● 한국 경제와 관련 없음</span>
+                    </div>
+                    <h4 class="text-sm font-semibold text-slate-300 line-clamp-1">Nuclear verdict alert: almost $50M against a mystery Texas trucking company</h4>
+                    <p class="text-xs text-slate-500 mt-1">사유: 한국 경제 또는 주요 기업 관련 연관 키워드가 검출되지 않았습니다.</p>
+                </div>
+                
+                <div class="glass-card rounded-2xl p-4 border border-slate-900 opacity-60 hover:opacity-100 transition duration-300">
+                    <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">Yahoo Finance</span>
+                            <span>2026-05-25 20:14:14</span>
+                        </div>
+                        <span class="text-slate-600">● 한국 경제와 관련 없음</span>
+                    </div>
+                    <h4 class="text-sm font-semibold text-slate-300 line-clamp-1">Berkshire Hathaway’s latest stock purge sends a clear message</h4>
+                    <p class="text-xs text-slate-500 mt-1">사유: 한국 경제 또는 주요 기업 관련 연관 키워드가 검출되지 않았습니다.</p>
+                </div>
+                
+        </div>
+    </div>
+
+    <!-- AI Briefing Modal -->
+    <div id="briefingModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+        <div class="glass-card w-full max-w-4xl rounded-3xl p-6 border border-slate-800 shadow-2xl flex flex-col max-h-[85vh]">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+                <h2 class="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-pink-400 bg-clip-text text-transparent flex items-center">
+                    📄 Gemini 일일 거시경제 브리핑 보고서
+                </h2>
+                <button onclick="closeBriefing()" class="text-slate-400 hover:text-slate-200 text-xl font-bold">&times;</button>
+            </div>
+            <div id="briefingContent" class="overflow-y-auto py-6 text-slate-300 text-sm leading-relaxed flex-1">
+                <!-- Loaded dynamically -->
+                <div class="flex flex-col items-center justify-center py-12">
+                    <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-400 mb-4"></div>
+                    <p class="text-slate-400">Gemini AI가 실시간 브리핑을 합성 중입니다...</p>
+                </div>
+            </div>
+            <div class="pt-4 border-t border-slate-800 flex justify-end">
+                <button onclick="closeBriefing()" class="px-5 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+                    닫기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Interactive Chatbot Widget (Floating bottom right) -->
+    <div class="fixed bottom-6 right-6 z-40">
+        <!-- Floating Chat Icon -->
+        <button onclick="toggleChat()" id="chatOpenBtn" class="h-14 w-14 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-xl shadow-indigo-900/50 flex items-center justify-center border border-indigo-400/30 transition duration-300 transform hover:scale-105">
+            <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+        </button>
+
+        <!-- Chat window -->
+        <div id="chatWindow" class="hidden glass-card w-[380px] sm:w-[420px] rounded-3xl border border-indigo-500/20 shadow-2xl flex flex-col max-h-[500px] overflow-hidden transition-all duration-300">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-indigo-950 to-purple-950 p-4 border-b border-indigo-500/10 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <div class="h-2 w-2 rounded-full bg-emerald-400 animate-ping"></div>
+                    <span class="font-bold text-sm text-slate-100 flex items-center">⚖️ K-이코노미 AI 비서 (RAG)</span>
+                </div>
+                <button onclick="toggleChat()" class="text-slate-400 hover:text-slate-200 text-lg font-bold">&times;</button>
+            </div>
+            
+            <!-- Chat logs -->
+            <div id="chatLogs" class="chat-container flex-1 p-4 space-y-3 bg-slate-950/20 text-xs">
+                <div class="bg-indigo-950/20 text-slate-300 p-3 rounded-2xl border border-indigo-500/10 max-w-[85%]">
+                    안녕하세요! 실시간 수집된 뉴스 데이터베이스를 완벽히 숙지하고 있는 **한반도 경제 AI 비서**입니다. 궁금하신 경제 질문이 있으신가요?
+                </div>
+            </div>
+
+            <!-- Input area -->
+            <div class="p-3 bg-slate-950/60 border-t border-indigo-500/10 flex items-center space-x-2">
+                <input type="text" id="chatInput" onkeydown="handleChatKey(event)" placeholder="예: 최근 삼성전자 HBM 관련 뉴스 요약해줘" class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500" />
+                <button onclick="sendChatMessage()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition">
+                    전송
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Frontend Interactive Javascript -->
+    <script>
+        // Toggle chatbot window
+        function toggleChat() {
+            const window = document.getElementById("chatWindow");
+            const btn = document.getElementById("chatOpenBtn");
+            if (window.classList.contains("hidden")) {
+                window.classList.remove("hidden");
+                btn.classList.add("hidden");
+                document.getElementById("chatInput").focus();
+            } else {
+                window.classList.add("hidden");
+                btn.classList.remove("hidden");
+            }
+        }
+
+        // Send Chat Message to Flask backend /api/chat
+        function sendChatMessage() {
+            const input = document.getElementById("chatInput");
+            const query = input.value.strip ? input.value.trim() : input.value;
+            if (!query) return;
+            
+            input.value = "";
+            
+            // Append User message bubble
+            const logs = document.getElementById("chatLogs");
+            const userBubble = document.createElement("div");
+            userBubble.className = "bg-slate-800 text-slate-200 p-3 rounded-2xl max-w-[85%] ml-auto text-right";
+            userBubble.textContent = query;
+            logs.appendChild(userBubble);
+            logs.scrollTop = logs.scrollHeight;
+            
+            // Append Typing indicator bubble
+            const typingBubble = document.createElement("div");
+            typingBubble.id = "typingIndicator";
+            typingBubble.className = "bg-indigo-950/10 text-slate-400 p-3 rounded-2xl border border-indigo-500/5 max-w-[85%] flex items-center space-x-1";
+            typingBubble.innerHTML = `
+                <div class="h-1.5 w-1.5 bg-slate-400 rounded-full animate-bounce"></div>
+                <div class="h-1.5 w-1.5 bg-slate-400 rounded-full animate-bounce delay-100"></div>
+                <div class="h-1.5 w-1.5 bg-slate-400 rounded-full animate-bounce delay-200"></div>
+            `;
+            logs.appendChild(typingBubble);
+            logs.scrollTop = logs.scrollHeight;
+            
+            // Fetch answer from backend RAG API
+            fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: query })
+            })
+            .then(res => res.json())
+            .then(data => {
+                // Remove typing bubble
+                document.getElementById("typingIndicator").remove();
+                
+                // Append AI message bubble (parsed as simple HTML since markdown could contain basic blocks)
+                const aiBubble = document.createElement("div");
+                aiBubble.className = "bg-indigo-950/20 text-slate-300 p-3 rounded-2xl border border-indigo-500/10 max-w-[85%] leading-relaxed";
+                
+                // Simple markdown parser for bold and lists
+                let text = data.answer;
+                text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                text = text.replace(/\*(.*?)\n/g, '• $1<br>');
+                text = text.replace(/\n/g, '<br>');
+                
+                aiBubble.innerHTML = text;
+                logs.appendChild(aiBubble);
+                logs.scrollTop = logs.scrollHeight;
+            })
+            .catch(err => {
+                document.getElementById("typingIndicator").remove();
+                const errBubble = document.createElement("div");
+                errBubble.className = "bg-rose-950/20 text-rose-300 p-3 rounded-2xl border border-rose-500/10 max-w-[85%]";
+                errBubble.textContent = "에러: 답변을 불러오는 과정에 실패했습니다.";
+                logs.appendChild(errBubble);
+                logs.scrollTop = logs.scrollHeight;
+            });
+        }
+
+        function handleChatKey(e) {
+            if (e.key === "Enter") {
+                sendChatMessage();
+            }
+        }
+
+        // Open/Close AI Briefing Modal
+        function openBriefing() {
+            const modal = document.getElementById("briefingModal");
+            modal.classList.remove("hidden");
+            
+            const content = document.getElementById("briefingContent");
+            // Show loading spinner
+            content.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-12">
+                    <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-400 mb-4"></div>
+                    <p class="text-slate-400">Gemini AI가 실시간 브리핑 보고서를 작성 중입니다...</p>
+                </div>
+            `;
+            
+            // Fetch briefing HTML
+            fetch('/briefing')
+            .then(res => res.text())
+            .then(html => {
+                content.innerHTML = html;
+            })
+            .catch(err => {
+                content.innerHTML = `
+                    <div class="text-center py-12 text-rose-400">
+                        에러: 실시간 브리핑 합성 과정에 실패했습니다.
+                    </div>
+                `;
+            });
+        }
+
+        function closeBriefing() {
+            document.getElementById("briefingModal").classList.add("hidden");
+        }
+
+        // Force Pipeline Refresh manually via frontend API
+        function forceRefresh() {
+            const btn = document.getElementById("refreshBtn");
+            btn.disabled = true;
+            btn.innerHTML = `
+                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-slate-300" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                수집 및 분석 중...
+            `;
+            
+            fetch('/api/refresh', { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                // Reload page to reflect new DB values
+                window.location.reload();
+            })
+            .catch(err => {
+                alert("수동 갱신 오류가 발생했습니다.");
+                btn.disabled = false;
+                btn.innerHTML = "🔄 실시간 수동 갱신";
+            });
+        }
+        
+        // Dynamic dynamic AJAX Fetch updates! (Runs every 15s in background, checks total item count, reloads if new)
+        let lastCount = 22;
+        setInterval(() => {
+            fetch('/api/count')
+            .then(res => res.json())
+            .then(data => {
+                if (data.count > lastCount) {
+                    console.log("[Pipeline] New news processed! Reloading dashboard page dynamically.");
+                    window.location.reload();
+                }
+            })
+            .catch(err => {});
+        }, 15000);
+    </script>
+</body>
+</html>
