@@ -8,6 +8,7 @@
     "pro_model": "gemini-3.5-flash"
   },
   "scraping_interval_seconds": 60,
+  "realtime_monitoring_enabled": false,
   "rss_feeds": [
     {
       "name": "Yahoo Finance",

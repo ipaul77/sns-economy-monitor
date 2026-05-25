@@ -943,9 +943,10 @@ global_analyzer = GeminiEconomyAnalyzer()
 # Pre-generate dashboard.html from cache on startup
 generate_html_dashboard()
 
-# Start background crawler thread immediately on import (WSGI/Gunicorn compatible!)
-t = threading.Thread(target=scheduler_thread, daemon=True)
-t.start()
+# Start background crawler thread immediately on import ONLY if enabled in config
+if global_config.get("realtime_monitoring_enabled", False):
+    t = threading.Thread(target=scheduler_thread, daemon=True)
+    t.start()
 
 def main():
     import argparse
@@ -971,6 +972,7 @@ def main():
     print(f"History Database         : {DB_PATH}")
     print(f"Cumulative Log File      : {LOG_PATH}")
     print(f"Web Dashboard URL        : http://localhost:5000")
+    print(f"Real-time Auto Monitoring: {'ENABLED' if global_config.get('realtime_monitoring_enabled', False) else 'DISABLED (Manual Refresh Mode)'}")
     
     # 5. Automatically launch browser at http://localhost:5000 on startup
     try:
