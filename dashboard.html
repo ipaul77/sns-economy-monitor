@@ -70,8 +70,8 @@
         <div class="glass-card rounded-2xl p-4 glow-red border border-slate-800/80">
             <p class="text-xs font-semibold text-slate-500">원/달러 환율 (USDKRW=X)</p>
             <div class="flex items-baseline justify-between mt-1">
-                <span class="text-lg font-bold text-slate-100">1,513.09원</span>
-                <span class="text-xs font-bold text-rose-400">-7.44 (-0.49%)</span>
+                <span class="text-lg font-bold text-slate-100">1,513.39원</span>
+                <span class="text-xs font-bold text-rose-400">-7.14 (-0.47%)</span>
             </div>
         </div>
         
@@ -97,7 +97,7 @@
         <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 my-6">
             <div class="glass-card rounded-2xl p-6 glow-orange">
                 <p class="text-sm font-medium text-slate-400">수집 및 검사 피드</p>
-                <p class="mt-2 text-3xl font-bold text-slate-100">27 건</p>
+                <p class="mt-2 text-3xl font-bold text-slate-100">31 건</p>
                 <p class="mt-2 text-xs text-slate-500">누적 캐시 체크 포함</p>
             </div>
             <div class="glass-card rounded-2xl p-6 glow-green">
@@ -125,6 +125,54 @@
         
         <div class="space-y-6">
     
+                <div class="glass-card rounded-2xl p-4 border border-slate-900 opacity-60 hover:opacity-100 transition duration-300">
+                    <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">Yahoo Finance</span>
+                            <span>2026-05-25 21:22:21</span>
+                        </div>
+                        <span class="text-slate-600">● 한국 경제와 관련 없음</span>
+                    </div>
+                    <h4 class="text-sm font-semibold text-slate-300 line-clamp-1">3 Things to Do With Your 401(k) Before You Retire in 2030</h4>
+                    <p class="text-xs text-slate-500 mt-1">사유: 한국 경제 또는 주요 기업 관련 연관 키워드가 검출되지 않았습니다.</p>
+                </div>
+                
+                <div class="glass-card rounded-2xl p-4 border border-slate-900 opacity-60 hover:opacity-100 transition duration-300">
+                    <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">Yahoo Finance</span>
+                            <span>2026-05-25 21:20:52</span>
+                        </div>
+                        <span class="text-slate-600">● 한국 경제와 관련 없음</span>
+                    </div>
+                    <h4 class="text-sm font-semibold text-slate-300 line-clamp-1">Micron’s 50% Problem: Why Having Too Few Microchips is Making Investors Rich</h4>
+                    <p class="text-xs text-slate-500 mt-1">사유: 한국 경제 또는 주요 기업 관련 연관 키워드가 검출되지 않았습니다.</p>
+                </div>
+                
+                <div class="glass-card rounded-2xl p-4 border border-slate-900 opacity-60 hover:opacity-100 transition duration-300">
+                    <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">Yahoo Finance</span>
+                            <span>2026-05-25 21:07:49</span>
+                        </div>
+                        <span class="text-slate-600">● 한국 경제와 관련 없음</span>
+                    </div>
+                    <h4 class="text-sm font-semibold text-slate-300 line-clamp-1">'Too big to stop': Young American men are flocking to prediction markets to take big risks on even bigger rewards</h4>
+                    <p class="text-xs text-slate-500 mt-1">사유: 한국 경제 또는 주요 기업 관련 연관 키워드가 검출되지 않았습니다.</p>
+                </div>
+                
+                <div class="glass-card rounded-2xl p-4 border border-slate-900 opacity-60 hover:opacity-100 transition duration-300">
+                    <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">Yahoo Finance</span>
+                            <span>2026-05-25 21:07:47</span>
+                        </div>
+                        <span class="text-slate-600">● 한국 경제와 관련 없음</span>
+                    </div>
+                    <h4 class="text-sm font-semibold text-slate-300 line-clamp-1">Logan Paul sold a Pokémon card for $16 million — and crypto money is pouring into the market</h4>
+                    <p class="text-xs text-slate-500 mt-1">사유: 한국 경제 또는 주요 기업 관련 연관 키워드가 검출되지 않았습니다.</p>
+                </div>
+                
                 <div class="glass-card rounded-2xl p-4 border border-slate-900 opacity-60 hover:opacity-100 transition duration-300">
                     <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
                         <div class="flex items-center space-x-2">
@@ -950,7 +998,7 @@
         }
         
         // Dynamic dynamic AJAX Fetch updates! (Runs every 15s in background, checks total item count, reloads if new)
-        let lastCount = 27;
+        let lastCount = 31;
         setInterval(() => {
             fetch('/api/count')
             .then(res => res.json())

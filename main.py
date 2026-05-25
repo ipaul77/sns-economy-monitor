@@ -307,8 +307,22 @@ def generate_html_dashboard():
                     
                 try:
                     companies = json.loads(r['impacted_companies'])
-                    companies_str = ", ".join(companies) if companies else "없음"
-                except:
+                    enriched_companies = []
+                    for comp in companies:
+                        if comp == "삼성전자" and "SAMSUNG" in market_data:
+                            s_info = market_data["SAMSUNG"]
+                            sign = "+" if s_info["change"] >= 0 else ""
+                            color = "text-emerald-400" if s_info["change"] >= 0 else "text-rose-400"
+                            enriched_companies.append(f'<span class="font-semibold text-slate-100">{comp}</span> <span class="text-xs {color} font-medium">({s_info["price"]:,}원 {sign}{s_info["percent"]}%)</span>')
+                        elif comp == "SK하이닉스" and "HYNIX" in market_data:
+                            h_info = market_data["HYNIX"]
+                            sign = "+" if h_info["change"] >= 0 else ""
+                            color = "text-emerald-400" if h_info["change"] >= 0 else "text-rose-400"
+                            enriched_companies.append(f'<span class="font-semibold text-slate-100">{comp}</span> <span class="text-xs {color} font-medium">({h_info["price"]:,}원 {sign}{h_info["percent"]}%)</span>')
+                        else:
+                            enriched_companies.append(f'<span class="font-semibold text-slate-300">{comp}</span>')
+                    companies_str = ", ".join(enriched_companies) if enriched_companies else "없음"
+                except Exception as e:
                     companies_str = r['impacted_companies'] or "없음"
                 
                 link_btn = f'<a href="{r["url"]}" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>' if r['url'] else ''
@@ -348,10 +362,10 @@ def generate_html_dashboard():
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
-                            <p class="text-sm text-slate-200">
+                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
                                 <span class="text-indigo-300">{sectors_str}</span>
-                                <span class="text-slate-500"> | </span>
-                                <span class="text-purple-300">{companies_str}</span>
+                                <span class="text-slate-500">|</span>
+                                {companies_str}
                             </p>
                         </div>
                         <div>
