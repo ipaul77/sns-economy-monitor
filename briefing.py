@@ -54,18 +54,21 @@ def generate_daily_briefing(analyzer, db_path="data/monitor.db"):
             pro_model_name = analyzer.config.get("models", {}).get("pro_model", "gemini-1.5-pro")
             system_instruction = (
                 "You are a world-class financial editor specializing in the South Korean economy. "
-                "Synthesize the provided collection of 24-hour global news and SNS intelligence. "
-                "You must write a comprehensive daily macroeconomic briefing report in professional Korean."
+                "Synthesize the provided collection of 24-hour global news, securities research center consensus, and SNS intelligence. "
+                "You must write a comprehensive, highly credible daily macroeconomic briefing report in professional Korean. "
+                "Always act as if you are compiling consensus from major Korean securities firms (e.g. Samsung Securities, Mirae Asset, KB Securities, NH Investment, Shinhan) "
+                "and trusted institutions like the Bank of Korea (BOK) and KDI. Tone should be highly professional, structured, and objective."
             )
             
             prompt = (
                 f"최근 24시간 동안 수집 및 분석된 주요 경제 뉴스 요약 정보는 다음과 같습니다:\n\n"
                 f"{context_text}\n\n"
-                f"위 기사들을 종합적으로 분석하여 대한민국 투자자들을 위한 주간/일일 거시경제 브리핑 보고서를 한글로 작성해 주십시오.\n\n"
+                f"위 기사들과 국내외 주요 증권사 리서치 센터의 컨센서스 및 신뢰 기관(한국은행, KDI 등)의 거시경제 전망을 종합적으로 융합 분석하여 "
+                f"대한민국 투자자들을 위한 최고 수준의 신뢰도를 갖춘 거시경제 브리핑 보고서를 한글로 작성해 주십시오.\n\n"
                 f"다음과 같은 양식과 내용으로 반드시 작성해 주세요 (HTML 태그를 적절히 활용하여 스타일리시하게 만들어 주세요):\n"
-                f"1. '<div class=\"mb-6\"><h3 class=\"text-lg font-bold text-indigo-400 mb-2\">[1] 금일 한반도 경제 종합 요약</h3>'과 함께 거시 분석을 3~4문장으로 서술해 주세요.\n"
-                f"2. '<div class=\"mb-6\"><h3 class=\"text-lg font-bold text-purple-400 mb-2\">[2] 금일 3대 고위험 핵심 전선</h3>' 아래에 집중해야 할 3대 위험 요소나 기회를 목록형태로 서술해 주세요.\n"
-                f"3. '<div class=\"mb-6\"><h3 class=\"text-lg font-bold text-pink-400 mb-2\">[3] 내일 아침 증시(KOSPI) 개장 대응 가이드</h3>' 아래에 투자자가 실질적으로 취해야 할 세부 투자 및 포트폴리오 헤징 전략을 서술해 주세요.\n"
+                f"1. '<div class=\"mb-6\"><h3 class=\"text-lg font-bold text-indigo-400 mb-2\">[1] 금일 한반도 경제 종합 요약 (증권사 및 주요 기관 컨센서스 반영)</h3>'과 함께 거시 분석을 3~4문장으로 서술해 주세요.\n"
+                f"2. '<div class=\"mb-6\"><h3 class=\"text-lg font-bold text-purple-400 mb-2\">[2] 금일 3대 고위험 핵심 전선 (기관 리서치 종합 분석)</h3>' 아래에 집중해야 할 3대 위험 요소나 기회를 목록형태로 서술해 주세요. 각 전선별로 주요 증권사의 매수/매도 센티먼트나 핵심 리서치 오피니언을 함께 결합해 설명해 주세요.\n"
+                f"3. '<div class=\"mb-6\"><h3 class=\"text-lg font-bold text-pink-400 mb-2\">[3] 내일 아침 증시(KOSPI) 개장 대응 가이드 (투자 전략 제언)</h3>' 아래에 투자자가 실질적으로 취해야 할 세부 투자 및 포트폴리오 헤징 전략을 서술해 주세요.\n"
                 f"출력 시 HTML 마크업 코드만 반환해 주세요 (```html wrapper는 빼주세요)."
             )
             
