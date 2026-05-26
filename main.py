@@ -196,6 +196,11 @@ def generate_html_dashboard():
             # Format badges
             is_rel = r['is_relevant'] == 1
             processed_at = r['processed_at'][:19].replace('T', ' ')
+            published_at = r.get('published_at', '')
+            if published_at:
+                published_at = published_at[:19].replace('T', ' ')
+            else:
+                published_at = "알 수 없음"
             
             if is_rel:
                 # Sentiment Badge
@@ -270,7 +275,11 @@ def generate_html_dashboard():
                     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
                         <div class="flex items-center space-x-3">
                             <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">{r['source']}</span>
-                            <span class="text-xs text-slate-400">{processed_at}</span>
+                            <span class="text-xs text-slate-400">
+                                <span class="text-indigo-400 font-medium">작성:</span> {published_at}
+                                <span class="mx-1 text-slate-600">|</span>
+                                <span class="text-slate-500">수집:</span> {processed_at}
+                            </span>
                         </div>
                         <div class="flex items-center space-x-2">
                             {sent_badge}
