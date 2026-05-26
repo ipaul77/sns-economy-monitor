@@ -70,8 +70,8 @@
         <div class="glass-card rounded-2xl p-4 glow-red border border-slate-800/80">
             <p class="text-xs font-semibold text-slate-500">원/달러 환율 (USDKRW=X)</p>
             <div class="flex items-baseline justify-between mt-1">
-                <span class="text-lg font-bold text-slate-100">1,504.78원</span>
-                <span class="text-xs font-bold text-rose-400">-12.44 (-0.82%)</span>
+                <span class="text-lg font-bold text-slate-100">1,503.63원</span>
+                <span class="text-xs font-bold text-rose-400">-13.59 (-0.9%)</span>
             </div>
         </div>
         
@@ -97,11 +97,11 @@
         <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 my-4">
             <div class="glass-card rounded-xl p-3 glow-orange">
                 <p class="text-xs font-semibold text-slate-400">수집 및 검사 피드</p>
-                <p class="mt-1 text-lg font-extrabold text-slate-100">16 건</p>
+                <p class="mt-1 text-lg font-extrabold text-slate-100">39 건</p>
             </div>
             <div class="glass-card rounded-xl p-3 glow-green">
                 <p class="text-xs font-semibold text-slate-400">연관 기사</p>
-                <p class="mt-1 text-lg font-extrabold text-emerald-400">4 건</p>
+                <p class="mt-1 text-lg font-extrabold text-emerald-400">7 건</p>
             </div>
             <div class="glass-card rounded-xl p-3 glow-red">
                 <p class="text-xs font-semibold text-slate-400">고위험 경보 (HIGH)</p>
@@ -109,19 +109,102 @@
             </div>
             <div class="glass-card rounded-xl p-3 glow-blue">
                 <p class="text-xs font-semibold text-slate-400">평균 감성 지수</p>
-                <p class="mt-1 text-lg font-extrabold text-slate-400">+0.12</p>
+                <p class="mt-1 text-lg font-extrabold text-emerald-400">+0.22</p>
             </div>
         </section>
 
         <!-- List Section -->
-        <h2 class="text-xl font-bold text-slate-100 mb-6 flex items-center">
-            <svg class="w-5 h-5 mr-2 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1M19 20a2 2 0 002-2V8a2 2 0 00-2-2h-5M19 20a2 2 0 002-2V8m-5 4h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
-            최신 분석 타임라인
-        </h2>
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+            <h2 class="text-xl font-bold text-slate-100 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1M19 20a2 2 0 002-2V8a2 2 0 00-2-2h-5M19 20a2 2 0 002-2V8m-5 4h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                최신 분석 타임라인
+            </h2>
+            
+            <!-- Sleek Search Input -->
+            <div class="relative w-full lg:w-80">
+                <input type="text" id="searchInput" oninput="filterTimeline()" placeholder="키워드 또는 기업명 실시간 검색..." class="w-full bg-slate-900/60 border border-slate-800/80 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30 transition placeholder-slate-600" />
+                <svg class="absolute left-3 top-2.5 h-4 w-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Sector Filter Badges -->
+        <div class="flex flex-wrap gap-2 mb-6" id="sectorFilters">
+            
+        <button onclick="filterSector('ALL')" id="filter-all" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600 text-white border border-indigo-500/20 transition duration-200 shadow-lg shadow-indigo-950/50 hover:scale-105 active:scale-95">
+            전체보기
+        </button>
+    
+        <button onclick="filterSector('Artificial Intelligence Hardware')" id="filter-ArtificialIntelligenceHardware" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            Artificial Intelligence Hardware
+        </button>
+        
+        <button onclick="filterSector('Automotive')" id="filter-Automotive" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            Automotive
+        </button>
+        
+        <button onclick="filterSector('Aviation')" id="filter-Aviation" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            Aviation
+        </button>
+        
+        <button onclick="filterSector('Chemicals & Materials')" id="filter-ChemicalsMaterials" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            Chemicals & Materials
+        </button>
+        
+        <button onclick="filterSector('Electric Vehicles')" id="filter-ElectricVehicles" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            Electric Vehicles
+        </button>
+        
+        <button onclick="filterSector('Energy')" id="filter-Energy" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            Energy
+        </button>
+        
+        <button onclick="filterSector('Finance & Banking')" id="filter-FinanceBanking" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            Finance & Banking
+        </button>
+        
+        <button onclick="filterSector('IT H/W')" id="filter-ITHW" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            IT H/W
+        </button>
+        
+        <button onclick="filterSector('Logistics')" id="filter-Logistics" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            Logistics
+        </button>
+        
+        <button onclick="filterSector('Power Grids and Energy Infrastructure')" id="filter-PowerGridsandEnergyInfrastructure" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            Power Grids and Energy Infrastructure
+        </button>
+        
+        <button onclick="filterSector('Secondary Batteries')" id="filter-SecondaryBatteries" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            Secondary Batteries
+        </button>
+        
+        <button onclick="filterSector('Semiconductors')" id="filter-Semiconductors" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            Semiconductors
+        </button>
+        
+        <button onclick="filterSector('Technology & Internet')" id="filter-TechnologyInternet" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            Technology & Internet
+        </button>
+        
+        <button onclick="filterSector('Tourism')" id="filter-Tourism" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            Tourism
+        </button>
+        
+        <button onclick="filterSector('글로벌 기술 IT')" id="filter-글로벌기술IT" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            글로벌 기술 IT
+        </button>
+        
+        <button onclick="filterSector('반도체')" id="filter-반도체" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            반도체
+        </button>
+        
+        </div>
         
         <div class="space-y-6">
     
-                <div class="glass-card rounded-2xl p-6 border border-rose-500/30 transition duration-300 hover:bg-slate-900/50">
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-rose-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["반도체", "IT H/W"]' data-search-text='@jensen huang post: nvidia blackwell chips shipping blackwell production is in full swing. the demand for ai hardware is surging exponentially. we are working closely with our key hbm3e suppliers like samsung electronics and sk hynix in south korea to secure next-gen memory components. 엔비디아가 hbm3e 공급을 다각화하고 차세대 칩 blackwell의 대량 생산에 돌입함에 따라, 주요 메모리 공급업체인 삼성전자와 sk하이닉스의 수혜가 강력하게 예상됩니다. 반도체 수출 사이클 개선 신호입니다. 반도체, it h/w <span class=\"font-semibold text-slate-100\">삼성전자</span> <span class=\"text-xs text-emerald-400 font-medium\">(299,000원 +2.22%)</span>, <span class=\"font-semibold text-slate-100\">sk하이닉스</span> <span class=\"text-xs text-emerald-400 font-medium\">(2,052,000원 +5.72%)</span> sns (jensen huang)'>
                     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
                         <div class="flex items-center space-x-3">
                             <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">SNS (Jensen Huang)</span>
@@ -165,9 +248,14 @@
                         <a href="https://x.com/jensenhuang/status/huang-nvidia-blackwell-hbm-1779801969" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
                     </div>
                     
+                            <div class="mt-3 pt-3 border-t border-slate-800/50 flex flex-wrap items-center text-xs text-slate-500">
+                                <span class="mr-2">동일 보도 매체:</span>
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-800/80 text-slate-400 border border-slate-700/80 mr-1.5">SNS (Jensen Huang)</span>
+                            </div>
+                            
                 </div>
                 
-                <div class="glass-card rounded-2xl p-6 border border-slate-800 transition duration-300 hover:bg-slate-900/50">
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-slate-800 transition duration-300 hover:bg-slate-900/50" data-sectors='["글로벌 기술 IT"]' data-search-text='stocks are rising. markets shrug off mideast tensions.  소버린 ai 인프라 투자와 핵심 모델 개발 촉진 등 글로벌 기술 트렌드의 강화 흐름은 한국 반도체 및 하드웨어 공급업체에 중장기적으로 긍정적인 산업 센티먼트를 유도합니다. 글로벌 기술 it <span class=\"font-semibold text-slate-100\">삼성전자</span> <span class=\"text-xs text-emerald-400 font-medium\">(299,000원 +2.22%)</span> yahoo finance'>
                     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
                         <div class="flex items-center space-x-3">
                             <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Yahoo Finance</span>
@@ -213,7 +301,7 @@
                     
                 </div>
                 
-                <div class="glass-card rounded-2xl p-6 border border-slate-800 transition duration-300 hover:bg-slate-900/50">
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-slate-800 transition duration-300 hover:bg-slate-900/50" data-sectors='["글로벌 기술 IT"]' data-search-text='mutual funds still hate battered software stocks: by the numbers  소버린 ai 인프라 투자와 핵심 모델 개발 촉진 등 글로벌 기술 트렌드의 강화 흐름은 한국 반도체 및 하드웨어 공급업체에 중장기적으로 긍정적인 산업 센티먼트를 유도합니다. 글로벌 기술 it <span class=\"font-semibold text-slate-100\">삼성전자</span> <span class=\"text-xs text-emerald-400 font-medium\">(299,000원 +2.22%)</span> yahoo finance'>
                     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
                         <div class="flex items-center space-x-3">
                             <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Yahoo Finance</span>
@@ -259,7 +347,155 @@
                     
                 </div>
                 
-                <div class="glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50">
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["Semiconductors", "Artificial Intelligence Hardware", "Power Grids and Energy Infrastructure"]' data-search-text='@sam altman post: openai sovereign infrastructure met with global technology leaders to discuss gpu infrastructure and energy grids. south korea\'s chip dominance makes it a core partner for the upcoming global ai infrastructure alliance. 샘 올트먼 openai ceo가 글로벌 ai 인프라 연합 구축을 위해 한국의 반도체 역량을 핵심 파트너로 지목했습니다. 이에 따라 hbm 등 고성능 메모리를 공급하는 국내 반도체 대기업과 ai 전력망 인프라 관련 기업들의 글로벌 수주 기회가 크게 확대될 것으로 기대됩니다. 이번 동맹은 한국 it 및 제조업 생태계 전반에 장기적인 성장 모멘텀을 제공할 것입니다. semiconductors, artificial intelligence hardware, power grids and energy infrastructure <span class=\"font-semibold text-slate-300\">samsung electronics</span>, <span class=\"font-semibold text-slate-300\">sk hynix</span>, <span class=\"font-semibold text-slate-300\">hanmi semiconductor</span>, <span class=\"font-semibold text-slate-300\">hd hyundai electric</span>, <span class=\"font-semibold text-slate-300\">ls electric</span> sns (sam altman)'>
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
+                        <div class="flex items-center space-x-3">
+                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">SNS (Sam Altman)</span>
+                            <span class="text-xs text-slate-400">
+                                <span class="text-indigo-400 font-medium">작성:</span> 2026-05-26 13:23:26
+                                <span class="mx-1 text-slate-600">|</span>
+                                <span class="text-slate-500">수집:</span> 2026-05-26 13:51:49
+                            </span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 (+0.8)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-lg font-bold text-slate-100 mb-2">@Sam Altman post: OpenAI sovereign infrastructure</h3>
+                    <p class="text-sm text-slate-400 line-clamp-3 mb-4">Met with global technology leaders to discuss GPU infrastructure and energy grids. South Korea's chip dominance makes it a core partner for the upcoming global AI infrastructure alliance.</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
+                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
+                                <span class="text-indigo-300">Semiconductors, Artificial Intelligence Hardware, Power Grids and Energy Infrastructure</span>
+                                <span class="text-slate-500">|</span>
+                                <span class="font-semibold text-slate-300">Samsung Electronics</span>, <span class="font-semibold text-slate-300">SK Hynix</span>, <span class="font-semibold text-slate-300">Hanmi Semiconductor</span>, <span class="font-semibold text-slate-300">HD Hyundai Electric</span>, <span class="font-semibold text-slate-300">LS Electric</span>
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
+                            <p class="text-sm text-slate-200">전 세계적인 AI 인프라 투자 확대로 반도체 수출이 크게 증가하며 원/달러 환율 안정과 경상수지 흑자 개선에 기여할 것입니다. 코스피(KOSPI) 내 반도체 및 전력 설비 관련 대형주들을 중심으로 외국인 자금 유입이 강화되어 증시 전반에 호재로 작용할 것으로 예상됩니다.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
+                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">샘 올트먼 OpenAI CEO가 글로벌 AI 인프라 연합 구축을 위해 한국의 반도체 역량을 핵심 파트너로 지목했습니다. 이에 따라 HBM 등 고성능 메모리를 공급하는 국내 반도체 대기업과 AI 전력망 인프라 관련 기업들의 글로벌 수주 기회가 크게 확대될 것으로 기대됩니다. 이번 동맹은 한국 IT 및 제조업 생태계 전반에 장기적인 성장 모멘텀을 제공할 것입니다.</p>
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-xs text-slate-500">
+                        <span>관련성 분류 이유: 대한민국의 반도체 산업이 글로벌 AI 인프라 구축의 핵심 파트너로 언급되어 한국 경제와 밀접한 관련이 있습니다.</span>
+                        <a href="https://x.com/samaltman/status/altman-ai-infrastructure-1779801806" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
+                    </div>
+                    
+                            <div class="mt-3 pt-3 border-t border-slate-800/50 flex flex-wrap items-center text-xs text-slate-500">
+                                <span class="mr-2">동일 보도 매체:</span>
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-800/80 text-slate-400 border border-slate-700/80 mr-1.5">SNS (Sam Altman)</span>
+                            </div>
+                            
+                </div>
+                
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["Aviation", "Logistics", "Tourism", "Energy"]' data-search-text='factbox-airlines cancel flights in response to middle east conflict  중동 지역의 지정학적 갈등으로 인한 글로벌 항공 노선 취소 및 우회 운항은 국내 항공사들의 유류비 부담을 증가시키고 운송 효율성을 저하시킬 수 있습니다. 특히 대한항공과 아시아나항공 등 국적사의 유럽 및 중동 노선 우회에 따른 비용 상승이 예상되며, 글로벌 공급망 불안정성도 심화될 우려가 있습니다. aviation, logistics, tourism, energy <span class=\"font-semibold text-slate-300\">korean air</span>, <span class=\"font-semibold text-slate-300\">asiana airlines</span> yahoo finance'>
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
+                        <div class="flex items-center space-x-3">
+                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Yahoo Finance</span>
+                            <span class="text-xs text-slate-400">
+                                <span class="text-indigo-400 font-medium">작성:</span> 2026-05-26 13:51:24
+                                <span class="mx-1 text-slate-600">|</span>
+                                <span class="text-slate-500">수집:</span> 2026-05-26 13:51:35
+                            </span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">부정 (-0.6)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-lg font-bold text-slate-100 mb-2">Factbox-Airlines cancel flights in response to Middle East conflict</h3>
+                    <p class="text-sm text-slate-400 line-clamp-3 mb-4"></p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
+                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
+                                <span class="text-indigo-300">Aviation, Logistics, Tourism, Energy</span>
+                                <span class="text-slate-500">|</span>
+                                <span class="font-semibold text-slate-300">Korean Air</span>, <span class="font-semibold text-slate-300">Asiana Airlines</span>
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
+                            <p class="text-sm text-slate-200">유가 상승 압력으로 인한 국내 물가 불안 및 원화 약세 압력이 커질 수 있으며, KOSPI 내 항공 및 여행 섹터에 단기적인 악재로 작용할 가능성이 있습니다.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
+                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">중동 지역의 지정학적 갈등으로 인한 글로벌 항공 노선 취소 및 우회 운항은 국내 항공사들의 유류비 부담을 증가시키고 운송 효율성을 저하시킬 수 있습니다. 특히 대한항공과 아시아나항공 등 국적사의 유럽 및 중동 노선 우회에 따른 비용 상승이 예상되며, 글로벌 공급망 불안정성도 심화될 우려가 있습니다.</p>
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-xs text-slate-500">
+                        <span>관련성 분류 이유: 중동 분쟁으로 인한 항공편 취소는 대한항공 및 아시아나항공 등 국내 항공사의 노선 운영과 유가 변동을 통해 한국 경제에 영향을 미칠 수 있습니다.</span>
+                        <a href="https://finance.yahoo.com/news/factbox-airlines-cancel-flights-us-123532820.html" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
+                    </div>
+                    
+                </div>
+                
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["Secondary Batteries", "Automotive", "Electric Vehicles", "Chemicals & Materials"]' data-search-text='@elon musk post: tesla giga factory expansion looking into next locations for giga factories. asia is highly competitive. korea has incredibly advanced battery supply chains and amazing engineering talent. under high consideration. 일론 머스크 테슬라 ceo가 차기 기가팩토리 후보지로 한국을 유력하게 검토 중이라고 밝히며 한국의 고도화된 배터리 공급망과 우수한 엔지니어링 인재를 높이 평가했습니다. 이 발언은 국내 2차전지 밸류체인 전반에 강력한 긍정적 모멘텀을 제공하며 실제 투자 유치 시 대규모 고용 창출과 수출 증대가 기대됩니다. secondary batteries, automotive, electric vehicles, chemicals & materials <span class=\"font-semibold text-slate-300\">lg energy solution</span>, <span class=\"font-semibold text-slate-300\">samsung sdi</span>, <span class=\"font-semibold text-slate-300\">sk on</span>, <span class=\"font-semibold text-slate-300\">l&f</span>, <span class=\"font-semibold text-slate-300\">ecopro bm</span> sns (elon musk)'>
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
+                        <div class="flex items-center space-x-3">
+                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">SNS (Elon Musk)</span>
+                            <span class="text-xs text-slate-400">
+                                <span class="text-indigo-400 font-medium">작성:</span> 2026-05-26 13:13:39
+                                <span class="mx-1 text-slate-600">|</span>
+                                <span class="text-slate-500">수집:</span> 2026-05-26 13:39:13
+                            </span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 (+0.8)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-lg font-bold text-slate-100 mb-2">@Elon Musk post: Tesla Giga Factory expansion</h3>
+                    <p class="text-sm text-slate-400 line-clamp-3 mb-4">Looking into next locations for Giga factories. Asia is highly competitive. Korea has incredibly advanced battery supply chains and amazing engineering talent. Under high consideration.</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
+                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
+                                <span class="text-indigo-300">Secondary Batteries, Automotive, Electric Vehicles, Chemicals & Materials</span>
+                                <span class="text-slate-500">|</span>
+                                <span class="font-semibold text-slate-300">LG Energy Solution</span>, <span class="font-semibold text-slate-300">Samsung SDI</span>, <span class="font-semibold text-slate-300">SK On</span>, <span class="font-semibold text-slate-300">L&F</span>, <span class="font-semibold text-slate-300">EcoPro BM</span>
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
+                            <p class="text-sm text-slate-200">유치 확정 시 대규모 외자 유입에 따른 원화 강세 압력 및 2차전지 대형주 중심의 KOSPI 상승 동력으로 작용할 전망입니다.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
+                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">일론 머스크 테슬라 CEO가 차기 기가팩토리 후보지로 한국을 유력하게 검토 중이라고 밝히며 한국의 고도화된 배터리 공급망과 우수한 엔지니어링 인재를 높이 평가했습니다. 이 발언은 국내 2차전지 밸류체인 전반에 강력한 긍정적 모멘텀을 제공하며 실제 투자 유치 시 대규모 고용 창출과 수출 증대가 기대됩니다.</p>
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-xs text-slate-500">
+                        <span>관련성 분류 이유: 테슬라의 기가팩토리 한국 유치 가능성은 한국의 배터리 공급망 및 엔지니어링 산업에 직접적인 영향을 미칠 수 있는 경제적 이슈입니다.</span>
+                        <a href="https://x.com/elonmusk/status/musk-tesla-giga-korea-1779801219" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
+                    </div>
+                    
+                            <div class="mt-3 pt-3 border-t border-slate-800/50 flex flex-wrap items-center text-xs text-slate-500">
+                                <span class="mr-2">동일 보도 매체:</span>
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-800/80 text-slate-400 border border-slate-700/80 mr-1.5">SNS (Elon Musk)</span>
+                            </div>
+                            
+                </div>
+                
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["Semiconductors", "Technology & Internet", "Finance & Banking", "Automotive"]' data-search-text='@jerome powell post: fed interest rate policy briefing inflation is moderating but remains slightly above our 2% target. we will keep interest rates steady until we see clear evidence of soft landing. strong dollar policies remain. 미 연준의 고금리 동결 기조와 강달러 정책 유지는 한국 경제에 금리 인하 지연 및 원화 약세 부담을 가중시킬 것입니다. 이는 국내 금융시장의 불확실성을 높이고 내수 회복을 제약하는 요인으로 작용할 전망입니다. semiconductors, technology & internet, finance & banking, automotive <span class=\"font-semibold text-slate-300\">samsung electronics</span>, <span class=\"font-semibold text-slate-300\">sk hynix</span>, <span class=\"font-semibold text-slate-300\">naver</span>, <span class=\"font-semibold text-slate-300\">kakao</span>, <span class=\"font-semibold text-slate-300\">kb financial group</span> sns (jerome powell)'>
                     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
                         <div class="flex items-center space-x-3">
                             <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">SNS (Jerome Powell)</span>
@@ -515,8 +751,56 @@
             });
         }
         
+        // Client-side Bloomberg-like Timeline Filtering
+        let activeSector = 'ALL';
+        
+        function filterSector(sector) {
+            activeSector = sector;
+            
+            // Clear other buttons active styles
+            const buttons = document.querySelectorAll('#sectorFilters button');
+            buttons.forEach(btn => {
+                btn.className = "px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95";
+            });
+            
+            // Highlight active button
+            const safeId = sector === 'ALL' ? 'all' : sector.replace(/[^a-zA-Z0-9-_]/g, '');
+            const activeBtn = document.getElementById('filter-' + safeId);
+            if (activeBtn) {
+                activeBtn.className = "px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600 text-white border border-indigo-500/20 transition duration-200 shadow-lg shadow-indigo-950/50 hover:scale-105 active:scale-95";
+            }
+            
+            filterTimeline();
+        }
+        
+        function filterTimeline() {
+            const query = document.getElementById("searchInput").value.toLowerCase().trim();
+            const cards = document.querySelectorAll(".timeline-card");
+            
+            cards.forEach(card => {
+                const sectors = JSON.parse(card.getAttribute("data-sectors") || "[]");
+                const searchText = card.getAttribute("data-search-text") || "";
+                
+                const matchesSector = (activeSector === 'ALL') || sectors.includes(activeSector);
+                const matchesQuery = (query === '') || searchText.includes(query);
+                
+                if (matchesSector && matchesQuery) {
+                    card.style.display = "block";
+                    // Reset display transition
+                    setTimeout(() => {
+                        card.style.opacity = "1";
+                        card.style.transform = "translateY(0) scale(1)";
+                    }, 10);
+                } else {
+                    card.style.display = "none";
+                    card.style.opacity = "0";
+                    card.style.transform = "translateY(4px) scale(0.98)";
+                }
+            });
+        }
+        
         // Dynamic dynamic AJAX Fetch updates! (Runs every 15s in background, checks total item count, reloads if new)
-        let lastCount = 16;
+        let lastCount = 39;
         setInterval(() => {
             fetch('/api/count')
             .then(res => res.json())

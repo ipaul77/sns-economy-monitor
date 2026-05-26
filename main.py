@@ -55,6 +55,37 @@ def generate_html_dashboard():
     total_relevant = len(relevant_rows)
     high_alerts = len([r for r in relevant_rows if r['alert_level'] == 'HIGH'])
     
+    # Collect all unique sectors from relevant rows for client-side filtering
+    unique_sectors = set()
+    for r in relevant_rows:
+        try:
+            sectors = json.loads(r.get('impacted_sectors') or '[]')
+            if isinstance(sectors, list):
+                for s in sectors:
+                    if s.strip():
+                        unique_sectors.add(s.strip())
+            else:
+                unique_sectors.add(str(sectors).strip())
+        except Exception:
+            val = r.get('impacted_sectors')
+            if val:
+                for s in val.split(','):
+                    if s.strip():
+                        unique_sectors.add(s.strip())
+                        
+    sector_buttons_html = """
+        <button onclick="filterSector('ALL')" id="filter-all" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600 text-white border border-indigo-500/20 transition duration-200 shadow-lg shadow-indigo-950/50 hover:scale-105 active:scale-95">
+            전체보기
+        </button>
+    """
+    for sector in sorted(list(unique_sectors)):
+        safe_id = "".join([c for c in sector if c.isalnum() or c in ["-", "_"]])
+        sector_buttons_html += f"""
+        <button onclick="filterSector('{sector}')" id="filter-{safe_id}" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            {sector}
+        </button>
+        """
+    
     # Average sentiment
     sent_scores = [r['sentiment_score'] for r in relevant_rows if r['sentiment_score'] is not None]
     avg_sentiment = sum(sent_scores) / len(sent_scores) if sent_scores else 0.0
@@ -176,10 +207,25 @@ def generate_html_dashboard():
         </section>
 
         <!-- List Section -->
-        <h2 class="text-xl font-bold text-slate-100 mb-6 flex items-center">
-            <svg class="w-5 h-5 mr-2 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1M19 20a2 2 0 002-2V8a2 2 0 00-2-2h-5M19 20a2 2 0 002-2V8m-5 4h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
-            최신 분석 타임라인
-        </h2>
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+            <h2 class="text-xl font-bold text-slate-100 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1M19 20a2 2 0 002-2V8a2 2 0 00-2-2h-5M19 20a2 2 0 002-2V8m-5 4h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                최신 분석 타임라인
+            </h2>
+            
+            <!-- Sleek Search Input -->
+            <div class="relative w-full lg:w-80">
+                <input type="text" id="searchInput" oninput="filterTimeline()" placeholder="키워드 또는 기업명 실시간 검색..." class="w-full bg-slate-900/60 border border-slate-800/80 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30 transition placeholder-slate-600" />
+                <svg class="absolute left-3 top-2.5 h-4 w-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Sector Filter Badges -->
+        <div class="flex flex-wrap gap-2 mb-6" id="sectorFilters">
+            {sector_buttons_html}
+        </div>
         
         <div class="space-y-6">
     """
@@ -270,8 +316,18 @@ def generate_html_dashboard():
                     except:
                         pass
                 
+                # Sectors JSON list for easy client-side parsing
+                try:
+                    sectors_list = json.loads(r['impacted_sectors'])
+                except:
+                    sectors_list = [x.strip() for x in (r['impacted_sectors'] or '').split(',') if x.strip()]
+                sectors_json = json.dumps(sectors_list, ensure_ascii=False)
+                
+                # Combine search tokens cleanly (lowercase)
+                search_text = f"{r['title']} {r['content']} {r['korean_summary']} {sectors_str} {companies_str} {r['source']}".lower().replace('"', '\\"').replace("'", "\\'")
+                
                 html += f"""
-                <div class="glass-card rounded-2xl p-6 border {glow_class} transition duration-300 hover:bg-slate-900/50">
+                <div class="timeline-card glass-card rounded-2xl p-6 border {glow_class} transition duration-300 hover:bg-slate-900/50" data-sectors='{sectors_json}' data-search-text='{search_text}'>
                     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
                         <div class="flex items-center space-x-3">
                             <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">{r['source']}</span>
@@ -523,6 +579,54 @@ def generate_html_dashboard():
                 alert("수동 갱신 오류가 발생했습니다.");
                 btn.disabled = false;
                 btn.innerHTML = "🔄 실시간 수동 갱신";
+            }});
+        }}
+        
+        // Client-side Bloomberg-like Timeline Filtering
+        let activeSector = 'ALL';
+        
+        function filterSector(sector) {{
+            activeSector = sector;
+            
+            // Clear other buttons active styles
+            const buttons = document.querySelectorAll('#sectorFilters button');
+            buttons.forEach(btn => {{
+                btn.className = "px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95";
+            }});
+            
+            // Highlight active button
+            const safeId = sector === 'ALL' ? 'all' : sector.replace(/[^a-zA-Z0-9-_]/g, '');
+            const activeBtn = document.getElementById('filter-' + safeId);
+            if (activeBtn) {{
+                activeBtn.className = "px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600 text-white border border-indigo-500/20 transition duration-200 shadow-lg shadow-indigo-950/50 hover:scale-105 active:scale-95";
+            }}
+            
+            filterTimeline();
+        }}
+        
+        function filterTimeline() {{
+            const query = document.getElementById("searchInput").value.toLowerCase().trim();
+            const cards = document.querySelectorAll(".timeline-card");
+            
+            cards.forEach(card => {{
+                const sectors = JSON.parse(card.getAttribute("data-sectors") || "[]");
+                const searchText = card.getAttribute("data-search-text") || "";
+                
+                const matchesSector = (activeSector === 'ALL') || sectors.includes(activeSector);
+                const matchesQuery = (query === '') || searchText.includes(query);
+                
+                if (matchesSector && matchesQuery) {{
+                    card.style.display = "block";
+                    // Reset display transition
+                    setTimeout(() => {{
+                        card.style.opacity = "1";
+                        card.style.transform = "translateY(0) scale(1)";
+                    }}, 10);
+                }} else {{
+                    card.style.display = "none";
+                    card.style.opacity = "0";
+                    card.style.transform = "translateY(4px) scale(0.98)";
+                }}
             }});
         }}
         
