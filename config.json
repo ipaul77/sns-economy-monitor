@@ -7,7 +7,7 @@
     "flash_model": "gemini-3.1-flash-lite",
     "pro_model": "gemini-3.5-flash"
   },
-  "scraping_interval_seconds": 60,
+  "scraping_interval_seconds": 600,
   "realtime_monitoring_enabled": false,
   "rss_feeds": [
     {
@@ -45,6 +45,33 @@
     "TSMC",
     "AI chip",
     "inflation",
-    "interest rate"
+    "interest rate",
+    "war",
+    "geopolitical",
+    "conflict",
+    "sanctions",
+    "military",
+    "tension",
+    "전쟁",
+    "지정학",
+    "갈등",
+    "제재",
+    "중동",
+    "우크라이나",
+    "대만",
+    "Fed",
+    "FOMC",
+    "tariff",
+    "trade war",
+    "oil price",
+    "WTI",
+    "OPEC",
+    "CPI",
+    "yield",
+    "금리",
+    "연준",
+    "관세",
+    "유가",
+    "국채"
   ]
 }

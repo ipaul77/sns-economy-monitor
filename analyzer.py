@@ -158,15 +158,43 @@ class GeminiEconomyAnalyzer:
             print(f"[Analyzer] Error in Stage 2 deep analysis: {str(e)}. Falling back to mock heuristic.")
             return self._mock_analyze_deep(item)
 
+    def check_relevance_local(self, item: dict) -> bool:
+        """
+        Stage 0: Local heuristic pre-filtering using target_keywords.
+        Returns True if any target keyword matches the title or content.
+        """
+        title = item.get("title", "") or ""
+        content = item.get("content", "") or ""
+        text = (title + " " + content).lower()
+        
+        keywords = self.config.get("target_keywords", [])
+        if not keywords:
+            # If no keywords are defined, default to True (don't filter anything locally)
+            return True
+            
+        for kw in keywords:
+            if kw.strip() and kw.lower() in text:
+                return True
+        return False
+
     def process_item(self, item: dict) -> tuple:
         """
-        Runs the 2-Stage processing:
+        Runs the 3-Stage processing:
+        Stage 0: Local keyword pre-filtering.
+        Stage 1: Quick filtering using Gemini Flash to determine Korean economic relevance.
+        Stage 2: Deep evaluation using Gemini Pro if relevance is YES.
+        
         Returns (relevance_check_obj, deep_analysis_obj_or_None)
         """
-        # Stage 1
+        # Stage 0: Local keyword pre-filtering to save Gemini API costs!
+        if not self.check_relevance_local(item):
+            reason = "로컬 사전 필터링: 주요 경제, 산업, 또는 지정학/정세 관련 핵심 키워드가 검출되지 않았습니다."
+            return RelevanceCheck(relevant=False, reason=reason), None
+            
+        # Stage 1: Quick filtering via Gemini Flash
         rel_check = self.check_relevance(item)
         
-        # Stage 2 (if relevant)
+        # Stage 2: Deep evaluation (if relevant)
         if rel_check.relevant:
             analysis = self.analyze_deep(item)
             return rel_check, analysis

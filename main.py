@@ -890,6 +890,10 @@ def handle_manual_refresh():
     API endpoint: Triggers a manual scraping and analysis cycle asynchronously.
     """
     try:
+        # Clear daily briefing cache to ensure fresh report generation after manual refresh!
+        from briefing import clear_briefing_cache
+        clear_briefing_cache()
+        
         # Run pipeline in a background thread to prevent Gunicorn/WSGI timeout crashes!
         t = threading.Thread(target=run_pipeline, args=(global_config, global_analyzer))
         t.start()

@@ -4,13 +4,58 @@ import json
 from datetime import datetime, timedelta
 import google.generativeai as genai
 
+CACHE_PATH = "data/briefing_cache.json"
+
+def clear_briefing_cache():
+    """
+    Clears the briefing cache to force regeneration (used during manual refresh).
+    """
+    try:
+        if os.path.exists(CACHE_PATH):
+            os.remove(CACHE_PATH)
+            print("[Briefing Cache] Cache cleared successfully.")
+    except Exception as e:
+        print(f"[Warning] Failed to clear briefing cache: {str(e)}")
+
+def save_to_cache(html_content):
+    """
+    Helper function to save briefing content to cache file.
+    """
+    try:
+        os.makedirs(os.path.dirname(CACHE_PATH), exist_ok=True)
+        cache_data = {
+            "timestamp": datetime.now().isoformat(),
+            "html_content": html_content
+        }
+        with open(CACHE_PATH, "w", encoding="utf-8") as f:
+            json.dump(cache_data, f, ensure_ascii=False, indent=2)
+        print("[Briefing Cache] Daily briefing successfully saved to cache.")
+    except Exception as e:
+        print(f"[Warning] Failed to write briefing cache: {str(e)}")
+
 def generate_daily_briefing(analyzer, db_path="data/monitor.db"):
     """
     Synthesizes the last 24 hours of relevant collected news and generates
     a comprehensive, highly professional macroeconomic executive report.
-    Supports offline fallback mode.
+    Supports caching (30 minutes expiry) and offline fallback mode.
     """
-    # 1. Fetch relevant articles from the last 24 hours
+    # 1. Check cache first!
+    if os.path.exists(CACHE_PATH):
+        try:
+            with open(CACHE_PATH, "r", encoding="utf-8") as f:
+                cache_data = json.load(f)
+            
+            cached_time_str = cache_data.get("timestamp")
+            if cached_time_str:
+                cached_time = datetime.fromisoformat(cached_time_str)
+                # Cache is valid for 30 minutes (1800 seconds)
+                if (datetime.now() - cached_time).total_seconds() < 1800:
+                    print(f"[Briefing Cache] Serving cached briefing report. (Generated at {cached_time.strftime('%H:%M:%S')})")
+                    return cache_data.get("html_content", "")
+        except Exception as e:
+            print(f"[Warning] Failed to read briefing cache: {str(e)}")
+
+    # 2. Fetch relevant articles from the last 24 hours
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
@@ -27,9 +72,11 @@ def generate_daily_briefing(analyzer, db_path="data/monitor.db"):
     conn.close()
     
     if not rows:
-        return get_peaceful_market_report()
+        html_report = get_peaceful_market_report()
+        save_to_cache(html_report)
+        return html_report
         
-    # 2. Compile articles for LLM prompt context
+    # 3. Compile articles for LLM prompt context
     context_list = []
     for r in rows:
         try:
@@ -48,7 +95,7 @@ def generate_daily_briefing(analyzer, db_path="data/monitor.db"):
         
     context_text = "\n".join(context_list)
     
-    # 3. Request Gemini Synthesis (Stage 2 Model)
+    # 4. Request Gemini Synthesis (Stage 2 Model)
     if analyzer.api_configured:
         try:
             pro_model_name = analyzer.config.get("models", {}).get("pro_model", "gemini-1.5-pro")
@@ -80,12 +127,15 @@ def generate_daily_briefing(analyzer, db_path="data/monitor.db"):
             response = model.generate_content(prompt)
             # Remove raw code block markers if LLM generates them
             cleaned_text = response.text.replace("```html", "").replace("```", "").strip()
+            save_to_cache(cleaned_text)
             return cleaned_text
         except Exception as e:
             print(f"[Warning] Gemini failed daily briefing synthesis: {str(e)}. Falling back to mock briefing.")
             
     # Heuristic Offline Fallback Synthesis
-    return get_fallback_briefing_report(rows)
+    fallback_report = get_fallback_briefing_report(rows)
+    save_to_cache(fallback_report)
+    return fallback_report
 
 def get_peaceful_market_report():
     return """
