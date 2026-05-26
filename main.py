@@ -608,7 +608,7 @@ def run_pipeline(config, analyzer):
         found_group = False
         for group in grouped_items:
             primary = group[0]
-            if get_similarity(item["title"], primary["title"]) > 0.75:
+            if db.get_similarity(item["title"], primary["title"]) > 0.75:
                 group.append(item)
                 found_group = True
                 break
