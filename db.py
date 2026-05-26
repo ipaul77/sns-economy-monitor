@@ -354,13 +354,14 @@ def fetch_recent_relevant(hours=24) -> list:
     if USE_FIREBASE:
         try:
             docs = db_client.collection("history")\
-                            .where("is_relevant", "==", 1)\
                             .where("processed_at", ">=", cutoff)\
                             .stream()
             results = []
             for doc in docs:
-                results.append(doc.to_dict())
-            # Sort manually by processed_at DESC since Firestore multiple filters need indices
+                data = doc.to_dict()
+                if data.get("is_relevant") == 1:
+                    results.append(data)
+            # Sort manually by processed_at DESC
             results.sort(key=lambda x: x.get("processed_at", ""), reverse=True)
             return results
         except Exception as e:
