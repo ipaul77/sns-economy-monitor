@@ -155,27 +155,23 @@ def generate_html_dashboard():
             {market_html}
         </section>
 
-        <!-- Stats Grid -->
-        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 my-6">
-            <div class="glass-card rounded-2xl p-6 glow-orange">
-                <p class="text-sm font-medium text-slate-400">수집 및 검사 피드</p>
-                <p class="mt-2 text-3xl font-bold text-slate-100">{total_processed} 건</p>
-                <p class="mt-2 text-xs text-slate-500">누적 캐시 체크 포함</p>
+        <!-- Stats Grid (Compact) -->
+        <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 my-4">
+            <div class="glass-card rounded-xl p-3 glow-orange">
+                <p class="text-xs font-semibold text-slate-400">수집 및 검사 피드</p>
+                <p class="mt-1 text-lg font-extrabold text-slate-100">{total_processed} 건</p>
             </div>
-            <div class="glass-card rounded-2xl p-6 glow-green">
-                <p class="text-sm font-medium text-slate-400">한국 경제 연관 기사</p>
-                <p class="mt-2 text-3xl font-bold text-emerald-400">{total_relevant} 건</p>
-                <p class="mt-2 text-xs text-slate-500">전체 수집 항목 중 필터링 통과</p>
+            <div class="glass-card rounded-xl p-3 glow-green">
+                <p class="text-xs font-semibold text-slate-400">연관 기사</p>
+                <p class="mt-1 text-lg font-extrabold text-emerald-400">{total_relevant} 건</p>
             </div>
-            <div class="glass-card rounded-2xl p-6 glow-red">
-                <p class="text-sm font-medium text-slate-400">고위험 경보 (HIGH)</p>
-                <p class="mt-2 text-3xl font-bold text-rose-500">{high_alerts} 건</p>
-                <p class="mt-2 text-xs text-slate-500">집중 모니터링이 필요한 기사</p>
+            <div class="glass-card rounded-xl p-3 glow-red">
+                <p class="text-xs font-semibold text-slate-400">고위험 경보 (HIGH)</p>
+                <p class="mt-1 text-lg font-extrabold text-rose-500">{high_alerts} 건</p>
             </div>
-            <div class="glass-card rounded-2xl p-6">
-                <p class="text-sm font-medium text-slate-400">평균 감성 지수</p>
-                <p class="mt-2 text-3xl font-bold {sentiment_class}">{avg_sentiment:+.2f}</p>
-                <p class="mt-2 text-xs text-slate-500">동향: {sentiment_label}</p>
+            <div class="glass-card rounded-xl p-3 glow-blue">
+                <p class="text-xs font-semibold text-slate-400">평균 감성 지수</p>
+                <p class="mt-1 text-lg font-extrabold {sentiment_class}">{avg_sentiment:+.2f}</p>
             </div>
         </section>
 
@@ -313,20 +309,7 @@ def generate_html_dashboard():
                 </div>
                 """
             else:
-                # Not relevant card
-                html += f"""
-                <div class="glass-card rounded-2xl p-4 border border-slate-900 opacity-60 hover:opacity-100 transition duration-300">
-                    <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
-                        <div class="flex items-center space-x-2">
-                            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">{r['source']}</span>
-                            <span>{processed_at}</span>
-                        </div>
-                        <span class="text-slate-600">● 한국 경제와 관련 없음</span>
-                    </div>
-                    <h4 class="text-sm font-semibold text-slate-300 line-clamp-1">{r['title']}</h4>
-                    <p class="text-xs text-slate-500 mt-1">사유: {r['relevance_reason']}</p>
-                </div>
-                """
+                pass
                 
     html += f"""
         </div>
