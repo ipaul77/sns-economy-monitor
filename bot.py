@@ -19,72 +19,66 @@ def query_local_history(query_text, analyzer, db_path="data/monitor.db"):
     if not keywords:
         keywords = [query_text.strip()]
         
-    # 2. Query SQLite for matching context
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    
-    # We build a query dynamically searching for all keywords
-    conditions = []
-    params = []
-    for kw in keywords:
-        # Search in title, content, summary, and macro impacts
-        conditions.append("(title LIKE ? OR content LIKE ? OR korean_summary LIKE ? OR macro_impacts LIKE ?)")
-        search_term = f"%{kw}%"
-        params.extend([search_term, search_term, search_term, search_term])
-        
-    where_clause = " AND ".join(conditions)
-    
-    # Run the query
-    query_str = f"SELECT * FROM history WHERE is_relevant = 1 AND ({where_clause}) ORDER BY processed_at DESC LIMIT 6"
-    
-    context_records = []
+    # 2. Fetch history and search locally (works perfectly on both SQLite & Firestore!)
+    import db
     try:
-        cursor.execute(query_str, params)
-        rows = cursor.fetchall()
-        for r in rows:
-            try:
-                sectors = ", ".join(json.loads(r['impacted_sectors']))
-            except:
-                sectors = r['impacted_sectors'] or "기타"
-                
-            try:
-                companies = ", ".join(json.loads(r['impacted_companies']))
-            except:
-                companies = r['impacted_companies'] or "없음"
-                
-            context_records.append(
-                f"[기사] {r['title']} ({r['source']}) | {r['processed_at'][:10]}\n"
-                f"- 요약: {r['korean_summary']}\n"
-                f"- 업종/수혜기업: {sectors} / {companies}\n"
-                f"- 증시영향: {r['macro_impacts']}\n"
-                f"- 경보 등급: {r['alert_level']}"
-            )
+        history = db.fetch_history(limit=100)
     except Exception as e:
-        print(f"[Error] RAG Database query failed: {str(e)}")
-        rows = []
-    finally:
-        conn.close()
+        print(f"[Error] RAG history fetch failed: {str(e)}")
+        history = []
+        
+    matching_rows = []
+    for r in history:
+        if r.get("is_relevant") != 1:
+            continue
+            
+        title = r.get("title", "") or ""
+        content = r.get("content", "") or ""
+        summary = r.get("korean_summary", "") or ""
+        macro = r.get("macro_impacts", "") or ""
+        text = (title + " " + content + " " + summary + " " + macro).lower()
+        
+        # Check if all keywords are in the text (AND matching)
+        match = True
+        for kw in keywords:
+            if kw.lower() not in text:
+                match = False
+                break
+                
+        if match:
+            matching_rows.append(r)
+            if len(matching_rows) >= 6:
+                break
+                
+    context_records = []
+    for r in matching_rows:
+        try:
+            sectors = ", ".join(json.loads(r['impacted_sectors']))
+        except:
+            sectors = r['impacted_sectors'] or "기타"
+            
+        try:
+            companies = ", ".join(json.loads(r['impacted_companies']))
+        except:
+            companies = r['impacted_companies'] or "없음"
+            
+        context_records.append(
+            f"[기사] {r['title']} ({r['source']}) | {r['processed_at'][:10]}\n"
+            f"- 요약: {r['korean_summary']}\n"
+            f"- 업종/수혜기업: {sectors} / {companies}\n"
+            f"- 증시영향: {r['macro_impacts']}\n"
+            f"- 경보 등급: {r['alert_level']}"
+        )
         
     # 3. If no matching records are found, try a wider search or fall back to general database search
     if not context_records:
-        # Fetch the top 4 latest relevant records as general fallback context
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        try:
-            cursor.execute("SELECT * FROM history WHERE is_relevant = 1 ORDER BY processed_at DESC LIMIT 4")
-            rows = cursor.fetchall()
-            for r in rows:
-                context_records.append(
-                    f"[최신 기사] {r['title']} ({r['source']})\n"
-                    f"- 요약: {r['korean_summary']}\n"
-                    f"- 증시영향: {r['macro_impacts']}"
-                )
-        except Exception:
-            pass
-        finally:
-            conn.close()
+        fallback_rows = [x for x in history if x.get("is_relevant") == 1][:4]
+        for r in fallback_rows:
+            context_records.append(
+                f"[최신 기사] {r['title']} ({r['source']})\n"
+                f"- 요약: {r['korean_summary']}\n"
+                f"- 증시영향: {r['macro_impacts']}"
+            )
             
     context_text = "\n\n".join(context_records) if context_records else "수집된 관련 데이터베이스 정보 없음."
     

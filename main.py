@@ -16,6 +16,7 @@ import scraper
 from analyzer import GeminiEconomyAnalyzer
 from market import get_market_indicators
 from alerts import send_telegram_alert, send_slack_alert
+import db
 
 DB_DIR = "data"
 DB_PATH = os.path.join(DB_DIR, "monitor.db")
@@ -29,83 +30,13 @@ global_config = {}
 global_analyzer = None
 
 def setup_database():
-    """
-    Initializes the SQLite database and creates the history table if it doesn't exist.
-    """
-    if not os.path.exists(DB_DIR):
-        os.makedirs(DB_DIR)
-        
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    
-    # Create monitoring history table
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS history (
-            url TEXT PRIMARY KEY,
-            title TEXT,
-            content TEXT,
-            source TEXT,
-            published_at TEXT,
-            processed_at TEXT,
-            is_relevant INTEGER,
-            relevance_reason TEXT,
-            sentiment TEXT,
-            sentiment_score REAL,
-            relevance_score INTEGER,
-            impacted_sectors TEXT,
-            impacted_companies TEXT,
-            macro_impacts TEXT,
-            korean_summary TEXT,
-            alert_level TEXT,
-            other_sources TEXT
-        )
-    """)
-    conn.commit()
-    
-    # Migrate existing database columns if any
-    try:
-        cursor.execute("ALTER TABLE history ADD COLUMN other_sources TEXT")
-        conn.commit()
-    except sqlite3.OperationalError:
-        pass # Already exists
-        
-    conn.close()
-
-def get_similarity(a, b):
-    import difflib
-    return difflib.SequenceMatcher(None, a.lower(), b.lower()).ratio()
+    db.setup_db()
 
 def find_similar_in_db(title):
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    cursor.execute("SELECT url, title, other_sources, source FROM history")
-    rows = cursor.fetchall()
-    conn.close()
-    
-    for r in rows:
-        if get_similarity(title, r['title']) > 0.75:
-            return r
-    return None
+    return db.find_similar(title)
 
 def update_other_sources_in_db(url, new_source):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT other_sources FROM history WHERE url = ?", (url,))
-    row = cursor.fetchone()
-    
-    current_sources = []
-    if row and row[0]:
-        try:
-            current_sources = json.loads(row[0])
-        except:
-            current_sources = [x.strip() for x in row[0].split(",") if x.strip()]
-            
-    if new_source not in current_sources:
-        current_sources.append(new_source)
-        cursor.execute("UPDATE history SET other_sources = ? WHERE url = ?", (json.dumps(current_sources, ensure_ascii=False), url))
-        conn.commit()
-    conn.close()
+    db.update_other_sources(url, new_source)
 
 def generate_html_dashboard():
     """
@@ -113,12 +44,7 @@ def generate_html_dashboard():
     Fetches real-time stock/exchange rate market indicators dynamically on generation!
     """
     try:
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM history ORDER BY processed_at DESC")
-        rows = cursor.fetchall()
-        conn.close()
+        rows = db.fetch_history()
     except Exception as e:
         print(f"[Error] Failed to read database for HTML generation: {str(e)}")
         return
@@ -634,68 +560,10 @@ def generate_html_dashboard():
         print(f"[Error] Failed to write dashboard.html: {str(e)}")
 
 def is_already_processed(url):
-    """
-    Checks if a URL has already been processed and logged.
-    """
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT 1 FROM history WHERE url = ?", (url,))
-    exists = cursor.fetchone() is not None
-    conn.close()
-    return exists
+    return db.is_already_processed(url)
 
 def save_analysis_result(item, rel_check, analysis, other_sources=None):
-    """
-    Saves the analyzed item to the SQLite database.
-    """
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    
-    now_str = datetime.now().isoformat()
-    
-    is_relevant_int = 1 if rel_check.relevant else 0
-    relevance_reason = rel_check.reason
-    
-    if analysis:
-        sentiment = analysis.sentiment
-        sentiment_score = analysis.sentiment_score
-        relevance_score = analysis.relevance_score
-        impacted_sectors = json.dumps(analysis.impacted_sectors, ensure_ascii=False)
-        impacted_companies = json.dumps(analysis.impacted_companies, ensure_ascii=False)
-        macro_impacts = analysis.macro_impacts
-        korean_summary = analysis.korean_summary
-        alert_level = analysis.alert_level
-    else:
-        sentiment = None
-        sentiment_score = None
-        relevance_score = None
-        impacted_sectors = None
-        impacted_companies = None
-        macro_impacts = None
-        korean_summary = None
-        alert_level = None
-        
-    other_sources_json = json.dumps(other_sources, ensure_ascii=False) if other_sources else None
-        
-    try:
-        cursor.execute("""
-            INSERT OR REPLACE INTO history (
-                url, title, content, source, published_at, processed_at, 
-                is_relevant, relevance_reason, sentiment, sentiment_score, 
-                relevance_score, impacted_sectors, impacted_companies, 
-                macro_impacts, korean_summary, alert_level, other_sources
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            item["url"], item["title"], item["content"], item["source"], item["published_at"], now_str,
-            is_relevant_int, relevance_reason, sentiment, sentiment_score, 
-            relevance_score, impacted_sectors, impacted_companies, 
-            macro_impacts, korean_summary, alert_level, other_sources_json
-        ))
-        conn.commit()
-    except Exception as e:
-        print(f"[Error] Failed to save record to DB: {str(e)}")
-    finally:
-        conn.close()
+    db.save_analysis_result(item, rel_check, analysis, other_sources)
 
 def append_to_logfile(item, rel_check, analysis, other_sources=None):
     """
@@ -840,6 +708,13 @@ def run_pipeline(config, analyzer):
     
     # 3. Generate updated HTML dashboard
     generate_html_dashboard()
+    
+    # 4. Auto-Purge old records to keep Firestore database size forever free!
+    try:
+        retention_days = config.get("data_retention_days", 14)
+        db.purge_old_records(retention_days)
+    except Exception as e:
+        print(f"[Warning] Auto-Purge failed: {str(e)}")
 
 
 # --- FLASK APP ENDPOINTS ---
@@ -906,15 +781,8 @@ def handle_item_count():
     """
     API endpoint: Returns the total count of processed items to allow dynamic frontend reload triggers.
     """
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM history")
-        count = cursor.fetchone()[0]
-        conn.close()
-        return jsonify({"count": count})
-    except:
-        return jsonify({"count": 0})
+    count = db.fetch_total_count()
+    return jsonify({"count": count})
 
 
 # --- SCHEDULER & RUN THREAD ---

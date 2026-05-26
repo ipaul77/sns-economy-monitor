@@ -10,4 +10,4 @@ log.txt
 .vscode/
 .antigravity/
 .gemini/
-*.log
+firebase_credentials.json

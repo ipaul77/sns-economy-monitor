@@ -56,20 +56,8 @@ def generate_daily_briefing(analyzer, db_path="data/monitor.db"):
             print(f"[Warning] Failed to read briefing cache: {str(e)}")
 
     # 2. Fetch relevant articles from the last 24 hours
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    
-    # Calculate cutoff time (24 hours ago)
-    cutoff = (datetime.now() - timedelta(hours=24)).isoformat()
-    
-    cursor.execute("""
-        SELECT * FROM history 
-        WHERE is_relevant = 1 AND processed_at >= ?
-        ORDER BY processed_at DESC
-    """, (cutoff,))
-    rows = cursor.fetchall()
-    conn.close()
+    import db
+    rows = db.fetch_recent_relevant(hours=24)
     
     if not rows:
         html_report = get_peaceful_market_report()
