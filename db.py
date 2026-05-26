@@ -25,13 +25,19 @@ def init_db():
         print("[DB] firebase-admin package is not installed. Falling back to local SQLite.")
         return
 
+    def safe_init(cred):
+        try:
+            firebase_admin.get_app()
+        except ValueError:
+            firebase_admin.initialize_app(cred)
+
     # 1. Check Render / Cloud Environment Variable first
     cred_json = os.getenv("FIREBASE_CREDENTIALS")
     if cred_json:
         try:
             cred_dict = json.loads(cred_json)
             cred = credentials.Certificate(cred_dict)
-            firebase_admin.initialize_app(cred)
+            safe_init(cred)
             db_client = firestore.client()
             USE_FIREBASE = True
             print("[DB] Successfully initialized Firebase Firestore via Environment Variable!")
@@ -44,7 +50,7 @@ def init_db():
     if os.path.exists(cred_file_path):
         try:
             cred = credentials.Certificate(cred_file_path)
-            firebase_admin.initialize_app(cred)
+            safe_init(cred)
             db_client = firestore.client()
             USE_FIREBASE = True
             print("[DB] Successfully initialized Firebase Firestore via local JSON credentials!")
