@@ -2,7 +2,11 @@ import os
 import json
 import sqlite3
 import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+
+def get_kst_now():
+    kst = timezone(timedelta(hours=9))
+    return datetime.now(kst).replace(tzinfo=None)
 
 # Try to import Firebase Admin SDK
 try:
@@ -146,7 +150,7 @@ def find_similar(title: str) -> dict:
     Searches the database for a story with a highly similar title (>0.75 similarity)
     processed within the last 3 days to prevent duplicate processing.
     """
-    cutoff = (datetime.now() - timedelta(days=3)).isoformat()
+    cutoff = (get_kst_now() - timedelta(days=3)).isoformat()
     
     if USE_FIREBASE:
         try:
@@ -234,7 +238,7 @@ def save_analysis_result(item: dict, rel_check, analysis, other_sources=None):
     """
     Saves a newly processed article and its structured AI analysis results.
     """
-    now_str = datetime.now().isoformat()
+    now_str = get_kst_now().isoformat()
     is_relevant_int = 1 if rel_check.relevant else 0
     relevance_reason = rel_check.reason
     
@@ -349,7 +353,7 @@ def fetch_recent_relevant(hours=24) -> list:
     """
     Fetches relevant articles processed within the last N hours.
     """
-    cutoff = (datetime.now() - timedelta(hours=hours)).isoformat()
+    cutoff = (get_kst_now() - timedelta(hours=hours)).isoformat()
     
     if USE_FIREBASE:
         try:
@@ -415,7 +419,7 @@ def purge_old_records(retention_days=14) -> int:
     Cleans up old analysis history documents that are older than the retention threshold.
     Crucial for keeping Firestore database size forever free!
     """
-    cutoff = (datetime.now() - timedelta(days=retention_days)).isoformat()
+    cutoff = (get_kst_now() - timedelta(days=retention_days)).isoformat()
     deleted_count = 0
     
     if USE_FIREBASE:

@@ -3,6 +3,7 @@ import sqlite3
 import json
 from datetime import datetime, timedelta
 import google.generativeai as genai
+import db
 
 CACHE_PATH = "data/briefing_cache.json"
 
@@ -24,7 +25,7 @@ def save_to_cache(html_content):
     try:
         os.makedirs(os.path.dirname(CACHE_PATH), exist_ok=True)
         cache_data = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": db.get_kst_now().isoformat(),
             "html_content": html_content
         }
         with open(CACHE_PATH, "w", encoding="utf-8") as f:
@@ -49,7 +50,7 @@ def generate_daily_briefing(analyzer, db_path="data/monitor.db"):
             if cached_time_str:
                 cached_time = datetime.fromisoformat(cached_time_str)
                 # Cache is valid for 30 minutes (1800 seconds)
-                if (datetime.now() - cached_time).total_seconds() < 1800:
+                if (db.get_kst_now() - cached_time).total_seconds() < 1800:
                     print(f"[Briefing Cache] Serving cached briefing report. (Generated at {cached_time.strftime('%H:%M:%S')})")
                     return cache_data.get("html_content", "")
         except Exception as e:

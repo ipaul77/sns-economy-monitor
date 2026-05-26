@@ -1,7 +1,8 @@
 import os
 import json
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+import email.utils
 import urllib.parse
 import xml.etree.ElementTree as ET
 import requests
@@ -62,16 +63,22 @@ def fetch_rss_feeds(feed_list):
                     if dc_date is not None:
                         pub_date_str = dc_date.text
                 
-                # Standardize pub date
-                pub_date = datetime.now().isoformat()
+                # Standardize pub date to KST (UTC + 9)
+                kst = timezone(timedelta(hours=9))
+                pub_date = datetime.now(kst).replace(tzinfo=None).isoformat()
                 if pub_date_str:
                     try:
-                        # Attempt standard RSS pubDate parsing, otherwise fallback
-                        # e.g., 'Mon, 25 May 2026 10:00:00 GMT'
-                        parsed_t = datetime.strptime(pub_date_str[:25].strip(), "%a, %d %b %Y %H:%M:%S")
-                        pub_date = parsed_t.isoformat()
+                        # Attempt to parse standard RFC 2822 format (includes timezone info) and convert to KST
+                        dt = email.utils.parsedate_to_datetime(pub_date_str)
+                        pub_date = dt.astimezone(kst).replace(tzinfo=None).isoformat()
                     except Exception:
-                        pass
+                        try:
+                            # Fallback standard strptime parse if email.utils fails (assumed as UTC/GMT)
+                            parsed_t = datetime.strptime(pub_date_str[:25].strip(), "%a, %d %b %Y %H:%M:%S")
+                            parsed_t = parsed_t.replace(tzinfo=timezone.utc)
+                            pub_date = parsed_t.astimezone(kst).replace(tzinfo=None).isoformat()
+                        except Exception:
+                            pass
                 
                 description = ""
                 desc_elem = item.find("description")
@@ -98,7 +105,8 @@ def generate_mock_sns_posts(personalities):
     to test the 2-stage filtering/routing analyzer.
     """
     posts = []
-    now = datetime.now()
+    kst = timezone(timedelta(hours=9))
+    now = datetime.now(kst).replace(tzinfo=None)
     
     # Pre-defined mock scenarios
     scenarios = [

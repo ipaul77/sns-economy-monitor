@@ -561,7 +561,7 @@ def append_to_logfile(item, rel_check, analysis, other_sources=None):
     """
     Appends cumulative logs to log.txt with beautiful timestamp headings.
     """
-    timestamp = datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
+    timestamp = db.get_kst_now().strftime("[%Y-%m-%d %H:%M:%S]")
     log_lines = []
     
     log_lines.append(f"{timestamp} SOURCE: {item['source']}")
@@ -602,7 +602,7 @@ def run_pipeline(config, analyzer):
     Runs a single cycle of the pipeline: crawl -> check cache -> analyze -> save & log.
     Sends instant push notifications for HIGH level economic warnings.
     """
-    cycle_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cycle_time = db.get_kst_now().strftime("%Y-%m-%d %H:%M:%S")
     print(Style.BRIGHT + Fore.CYAN + f"\n--- Starting Monitoring Cycle: {cycle_time} ---")
     
     # 1. Fetch
