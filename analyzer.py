@@ -234,42 +234,70 @@ class GeminiEconomyAnalyzer:
         relevance_score = 5
         sectors = ["기타"]
         companies = []
+        macro_impacts = "국내 매크로 지표 변동성 모니터링 지속 필요."
+        korean_summary = f"[{title}] 기사에 대한 모니터링이 필요한 시점입니다."
+        alert_level = "LOW"
         
-        if "nvidia" in text or "hbm" in text or "semiconductor" in text or "황창규" in text or "jensen huang" in text:
-            sentiment = "POSITIVE"
-            sentiment_score = 0.8
+        # 1. Semiconductors / IT
+        if any(x in text for x in ["nvidia", "hbm", "semiconductor", "jensen huang", "반도체", "하이닉스", "hynix", "삼성전자", "samsung", "리벨리온", "삼전닉스"]):
+            sentiment = "POSITIVE" if not any(y in text for y in ["우려", "악재", "소외"]) else "NEUTRAL"
+            sentiment_score = 0.8 if sentiment == "POSITIVE" else 0.1
             relevance_score = 9
             sectors = ["반도체", "IT H/W"]
-            companies = ["삼성전자", "SK하이닉스"]
-            macro_impacts = "NVIDIA의 신규 칩 수요 증가로 인한 국내 메모리 반도체 동반 수출 확대 기대로 KOSPI 반등 및 IT 수출 호조세 유입 예상."
-            korean_summary = "엔비디아가 HBM3e 공급을 다각화하고 차세대 칩 Blackwell의 대량 생산에 돌입함에 따라, 주요 메모리 공급업체인 삼성전자와 SK하이닉스의 수혜가 강력하게 예상됩니다. 반도체 수출 사이클 개선 신호입니다."
-            alert_level = "HIGH"
-        elif "tesla" in text or "giga" in text or "battery" in text or "musk" in text:
+            companies = []
+            if "하이닉스" in text or "hynix" in text or "삼전닉스" in text:
+                companies.append("SK하이닉스")
+            if "삼성" in text or "samsung" in text or "삼전" in text:
+                companies.append("삼성전자")
+            if not companies:
+                companies = ["삼성전자", "SK하이닉스"]
+                
+            macro_impacts = "글로벌 반도체 및 AI 수요 강세 지속으로 국내 IT 하드웨어 수출 증가와 KOSPI 상방 모멘텀 지원."
+            korean_summary = f"'{title}' 뉴스는 글로벌 AI 및 반도체 공급망 리스크 호재에 따른 국내 주요 반도체 제조사({', '.join(companies)})의 실적 성장 가능성을 시사합니다."
+            alert_level = "HIGH" if "1조" in text or "상한가" in text or "상승" in text else "MEDIUM"
+            
+        # 2. Batteries / EV
+        elif any(x in text for x in ["tesla", "giga", "battery", "musk", "배터리", "이차전지", "셀 3사", "lg에너지솔루션", "삼성sdi"]):
             sentiment = "POSITIVE"
             sentiment_score = 0.5
-            relevance_score = 7
+            relevance_score = 8
             sectors = ["이차전지", "자동차"]
-            companies = ["LG에너지솔루션", "현대자동차"]
-            macro_impacts = "기가팩토리 아시아 확장 및 배터리 공급망 수요 자극으로 2차전지 밸류체인 전반의 자금 수급 개선 효과 기대."
-            korean_summary = "일론 머스크의 아시아 기가팩토리 추가 확장 언급에 따라 배터리 강국인 대한민국의 강력한 배터리 공급망 인프라가 재조명받고 있습니다. LG엔솔, 삼성SDI 등 국내 배터리 셀 3사와의 협력 확장 가능성이 존재합니다."
+            companies = ["LG에너지솔루션", "삼성SDI", "SK온"]
+            macro_impacts = "글로벌 완성차 및 배터리 공급망 협력 확대로 관련 산업 자금 유입 및 관련주 변동성 확대."
+            korean_summary = f"'{title}' 소식은 아시아 지역 배터리 공급망 인프라 재조명에 따른 국내 이차전지 셀 3사의 장기 공급 파트너십 구축 및 설비 투자 확대 요인으로 평가됩니다."
             alert_level = "MEDIUM"
-        elif "powell" in text or "interest rate" in text or "fed" in text:
-            sentiment = "NEGATIVE"
-            sentiment_score = -0.3
+            
+        # 3. Interest Rates / Central Bank / Exchange Rates / Geopolitical Tensions
+        elif any(x in text for x in ["powell", "interest rate", "fed", "금리", "연준", "한국은행", "한은", "환율", "외국환", "국채", "지정학", "갈등", "전쟁"]):
+            sentiment = "NEGATIVE" if any(y in text for y in ["상방", "상승", "압력", "갈등", "전쟁", "처우", "떠나는"]) else "NEUTRAL"
+            sentiment_score = -0.4 if sentiment == "NEGATIVE" else 0.0
             relevance_score = 8
             sectors = ["거시경제", "금융"]
-            companies = ["금융지주회사"]
-            macro_impacts = "미국 연준의 고금리 장기화 기조에 따른 원/달러 환율 상방 압력 가중 및 외인 자금 이탈 가능성 가중 (KOSPI 횡보)."
-            korean_summary = "파월 연준 의장이 인플레이션 극복을 위해 고금리 기조를 유지하겠다는 신호를 보이면서 한미 금리 격차에 따른 원화 약세 압력이 고조되고 있습니다. 국내 증시 수급 부담 요소로 작용할 가능성이 큽니다."
+            companies = ["금융지주회사", "한국은행"]
+            macro_impacts = "고금리/고환율 기조 장기화 및 대외 리스크 지속에 따른 원화 가치 변동성 가중 및 KOSPI 시장의 외국인 자금 이탈 경계."
+            korean_summary = f"'{title}' 분석 결과, 글로벌 통화 정책 불확실성 및 지정학적 리스크가 맞물려 국내 자본 시장 수급 및 외환 시장 변동성 확대 부담으로 작용할 가능성이 큽니다."
             alert_level = "HIGH"
+            
+        # 4. Stock Market / Stock Prices / Trading
+        elif any(x in text for x in ["stock", "kospi", "kosdaq", "증시", "주가", "주식", "코스피", "코스닥", "개미"]):
+            sentiment = "POSITIVE" if "상승" in text or "호실적" in text or "랠리" in text or "벌자" in text or "폭발" in text else "NEUTRAL"
+            sentiment_score = 0.4 if sentiment == "POSITIVE" else 0.0
+            relevance_score = 7
+            sectors = ["증시", "금융"]
+            companies = ["증권사", "자산운용사"]
+            macro_impacts = "개인 투자자 자금 흐름 다변화 및 국내 주식 거래 대금 변동에 따른 증권업종 센티먼트 영향."
+            korean_summary = f"'{title}' 뉴스는 국내 자본시장 개미 투자자들의 투자 열기와 증시 거래대금 변화를 보여주며, 시장 유동성 및 증권가 전반의 수수료 수익 구조에 단기적 영향을 미칠 수 있습니다."
+            alert_level = "MEDIUM" if sentiment == "POSITIVE" else "LOW"
+            
+        # 5. Default Fallback
         else:
             sentiment = "NEUTRAL"
             sentiment_score = 0.1
             relevance_score = 4
-            sectors = ["글로벌 기술 IT"]
-            companies = ["삼성전자"]
-            macro_impacts = "글로벌 IT 인프라 투자 모멘텀 유지로 인한 국내 테크 업종에 대한 간접적 센티먼트 개선 지원."
-            korean_summary = "소버린 AI 인프라 투자와 핵심 모델 개발 촉진 등 글로벌 기술 트렌드의 강화 흐름은 한국 반도체 및 하드웨어 공급업체에 중장기적으로 긍정적인 산업 센티먼트를 유도합니다."
+            sectors = ["일반경제", "기업동향"]
+            companies = ["기타 국내 기업"]
+            macro_impacts = "특정 섹터의 개별 기업 재무/경영 활동으로 거시경제 전반에 대한 영향은 다소 제한적임."
+            korean_summary = f"'{title}' 뉴스는 특정 기업 또는 경제 섹터의 개별 이슈를 반영하며, 중장기적인 거시경제 영향보다는 단기 업종별 흐름 모니터링이 권장됩니다."
             alert_level = "LOW"
             
         return DeepAnalysis(

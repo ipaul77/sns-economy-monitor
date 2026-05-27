@@ -70,8 +70,8 @@
         <div class="glass-card rounded-2xl p-4 glow-red border border-slate-800/80">
             <p class="text-xs font-semibold text-slate-500">원/달러 환율 (USDKRW=X)</p>
             <div class="flex items-baseline justify-between mt-1">
-                <span class="text-lg font-bold text-slate-100">1,499.56원</span>
-                <span class="text-xs font-bold text-rose-400">-6.97 (-0.46%)</span>
+                <span class="text-lg font-bold text-slate-100">1,498.72원</span>
+                <span class="text-xs font-bold text-rose-400">-7.81 (-0.52%)</span>
             </div>
         </div>
         
@@ -97,19 +97,19 @@
         <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 my-4">
             <div class="glass-card rounded-xl p-3 glow-orange">
                 <p class="text-xs font-semibold text-slate-400">수집 및 검사 피드</p>
-                <p class="mt-1 text-lg font-extrabold text-slate-100">100 건</p>
+                <p class="mt-1 text-lg font-extrabold text-slate-100">44 건</p>
             </div>
             <div class="glass-card rounded-xl p-3 glow-green">
                 <p class="text-xs font-semibold text-slate-400">연관 기사</p>
-                <p class="mt-1 text-lg font-extrabold text-emerald-400">14 건</p>
+                <p class="mt-1 text-lg font-extrabold text-emerald-400">13 건</p>
             </div>
             <div class="glass-card rounded-xl p-3 glow-red">
                 <p class="text-xs font-semibold text-slate-400">고위험 경보 (HIGH)</p>
-                <p class="mt-1 text-lg font-extrabold text-rose-500">0 건</p>
+                <p class="mt-1 text-lg font-extrabold text-rose-500">4 건</p>
             </div>
             <div class="glass-card rounded-xl p-3 glow-blue">
                 <p class="text-xs font-semibold text-slate-400">평균 감성 지수</p>
-                <p class="mt-1 text-lg font-extrabold text-slate-400">+0.00</p>
+                <p class="mt-1 text-lg font-extrabold text-emerald-400">+0.28</p>
             </div>
         </section>
 
@@ -136,70 +136,146 @@
             전체보기
         </button>
     
-        <button onclick="filterSector('Automotive')" id="filter-Automotive" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            Automotive
+        <button onclick="filterSector('IT H/W')" id="filter-ITHW" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            IT H/W
         </button>
         
-        <button onclick="filterSector('Blockchain')" id="filter-Blockchain" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            Blockchain
+        <button onclick="filterSector('거시경제')" id="filter-거시경제" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            거시경제
         </button>
         
-        <button onclick="filterSector('Financial Services')" id="filter-FinancialServices" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            Financial Services
+        <button onclick="filterSector('금융')" id="filter-금융" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            금융
         </button>
         
-        <button onclick="filterSector('Financials')" id="filter-Financials" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            Financials
+        <button onclick="filterSector('기업동향')" id="filter-기업동향" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            기업동향
         </button>
         
-        <button onclick="filterSector('Fintech')" id="filter-Fintech" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            Fintech
+        <button onclick="filterSector('반도체')" id="filter-반도체" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            반도체
         </button>
         
-        <button onclick="filterSector('Information Technology')" id="filter-InformationTechnology" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            Information Technology
+        <button onclick="filterSector('이차전지')" id="filter-이차전지" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            이차전지
         </button>
         
-        <button onclick="filterSector('Semiconductors')" id="filter-Semiconductors" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            Semiconductors
+        <button onclick="filterSector('일반경제')" id="filter-일반경제" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            일반경제
         </button>
         
-        <button onclick="filterSector('Virtual Assets')" id="filter-VirtualAssets" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            Virtual Assets
+        <button onclick="filterSector('자동차')" id="filter-자동차" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            자동차
         </button>
         
-        <button onclick="filterSector('글로벌 기술 IT')" id="filter-글로벌기술IT" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            글로벌 기술 IT
-        </button>
-        
-        <button onclick="filterSector('배달 플랫폼')" id="filter-배달플랫폼" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            배달 플랫폼
-        </button>
-        
-        <button onclick="filterSector('외식업')" id="filter-외식업" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            외식업
-        </button>
-        
-        <button onclick="filterSector('정보기술(IT)')" id="filter-정보기술IT" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            정보기술(IT)
-        </button>
-        
-        <button onclick="filterSector('푸드테크')" id="filter-푸드테크" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            푸드테크
+        <button onclick="filterSector('증시')" id="filter-증시" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            증시
         </button>
         
         </div>
         
         <div class="space-y-6">
     
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-slate-800 transition duration-300 hover:bg-slate-900/50" data-sectors='["글로벌 기술 IT"]' data-search-text='젠슨 황 \"대만에 매년 225조 투자\"…본사 설립 계획도 발표  소버린 ai 인프라 투자와 핵심 모델 개발 촉진 등 글로벌 기술 트렌드의 강화 흐름은 한국 반도체 및 하드웨어 공급업체에 중장기적으로 긍정적인 산업 센티먼트를 유도합니다. 글로벌 기술 it <span class=\"font-semibold text-slate-100\">삼성전자</span> <span class=\"text-xs text-emerald-400 font-medium\">(307,000원 +2.68%)</span> hankyung economy'>
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["이차전지", "자동차"]' data-search-text='@elon musk post: tesla giga factory expansion looking into next locations for giga factories. asia is highly competitive. korea has incredibly advanced battery supply chains and amazing engineering talent. under high consideration. \'@elon musk post: tesla giga factory expansion\' 소식은 아시아 지역 배터리 공급망 인프라 재조명에 따른 국내 이차전지 셀 3사의 장기 공급 파트너십 구축 및 설비 투자 확대 요인으로 평가됩니다. 이차전지, 자동차 <span class=\"font-semibold text-slate-300\">lg에너지솔루션</span>, <span class=\"font-semibold text-slate-300\">삼성sdi</span>, <span class=\"font-semibold text-slate-300\">sk온</span> sns (elon musk)'>
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
+                        <div class="flex items-center space-x-3">
+                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">SNS (Elon Musk)</span>
+                            <span class="text-xs text-slate-400">
+                                <span class="text-indigo-400 font-medium">작성:</span> 2026-05-27 21:03:09
+                                <span class="mx-1 text-slate-600">|</span>
+                                <span class="text-slate-500">수집:</span> 2026-05-27 21:09:12
+                            </span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 (+0.5)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-lg font-bold text-slate-100 mb-2">@Elon Musk post: Tesla Giga Factory expansion</h3>
+                    <p class="text-sm text-slate-400 line-clamp-3 mb-4">Looking into next locations for Giga factories. Asia is highly competitive. Korea has incredibly advanced battery supply chains and amazing engineering talent. Under high consideration.</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
+                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
+                                <span class="text-indigo-300">이차전지, 자동차</span>
+                                <span class="text-slate-500">|</span>
+                                <span class="font-semibold text-slate-300">LG에너지솔루션</span>, <span class="font-semibold text-slate-300">삼성SDI</span>, <span class="font-semibold text-slate-300">SK온</span>
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
+                            <p class="text-sm text-slate-200">글로벌 완성차 및 배터리 공급망 협력 확대로 관련 산업 자금 유입 및 관련주 변동성 확대.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
+                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">'@Elon Musk post: Tesla Giga Factory expansion' 소식은 아시아 지역 배터리 공급망 인프라 재조명에 따른 국내 이차전지 셀 3사의 장기 공급 파트너십 구축 및 설비 투자 확대 요인으로 평가됩니다.</p>
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-xs text-slate-500">
+                        <span>관련성 분류 이유: 글로벌 이슈 및 핵심 키워드 (Korea, battery) 검색 매칭에 따른 한국 경제 관련성 판별 완료 (데모 모드).</span>
+                        <a href="https://x.com/elonmusk/status/musk-tesla-giga-korea-1779883389" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
+                    </div>
+                    
+                </div>
+                
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["반도체", "IT H/W"]' data-search-text='@jensen huang post: nvidia blackwell chips shipping blackwell production is in full swing. the demand for ai hardware is surging exponentially. we are working closely with our key hbm3e suppliers like samsung electronics and sk hynix in south korea to secure next-gen memory components. \'@jensen huang post: nvidia blackwell chips shipping\' 뉴스는 글로벌 ai 및 반도체 공급망 리스크 호재에 따른 국내 주요 반도체 제조사(sk하이닉스, 삼성전자)의 실적 성장 가능성을 시사합니다. 반도체, it h/w <span class=\"font-semibold text-slate-100\">sk하이닉스</span> <span class=\"text-xs text-emerald-400 font-medium\">(2,243,000원 +9.31%)</span>, <span class=\"font-semibold text-slate-100\">삼성전자</span> <span class=\"text-xs text-emerald-400 font-medium\">(307,000원 +2.68%)</span> sns (jensen huang)'>
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
+                        <div class="flex items-center space-x-3">
+                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">SNS (Jensen Huang)</span>
+                            <span class="text-xs text-slate-400">
+                                <span class="text-indigo-400 font-medium">작성:</span> 2026-05-27 20:44:09
+                                <span class="mx-1 text-slate-600">|</span>
+                                <span class="text-slate-500">수집:</span> 2026-05-27 21:09:12
+                            </span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 (+0.8)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-lg font-bold text-slate-100 mb-2">@Jensen Huang post: NVIDIA Blackwell chips shipping</h3>
+                    <p class="text-sm text-slate-400 line-clamp-3 mb-4">Blackwell production is in full swing. The demand for AI hardware is surging exponentially. We are working closely with our key HBM3e suppliers like Samsung Electronics and SK Hynix in South Korea to secure next-gen memory components.</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
+                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
+                                <span class="text-indigo-300">반도체, IT H/W</span>
+                                <span class="text-slate-500">|</span>
+                                <span class="font-semibold text-slate-100">SK하이닉스</span> <span class="text-xs text-emerald-400 font-medium">(2,243,000원 +9.31%)</span>, <span class="font-semibold text-slate-100">삼성전자</span> <span class="text-xs text-emerald-400 font-medium">(307,000원 +2.68%)</span>
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
+                            <p class="text-sm text-slate-200">글로벌 반도체 및 AI 수요 강세 지속으로 국내 IT 하드웨어 수출 증가와 KOSPI 상방 모멘텀 지원.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
+                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">'@Jensen Huang post: NVIDIA Blackwell chips shipping' 뉴스는 글로벌 AI 및 반도체 공급망 리스크 호재에 따른 국내 주요 반도체 제조사(SK하이닉스, 삼성전자)의 실적 성장 가능성을 시사합니다.</p>
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-xs text-slate-500">
+                        <span>관련성 분류 이유: 글로벌 이슈 및 핵심 키워드 (South Korea, Korea) 검색 매칭에 따른 한국 경제 관련성 판별 완료 (데모 모드).</span>
+                        <a href="https://x.com/jensenhuang/status/huang-nvidia-blackwell-hbm-1779882249" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
+                    </div>
+                    
+                </div>
+                
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-slate-800 transition duration-300 hover:bg-slate-900/50" data-sectors='["일반경제", "기업동향"]' data-search-text='젠슨 황 \"대만에 매년 225조 투자\"…본사 설립 계획도 발표  \'젠슨 황 \"대만에 매년 225조 투자\"…본사 설립 계획도 발표\' 뉴스는 특정 기업 또는 경제 섹터의 개별 이슈를 반영하며, 중장기적인 거시경제 영향보다는 단기 업종별 흐름 모니터링이 권장됩니다. 일반경제, 기업동향 <span class=\"font-semibold text-slate-300\">기타 국내 기업</span> hankyung economy'>
                     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
                         <div class="flex items-center space-x-3">
                             <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Hankyung Economy</span>
                             <span class="text-xs text-slate-400">
                                 <span class="text-indigo-400 font-medium">작성:</span> 2026-05-27 20:34:51
                                 <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-05-27 21:02:02
+                                <span class="text-slate-500">수집:</span> 2026-05-27 21:09:12
                             </span>
                         </div>
                         <div class="flex items-center space-x-2">
@@ -215,20 +291,20 @@
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
                             <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">글로벌 기술 IT</span>
+                                <span class="text-indigo-300">일반경제, 기업동향</span>
                                 <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-100">삼성전자</span> <span class="text-xs text-emerald-400 font-medium">(307,000원 +2.68%)</span>
+                                <span class="font-semibold text-slate-300">기타 국내 기업</span>
                             </p>
                         </div>
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">글로벌 IT 인프라 투자 모멘텀 유지로 인한 국내 테크 업종에 대한 간접적 센티먼트 개선 지원.</p>
+                            <p class="text-sm text-slate-200">특정 섹터의 개별 기업 재무/경영 활동으로 거시경제 전반에 대한 영향은 다소 제한적임.</p>
                         </div>
                     </div>
                     
                     <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
                         <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">소버린 AI 인프라 투자와 핵심 모델 개발 촉진 등 글로벌 기술 트렌드의 강화 흐름은 한국 반도체 및 하드웨어 공급업체에 중장기적으로 긍정적인 산업 센티먼트를 유도합니다.</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">'젠슨 황 "대만에 매년 225조 투자"…본사 설립 계획도 발표' 뉴스는 특정 기업 또는 경제 섹터의 개별 이슈를 반영하며, 중장기적인 거시경제 영향보다는 단기 업종별 흐름 모니터링이 권장됩니다.</p>
                     </div>
                     
                     <div class="flex justify-between items-center text-xs text-slate-500">
@@ -238,19 +314,19 @@
                     
                 </div>
                 
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-slate-800 transition duration-300 hover:bg-slate-900/50" data-sectors='["글로벌 기술 IT"]' data-search-text='\"8천피 찍더니\"…주식으로 돈 번 개미 덕에 매출 폭발한 곳  소버린 ai 인프라 투자와 핵심 모델 개발 촉진 등 글로벌 기술 트렌드의 강화 흐름은 한국 반도체 및 하드웨어 공급업체에 중장기적으로 긍정적인 산업 센티먼트를 유도합니다. 글로벌 기술 it <span class=\"font-semibold text-slate-100\">삼성전자</span> <span class=\"text-xs text-emerald-400 font-medium\">(307,000원 +2.68%)</span> hankyung economy'>
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["증시", "금융"]' data-search-text='\"8천피 찍더니\"…주식으로 돈 번 개미 덕에 매출 폭발한 곳  \'\"8천피 찍더니\"…주식으로 돈 번 개미 덕에 매출 폭발한 곳\' 뉴스는 국내 자본시장 개미 투자자들의 투자 열기와 증시 거래대금 변화를 보여주며, 시장 유동성 및 증권가 전반의 수수료 수익 구조에 단기적 영향을 미칠 수 있습니다. 증시, 금융 <span class=\"font-semibold text-slate-300\">증권사</span>, <span class=\"font-semibold text-slate-300\">자산운용사</span> hankyung economy'>
                     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
                         <div class="flex items-center space-x-3">
                             <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Hankyung Economy</span>
                             <span class="text-xs text-slate-400">
                                 <span class="text-indigo-400 font-medium">작성:</span> 2026-05-27 20:43:46
                                 <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-05-27 21:02:02
+                                <span class="text-slate-500">수집:</span> 2026-05-27 21:09:11
                             </span>
                         </div>
                         <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">중립 (+0.1)</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-700 text-slate-300">경보: 낮음 (LOW)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 (+0.4)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>
                         </div>
                     </div>
                     
@@ -261,20 +337,20 @@
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
                             <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">글로벌 기술 IT</span>
+                                <span class="text-indigo-300">증시, 금융</span>
                                 <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-100">삼성전자</span> <span class="text-xs text-emerald-400 font-medium">(307,000원 +2.68%)</span>
+                                <span class="font-semibold text-slate-300">증권사</span>, <span class="font-semibold text-slate-300">자산운용사</span>
                             </p>
                         </div>
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">글로벌 IT 인프라 투자 모멘텀 유지로 인한 국내 테크 업종에 대한 간접적 센티먼트 개선 지원.</p>
+                            <p class="text-sm text-slate-200">개인 투자자 자금 흐름 다변화 및 국내 주식 거래 대금 변동에 따른 증권업종 센티먼트 영향.</p>
                         </div>
                     </div>
                     
                     <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
                         <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">소버린 AI 인프라 투자와 핵심 모델 개발 촉진 등 글로벌 기술 트렌드의 강화 흐름은 한국 반도체 및 하드웨어 공급업체에 중장기적으로 긍정적인 산업 센티먼트를 유도합니다.</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">'"8천피 찍더니"…주식으로 돈 번 개미 덕에 매출 폭발한 곳' 뉴스는 국내 자본시장 개미 투자자들의 투자 열기와 증시 거래대금 변화를 보여주며, 시장 유동성 및 증권가 전반의 수수료 수익 구조에 단기적 영향을 미칠 수 있습니다.</p>
                     </div>
                     
                     <div class="flex justify-between items-center text-xs text-slate-500">
@@ -284,19 +360,19 @@
                     
                 </div>
                 
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-slate-800 transition duration-300 hover:bg-slate-900/50" data-sectors='["글로벌 기술 IT"]' data-search-text='글로벌 반도체 랠리…sk하이닉스·마이크론도 시총 \'1조 달러 클럽\'  소버린 ai 인프라 투자와 핵심 모델 개발 촉진 등 글로벌 기술 트렌드의 강화 흐름은 한국 반도체 및 하드웨어 공급업체에 중장기적으로 긍정적인 산업 센티먼트를 유도합니다. 글로벌 기술 it <span class=\"font-semibold text-slate-100\">삼성전자</span> <span class=\"text-xs text-emerald-400 font-medium\">(307,000원 +2.68%)</span> hankyung finance'>
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-rose-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["반도체", "IT H/W"]' data-search-text='글로벌 반도체 랠리…sk하이닉스·마이크론도 시총 \'1조 달러 클럽\'  \'글로벌 반도체 랠리…sk하이닉스·마이크론도 시총 \'1조 달러 클럽\'\' 뉴스는 글로벌 ai 및 반도체 공급망 리스크 호재에 따른 국내 주요 반도체 제조사(sk하이닉스)의 실적 성장 가능성을 시사합니다. 반도체, it h/w <span class=\"font-semibold text-slate-100\">sk하이닉스</span> <span class=\"text-xs text-emerald-400 font-medium\">(2,243,000원 +9.31%)</span> hankyung finance'>
                     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
                         <div class="flex items-center space-x-3">
                             <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Hankyung Finance</span>
                             <span class="text-xs text-slate-400">
                                 <span class="text-indigo-400 font-medium">작성:</span> 2026-05-27 17:40:38
                                 <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-05-27 21:02:02
+                                <span class="text-slate-500">수집:</span> 2026-05-27 21:09:11
                             </span>
                         </div>
                         <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">중립 (+0.1)</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-700 text-slate-300">경보: 낮음 (LOW)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 (+0.8)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-600 text-white shadow-lg shadow-rose-900/40">경보: 높음 (HIGH)</span>
                         </div>
                     </div>
                     
@@ -307,20 +383,20 @@
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
                             <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">글로벌 기술 IT</span>
+                                <span class="text-indigo-300">반도체, IT H/W</span>
                                 <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-100">삼성전자</span> <span class="text-xs text-emerald-400 font-medium">(307,000원 +2.68%)</span>
+                                <span class="font-semibold text-slate-100">SK하이닉스</span> <span class="text-xs text-emerald-400 font-medium">(2,243,000원 +9.31%)</span>
                             </p>
                         </div>
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">글로벌 IT 인프라 투자 모멘텀 유지로 인한 국내 테크 업종에 대한 간접적 센티먼트 개선 지원.</p>
+                            <p class="text-sm text-slate-200">글로벌 반도체 및 AI 수요 강세 지속으로 국내 IT 하드웨어 수출 증가와 KOSPI 상방 모멘텀 지원.</p>
                         </div>
                     </div>
                     
                     <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
                         <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">소버린 AI 인프라 투자와 핵심 모델 개발 촉진 등 글로벌 기술 트렌드의 강화 흐름은 한국 반도체 및 하드웨어 공급업체에 중장기적으로 긍정적인 산업 센티먼트를 유도합니다.</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">'글로벌 반도체 랠리…SK하이닉스·마이크론도 시총 '1조 달러 클럽'' 뉴스는 글로벌 AI 및 반도체 공급망 리스크 호재에 따른 국내 주요 반도체 제조사(SK하이닉스)의 실적 성장 가능성을 시사합니다.</p>
                     </div>
                     
                     <div class="flex justify-between items-center text-xs text-slate-500">
@@ -330,19 +406,19 @@
                     
                 </div>
                 
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-slate-800 transition duration-300 hover:bg-slate-900/50" data-sectors='["글로벌 기술 IT"]' data-search-text='\'반도체주 큰손\' 서희건설은 왜 랠리서 소외됐나  소버린 ai 인프라 투자와 핵심 모델 개발 촉진 등 글로벌 기술 트렌드의 강화 흐름은 한국 반도체 및 하드웨어 공급업체에 중장기적으로 긍정적인 산업 센티먼트를 유도합니다. 글로벌 기술 it <span class=\"font-semibold text-slate-100\">삼성전자</span> <span class=\"text-xs text-emerald-400 font-medium\">(307,000원 +2.68%)</span> hankyung finance'>
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["반도체", "IT H/W"]' data-search-text='\'반도체주 큰손\' 서희건설은 왜 랠리서 소외됐나  \'\'반도체주 큰손\' 서희건설은 왜 랠리서 소외됐나\' 뉴스는 글로벌 ai 및 반도체 공급망 리스크 호재에 따른 국내 주요 반도체 제조사(삼성전자, sk하이닉스)의 실적 성장 가능성을 시사합니다. 반도체, it h/w <span class=\"font-semibold text-slate-100\">삼성전자</span> <span class=\"text-xs text-emerald-400 font-medium\">(307,000원 +2.68%)</span>, <span class=\"font-semibold text-slate-100\">sk하이닉스</span> <span class=\"text-xs text-emerald-400 font-medium\">(2,243,000원 +9.31%)</span> hankyung finance'>
                     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
                         <div class="flex items-center space-x-3">
                             <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Hankyung Finance</span>
                             <span class="text-xs text-slate-400">
                                 <span class="text-indigo-400 font-medium">작성:</span> 2026-05-27 17:50:52
                                 <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-05-27 21:02:02
+                                <span class="text-slate-500">수집:</span> 2026-05-27 21:09:11
                             </span>
                         </div>
                         <div class="flex items-center space-x-2">
                             <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">중립 (+0.1)</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-700 text-slate-300">경보: 낮음 (LOW)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>
                         </div>
                     </div>
                     
@@ -353,20 +429,20 @@
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
                             <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">글로벌 기술 IT</span>
+                                <span class="text-indigo-300">반도체, IT H/W</span>
                                 <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-100">삼성전자</span> <span class="text-xs text-emerald-400 font-medium">(307,000원 +2.68%)</span>
+                                <span class="font-semibold text-slate-100">삼성전자</span> <span class="text-xs text-emerald-400 font-medium">(307,000원 +2.68%)</span>, <span class="font-semibold text-slate-100">SK하이닉스</span> <span class="text-xs text-emerald-400 font-medium">(2,243,000원 +9.31%)</span>
                             </p>
                         </div>
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">글로벌 IT 인프라 투자 모멘텀 유지로 인한 국내 테크 업종에 대한 간접적 센티먼트 개선 지원.</p>
+                            <p class="text-sm text-slate-200">글로벌 반도체 및 AI 수요 강세 지속으로 국내 IT 하드웨어 수출 증가와 KOSPI 상방 모멘텀 지원.</p>
                         </div>
                     </div>
                     
                     <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
                         <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">소버린 AI 인프라 투자와 핵심 모델 개발 촉진 등 글로벌 기술 트렌드의 강화 흐름은 한국 반도체 및 하드웨어 공급업체에 중장기적으로 긍정적인 산업 센티먼트를 유도합니다.</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">''반도체주 큰손' 서희건설은 왜 랠리서 소외됐나' 뉴스는 글로벌 AI 및 반도체 공급망 리스크 호재에 따른 국내 주요 반도체 제조사(삼성전자, SK하이닉스)의 실적 성장 가능성을 시사합니다.</p>
                     </div>
                     
                     <div class="flex justify-between items-center text-xs text-slate-500">
@@ -376,19 +452,19 @@
                     
                 </div>
                 
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-slate-800 transition duration-300 hover:bg-slate-900/50" data-sectors='["글로벌 기술 IT"]' data-search-text='[포토] \"ai 확산·지정학 갈등…대체투자 공식이 바뀐다\"  소버린 ai 인프라 투자와 핵심 모델 개발 촉진 등 글로벌 기술 트렌드의 강화 흐름은 한국 반도체 및 하드웨어 공급업체에 중장기적으로 긍정적인 산업 센티먼트를 유도합니다. 글로벌 기술 it <span class=\"font-semibold text-slate-100\">삼성전자</span> <span class=\"text-xs text-emerald-400 font-medium\">(307,000원 +2.68%)</span> hankyung finance'>
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-rose-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["거시경제", "금융"]' data-search-text='[포토] \"ai 확산·지정학 갈등…대체투자 공식이 바뀐다\"  \'[포토] \"ai 확산·지정학 갈등…대체투자 공식이 바뀐다\"\' 분석 결과, 글로벌 통화 정책 불확실성 및 지정학적 리스크가 맞물려 국내 자본 시장 수급 및 외환 시장 변동성 확대 부담으로 작용할 가능성이 큽니다. 거시경제, 금융 <span class=\"font-semibold text-slate-300\">금융지주회사</span>, <span class=\"font-semibold text-slate-300\">한국은행</span> hankyung finance'>
                     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
                         <div class="flex items-center space-x-3">
                             <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Hankyung Finance</span>
                             <span class="text-xs text-slate-400">
                                 <span class="text-indigo-400 font-medium">작성:</span> 2026-05-27 17:54:14
                                 <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-05-27 21:02:02
+                                <span class="text-slate-500">수집:</span> 2026-05-27 21:09:11
                             </span>
                         </div>
                         <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">중립 (+0.1)</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-700 text-slate-300">경보: 낮음 (LOW)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">부정 (-0.4)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-600 text-white shadow-lg shadow-rose-900/40">경보: 높음 (HIGH)</span>
                         </div>
                     </div>
                     
@@ -399,20 +475,20 @@
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
                             <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">글로벌 기술 IT</span>
+                                <span class="text-indigo-300">거시경제, 금융</span>
                                 <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-100">삼성전자</span> <span class="text-xs text-emerald-400 font-medium">(307,000원 +2.68%)</span>
+                                <span class="font-semibold text-slate-300">금융지주회사</span>, <span class="font-semibold text-slate-300">한국은행</span>
                             </p>
                         </div>
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">글로벌 IT 인프라 투자 모멘텀 유지로 인한 국내 테크 업종에 대한 간접적 센티먼트 개선 지원.</p>
+                            <p class="text-sm text-slate-200">고금리/고환율 기조 장기화 및 대외 리스크 지속에 따른 원화 가치 변동성 가중 및 KOSPI 시장의 외국인 자금 이탈 경계.</p>
                         </div>
                     </div>
                     
                     <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
                         <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">소버린 AI 인프라 투자와 핵심 모델 개발 촉진 등 글로벌 기술 트렌드의 강화 흐름은 한국 반도체 및 하드웨어 공급업체에 중장기적으로 긍정적인 산업 센티먼트를 유도합니다.</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">'[포토] "AI 확산·지정학 갈등…대체투자 공식이 바뀐다"' 분석 결과, 글로벌 통화 정책 불확실성 및 지정학적 리스크가 맞물려 국내 자본 시장 수급 및 외환 시장 변동성 확대 부담으로 작용할 가능성이 큽니다.</p>
                     </div>
                     
                     <div class="flex justify-between items-center text-xs text-slate-500">
@@ -422,19 +498,19 @@
                     
                 </div>
                 
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-slate-800 transition duration-300 hover:bg-slate-900/50" data-sectors='["글로벌 기술 IT"]' data-search-text='삼성생명 호실적에…생보업계 1분기 순익 10% 쑥 생명보험사는 올해 1분기 당기순이익이 1년 전보다 늘어난 반면 손해보험사는 감소한 것으로 나타났다. 삼성전자가 역대급 실적을 낸 덕에 생명보험 업계 맏형 격인 삼성생명의 배당금 수.. 소버린 ai 인프라 투자와 핵심 모델 개발 촉진 등 글로벌 기술 트렌드의 강화 흐름은 한국 반도체 및 하드웨어 공급업체에 중장기적으로 긍정적인 산업 센티먼트를 유도합니다. 글로벌 기술 it <span class=\"font-semibold text-slate-100\">삼성전자</span> <span class=\"text-xs text-emerald-400 font-medium\">(307,000원 +2.68%)</span> maeil business economy'>
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["반도체", "IT H/W"]' data-search-text='삼성생명 호실적에…생보업계 1분기 순익 10% 쑥 생명보험사는 올해 1분기 당기순이익이 1년 전보다 늘어난 반면 손해보험사는 감소한 것으로 나타났다. 삼성전자가 역대급 실적을 낸 덕에 생명보험 업계 맏형 격인 삼성생명의 배당금 수.. \'삼성생명 호실적에…생보업계 1분기 순익 10% 쑥\' 뉴스는 글로벌 ai 및 반도체 공급망 리스크 호재에 따른 국내 주요 반도체 제조사(삼성전자)의 실적 성장 가능성을 시사합니다. 반도체, it h/w <span class=\"font-semibold text-slate-100\">삼성전자</span> <span class=\"text-xs text-emerald-400 font-medium\">(307,000원 +2.68%)</span> maeil business economy'>
                     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
                         <div class="flex items-center space-x-3">
                             <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Maeil Business Economy</span>
                             <span class="text-xs text-slate-400">
                                 <span class="text-indigo-400 font-medium">작성:</span> 2026-05-27 17:42:23
                                 <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-05-27 21:02:01
+                                <span class="text-slate-500">수집:</span> 2026-05-27 21:09:11
                             </span>
                         </div>
                         <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">중립 (+0.1)</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-700 text-slate-300">경보: 낮음 (LOW)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 (+0.8)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>
                         </div>
                     </div>
                     
@@ -445,20 +521,20 @@
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
                             <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">글로벌 기술 IT</span>
+                                <span class="text-indigo-300">반도체, IT H/W</span>
                                 <span class="text-slate-500">|</span>
                                 <span class="font-semibold text-slate-100">삼성전자</span> <span class="text-xs text-emerald-400 font-medium">(307,000원 +2.68%)</span>
                             </p>
                         </div>
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">글로벌 IT 인프라 투자 모멘텀 유지로 인한 국내 테크 업종에 대한 간접적 센티먼트 개선 지원.</p>
+                            <p class="text-sm text-slate-200">글로벌 반도체 및 AI 수요 강세 지속으로 국내 IT 하드웨어 수출 증가와 KOSPI 상방 모멘텀 지원.</p>
                         </div>
                     </div>
                     
                     <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
                         <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">소버린 AI 인프라 투자와 핵심 모델 개발 촉진 등 글로벌 기술 트렌드의 강화 흐름은 한국 반도체 및 하드웨어 공급업체에 중장기적으로 긍정적인 산업 센티먼트를 유도합니다.</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">'삼성생명 호실적에…생보업계 1분기 순익 10% 쑥' 뉴스는 글로벌 AI 및 반도체 공급망 리스크 호재에 따른 국내 주요 반도체 제조사(삼성전자)의 실적 성장 가능성을 시사합니다.</p>
                     </div>
                     
                     <div class="flex justify-between items-center text-xs text-slate-500">
@@ -468,19 +544,19 @@
                     
                 </div>
                 
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-slate-800 transition duration-300 hover:bg-slate-900/50" data-sectors='["글로벌 기술 IT"]' data-search-text='[표] 외국환율고시표  소버린 ai 인프라 투자와 핵심 모델 개발 촉진 등 글로벌 기술 트렌드의 강화 흐름은 한국 반도체 및 하드웨어 공급업체에 중장기적으로 긍정적인 산업 센티먼트를 유도합니다. 글로벌 기술 it <span class=\"font-semibold text-slate-100\">삼성전자</span> <span class=\"text-xs text-emerald-400 font-medium\">(307,000원 +2.68%)</span> maeil business economy'>
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-rose-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["거시경제", "금융"]' data-search-text='[표] 외국환율고시표  \'[표] 외국환율고시표\' 분석 결과, 글로벌 통화 정책 불확실성 및 지정학적 리스크가 맞물려 국내 자본 시장 수급 및 외환 시장 변동성 확대 부담으로 작용할 가능성이 큽니다. 거시경제, 금융 <span class=\"font-semibold text-slate-300\">금융지주회사</span>, <span class=\"font-semibold text-slate-300\">한국은행</span> maeil business economy'>
                     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
                         <div class="flex items-center space-x-3">
                             <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Maeil Business Economy</span>
                             <span class="text-xs text-slate-400">
                                 <span class="text-indigo-400 font-medium">작성:</span> 2026-05-27 17:42:25
                                 <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-05-27 21:02:01
+                                <span class="text-slate-500">수집:</span> 2026-05-27 21:09:10
                             </span>
                         </div>
                         <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">중립 (+0.1)</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-700 text-slate-300">경보: 낮음 (LOW)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">중립 (+0.0)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-600 text-white shadow-lg shadow-rose-900/40">경보: 높음 (HIGH)</span>
                         </div>
                     </div>
                     
@@ -491,20 +567,20 @@
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
                             <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">글로벌 기술 IT</span>
+                                <span class="text-indigo-300">거시경제, 금융</span>
                                 <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-100">삼성전자</span> <span class="text-xs text-emerald-400 font-medium">(307,000원 +2.68%)</span>
+                                <span class="font-semibold text-slate-300">금융지주회사</span>, <span class="font-semibold text-slate-300">한국은행</span>
                             </p>
                         </div>
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">글로벌 IT 인프라 투자 모멘텀 유지로 인한 국내 테크 업종에 대한 간접적 센티먼트 개선 지원.</p>
+                            <p class="text-sm text-slate-200">고금리/고환율 기조 장기화 및 대외 리스크 지속에 따른 원화 가치 변동성 가중 및 KOSPI 시장의 외국인 자금 이탈 경계.</p>
                         </div>
                     </div>
                     
                     <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
                         <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">소버린 AI 인프라 투자와 핵심 모델 개발 촉진 등 글로벌 기술 트렌드의 강화 흐름은 한국 반도체 및 하드웨어 공급업체에 중장기적으로 긍정적인 산업 센티먼트를 유도합니다.</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">'[표] 외국환율고시표' 분석 결과, 글로벌 통화 정책 불확실성 및 지정학적 리스크가 맞물려 국내 자본 시장 수급 및 외환 시장 변동성 확대 부담으로 작용할 가능성이 큽니다.</p>
                     </div>
                     
                     <div class="flex justify-between items-center text-xs text-slate-500">
@@ -514,19 +590,19 @@
                     
                 </div>
                 
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-slate-800 transition duration-300 hover:bg-slate-900/50" data-sectors='["글로벌 기술 IT"]' data-search-text='[포토] kb금융, ai 반도체 기업 리벨리온과 업무협약  소버린 ai 인프라 투자와 핵심 모델 개발 촉진 등 글로벌 기술 트렌드의 강화 흐름은 한국 반도체 및 하드웨어 공급업체에 중장기적으로 긍정적인 산업 센티먼트를 유도합니다. 글로벌 기술 it <span class=\"font-semibold text-slate-100\">삼성전자</span> <span class=\"text-xs text-emerald-400 font-medium\">(307,000원 +2.68%)</span> maeil business economy'>
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["반도체", "IT H/W"]' data-search-text='[포토] kb금융, ai 반도체 기업 리벨리온과 업무협약  \'[포토] kb금융, ai 반도체 기업 리벨리온과 업무협약\' 뉴스는 글로벌 ai 및 반도체 공급망 리스크 호재에 따른 국내 주요 반도체 제조사(삼성전자, sk하이닉스)의 실적 성장 가능성을 시사합니다. 반도체, it h/w <span class=\"font-semibold text-slate-100\">삼성전자</span> <span class=\"text-xs text-emerald-400 font-medium\">(307,000원 +2.68%)</span>, <span class=\"font-semibold text-slate-100\">sk하이닉스</span> <span class=\"text-xs text-emerald-400 font-medium\">(2,243,000원 +9.31%)</span> maeil business economy'>
                     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
                         <div class="flex items-center space-x-3">
                             <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Maeil Business Economy</span>
                             <span class="text-xs text-slate-400">
                                 <span class="text-indigo-400 font-medium">작성:</span> 2026-05-27 17:42:25
                                 <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-05-27 21:02:01
+                                <span class="text-slate-500">수집:</span> 2026-05-27 21:09:10
                             </span>
                         </div>
                         <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">중립 (+0.1)</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-700 text-slate-300">경보: 낮음 (LOW)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 (+0.8)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>
                         </div>
                     </div>
                     
@@ -537,20 +613,20 @@
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
                             <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">글로벌 기술 IT</span>
+                                <span class="text-indigo-300">반도체, IT H/W</span>
                                 <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-100">삼성전자</span> <span class="text-xs text-emerald-400 font-medium">(307,000원 +2.68%)</span>
+                                <span class="font-semibold text-slate-100">삼성전자</span> <span class="text-xs text-emerald-400 font-medium">(307,000원 +2.68%)</span>, <span class="font-semibold text-slate-100">SK하이닉스</span> <span class="text-xs text-emerald-400 font-medium">(2,243,000원 +9.31%)</span>
                             </p>
                         </div>
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">글로벌 IT 인프라 투자 모멘텀 유지로 인한 국내 테크 업종에 대한 간접적 센티먼트 개선 지원.</p>
+                            <p class="text-sm text-slate-200">글로벌 반도체 및 AI 수요 강세 지속으로 국내 IT 하드웨어 수출 증가와 KOSPI 상방 모멘텀 지원.</p>
                         </div>
                     </div>
                     
                     <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
                         <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">소버린 AI 인프라 투자와 핵심 모델 개발 촉진 등 글로벌 기술 트렌드의 강화 흐름은 한국 반도체 및 하드웨어 공급업체에 중장기적으로 긍정적인 산업 센티먼트를 유도합니다.</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">'[포토] KB금융, AI 반도체 기업 리벨리온과 업무협약' 뉴스는 글로벌 AI 및 반도체 공급망 리스크 호재에 따른 국내 주요 반도체 제조사(삼성전자, SK하이닉스)의 실적 성장 가능성을 시사합니다.</p>
                     </div>
                     
                     <div class="flex justify-between items-center text-xs text-slate-500">
@@ -560,18 +636,18 @@
                     
                 </div>
                 
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-slate-800 transition duration-300 hover:bg-slate-900/50" data-sectors='["글로벌 기술 IT"]' data-search-text='명품 판매 38% 늘었는데 … 마트는 \'한파\' 40대 직장인 지 모씨는 최근 주식 투자로 수익을 보자 백화점에서 그동안 미뤄뒀던 명품 가방을 구입할 계획이다. 지씨는 \"주변에서 소비를 조금씩 늘리는 모습이 보인다\"면서 \"아주 .. 소버린 ai 인프라 투자와 핵심 모델 개발 촉진 등 글로벌 기술 트렌드의 강화 흐름은 한국 반도체 및 하드웨어 공급업체에 중장기적으로 긍정적인 산업 센티먼트를 유도합니다. 글로벌 기술 it <span class=\"font-semibold text-slate-100\">삼성전자</span> <span class=\"text-xs text-emerald-400 font-medium\">(307,000원 +2.68%)</span> maeil business economy'>
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-slate-800 transition duration-300 hover:bg-slate-900/50" data-sectors='["증시", "금융"]' data-search-text='명품 판매 38% 늘었는데 … 마트는 \'한파\' 40대 직장인 지 모씨는 최근 주식 투자로 수익을 보자 백화점에서 그동안 미뤄뒀던 명품 가방을 구입할 계획이다. 지씨는 \"주변에서 소비를 조금씩 늘리는 모습이 보인다\"면서 \"아주 .. \'명품 판매 38% 늘었는데 … 마트는 \'한파\'\' 뉴스는 국내 자본시장 개미 투자자들의 투자 열기와 증시 거래대금 변화를 보여주며, 시장 유동성 및 증권가 전반의 수수료 수익 구조에 단기적 영향을 미칠 수 있습니다. 증시, 금융 <span class=\"font-semibold text-slate-300\">증권사</span>, <span class=\"font-semibold text-slate-300\">자산운용사</span> maeil business economy'>
                     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
                         <div class="flex items-center space-x-3">
                             <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Maeil Business Economy</span>
                             <span class="text-xs text-slate-400">
                                 <span class="text-indigo-400 font-medium">작성:</span> 2026-05-27 17:50:10
                                 <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-05-27 21:02:01
+                                <span class="text-slate-500">수집:</span> 2026-05-27 21:09:10
                             </span>
                         </div>
                         <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">중립 (+0.1)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">중립 (+0.0)</span>
                             <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-700 text-slate-300">경보: 낮음 (LOW)</span>
                         </div>
                     </div>
@@ -583,20 +659,20 @@
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
                             <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">글로벌 기술 IT</span>
+                                <span class="text-indigo-300">증시, 금융</span>
                                 <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-100">삼성전자</span> <span class="text-xs text-emerald-400 font-medium">(307,000원 +2.68%)</span>
+                                <span class="font-semibold text-slate-300">증권사</span>, <span class="font-semibold text-slate-300">자산운용사</span>
                             </p>
                         </div>
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">글로벌 IT 인프라 투자 모멘텀 유지로 인한 국내 테크 업종에 대한 간접적 센티먼트 개선 지원.</p>
+                            <p class="text-sm text-slate-200">개인 투자자 자금 흐름 다변화 및 국내 주식 거래 대금 변동에 따른 증권업종 센티먼트 영향.</p>
                         </div>
                     </div>
                     
                     <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
                         <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">소버린 AI 인프라 투자와 핵심 모델 개발 촉진 등 글로벌 기술 트렌드의 강화 흐름은 한국 반도체 및 하드웨어 공급업체에 중장기적으로 긍정적인 산업 센티먼트를 유도합니다.</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">'명품 판매 38% 늘었는데 … 마트는 '한파'' 뉴스는 국내 자본시장 개미 투자자들의 투자 열기와 증시 거래대금 변화를 보여주며, 시장 유동성 및 증권가 전반의 수수료 수익 구조에 단기적 영향을 미칠 수 있습니다.</p>
                     </div>
                     
                     <div class="flex justify-between items-center text-xs text-slate-500">
@@ -606,19 +682,19 @@
                     
                 </div>
                 
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-slate-800 transition duration-300 hover:bg-slate-900/50" data-sectors='["글로벌 기술 IT"]' data-search-text='\"시중銀보다 처우 못해\" … 한은서 떠나는 40대 한국은행 본부 소속 40대 팀장급 직원이 올해 세계은행 파견근무 중 현지 취업했다. 지난해와 올해에는 또 다른 40대 팀장급 직원 3명이 잇따라 핀테크 기업 토스의 계열사인 토스인.. 소버린 ai 인프라 투자와 핵심 모델 개발 촉진 등 글로벌 기술 트렌드의 강화 흐름은 한국 반도체 및 하드웨어 공급업체에 중장기적으로 긍정적인 산업 센티먼트를 유도합니다. 글로벌 기술 it <span class=\"font-semibold text-slate-100\">삼성전자</span> <span class=\"text-xs text-emerald-400 font-medium\">(307,000원 +2.68%)</span> maeil business economy'>
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-rose-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["거시경제", "금융"]' data-search-text='\"시중銀보다 처우 못해\" … 한은서 떠나는 40대 한국은행 본부 소속 40대 팀장급 직원이 올해 세계은행 파견근무 중 현지 취업했다. 지난해와 올해에는 또 다른 40대 팀장급 직원 3명이 잇따라 핀테크 기업 토스의 계열사인 토스인.. \'\"시중銀보다 처우 못해\" … 한은서 떠나는 40대\' 분석 결과, 글로벌 통화 정책 불확실성 및 지정학적 리스크가 맞물려 국내 자본 시장 수급 및 외환 시장 변동성 확대 부담으로 작용할 가능성이 큽니다. 거시경제, 금융 <span class=\"font-semibold text-slate-300\">금융지주회사</span>, <span class=\"font-semibold text-slate-300\">한국은행</span> maeil business economy'>
                     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
                         <div class="flex items-center space-x-3">
                             <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Maeil Business Economy</span>
                             <span class="text-xs text-slate-400">
                                 <span class="text-indigo-400 font-medium">작성:</span> 2026-05-27 17:50:11
                                 <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-05-27 21:02:01
+                                <span class="text-slate-500">수집:</span> 2026-05-27 21:09:10
                             </span>
                         </div>
                         <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">중립 (+0.1)</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-700 text-slate-300">경보: 낮음 (LOW)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">부정 (-0.4)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-600 text-white shadow-lg shadow-rose-900/40">경보: 높음 (HIGH)</span>
                         </div>
                     </div>
                     
@@ -629,20 +705,20 @@
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
                             <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">글로벌 기술 IT</span>
+                                <span class="text-indigo-300">거시경제, 금융</span>
                                 <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-100">삼성전자</span> <span class="text-xs text-emerald-400 font-medium">(307,000원 +2.68%)</span>
+                                <span class="font-semibold text-slate-300">금융지주회사</span>, <span class="font-semibold text-slate-300">한국은행</span>
                             </p>
                         </div>
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">글로벌 IT 인프라 투자 모멘텀 유지로 인한 국내 테크 업종에 대한 간접적 센티먼트 개선 지원.</p>
+                            <p class="text-sm text-slate-200">고금리/고환율 기조 장기화 및 대외 리스크 지속에 따른 원화 가치 변동성 가중 및 KOSPI 시장의 외국인 자금 이탈 경계.</p>
                         </div>
                     </div>
                     
                     <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
                         <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">소버린 AI 인프라 투자와 핵심 모델 개발 촉진 등 글로벌 기술 트렌드의 강화 흐름은 한국 반도체 및 하드웨어 공급업체에 중장기적으로 긍정적인 산업 센티먼트를 유도합니다.</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">'"시중銀보다 처우 못해" … 한은서 떠나는 40대' 분석 결과, 글로벌 통화 정책 불확실성 및 지정학적 리스크가 맞물려 국내 자본 시장 수급 및 외환 시장 변동성 확대 부담으로 작용할 가능성이 큽니다.</p>
                     </div>
                     
                     <div class="flex justify-between items-center text-xs text-slate-500">
@@ -652,186 +728,48 @@
                     
                 </div>
                 
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["Semiconductors", "Automotive", "Financials", "Information Technology"]' data-search-text='jamie dimon warns markets have \'too much exuberance,\' joining forecasters like michael burry seeing a looming correction  제이미 다이먼 jp모건 회장과 마이클 버리 등 금융 전문가들이 미국 증시의 과열과 잠재적 조정 가능성을 경고했습니다. 대외 의존도가 높은 한국 경제 특성상 미국발 증시 조정은 국내 증시의 외국인 자금 유출을 유도하고 수출 대형주에 부정적인 영향을 미칠 수 있습니다. 이에 따라 투자자들의 안전자산 선호 심리가 강화될 것으로 전망됩니다. semiconductors, automotive, financials, information technology <span class=\"font-semibold text-slate-300\">samsung electronics</span>, <span class=\"font-semibold text-slate-300\">sk hynix</span>, <span class=\"font-semibold text-slate-300\">hyundai motor</span>, <span class=\"font-semibold text-slate-300\">lg energy solution</span> yahoo finance'>
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-slate-800 transition duration-300 hover:bg-slate-900/50" data-sectors='["일반경제", "기업동향"]' data-search-text='schaeffler, spire global team up for space hardware, satellite platforms in europe  \'schaeffler, spire global team up for space hardware, satellite platforms in europe\' 뉴스는 특정 기업 또는 경제 섹터의 개별 이슈를 반영하며, 중장기적인 거시경제 영향보다는 단기 업종별 흐름 모니터링이 권장됩니다. 일반경제, 기업동향 <span class=\"font-semibold text-slate-300\">기타 국내 기업</span> yahoo finance'>
                     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
                         <div class="flex items-center space-x-3">
                             <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Yahoo Finance</span>
                             <span class="text-xs text-slate-400">
-                                <span class="text-indigo-400 font-medium">작성:</span> 2026-05-27 20:57:08
+                                <span class="text-indigo-400 font-medium">작성:</span> 2026-05-27 21:09:06
                                 <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-05-27 20:57:27
+                                <span class="text-slate-500">수집:</span> 2026-05-27 21:09:10
                             </span>
                         </div>
                         <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">부정 (-0.6)</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>
-                        </div>
-                    </div>
-                    
-                    <h3 class="text-lg font-bold text-slate-100 mb-2">Jamie Dimon warns markets have 'too much exuberance,' joining forecasters like Michael Burry seeing a looming correction</h3>
-                    <p class="text-sm text-slate-400 line-clamp-3 mb-4"></p>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
-                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">Semiconductors, Automotive, Financials, Information Technology</span>
-                                <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-300">Samsung Electronics</span>, <span class="font-semibold text-slate-300">SK Hynix</span>, <span class="font-semibold text-slate-300">Hyundai Motor</span>, <span class="font-semibold text-slate-300">LG Energy Solution</span>
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">글로벌 투자심리 위축으로 인한 KOSPI 지수의 하방 압력 가중, 원/달러 환율 상승(원화 가치 하락), 그리고 글로벌 경기 둔화 우려에 따른 한국 수출 기업들의 실적 우려 제기.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
-                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">제이미 다이먼 JP모건 회장과 마이클 버리 등 금융 전문가들이 미국 증시의 과열과 잠재적 조정 가능성을 경고했습니다. 대외 의존도가 높은 한국 경제 특성상 미국발 증시 조정은 국내 증시의 외국인 자금 유출을 유도하고 수출 대형주에 부정적인 영향을 미칠 수 있습니다. 이에 따라 투자자들의 안전자산 선호 심리가 강화될 것으로 전망됩니다.</p>
-                    </div>
-                    
-                    <div class="flex justify-between items-center text-xs text-slate-500">
-                        <span>관련성 분류 이유: 제이미 다이먼의 글로벌 시장 과열 경고는 한국 증시 및 금융 시장의 투자 심리와 직접적인 연관성이 있습니다.</span>
-                        <a href="https://finance.yahoo.com/markets/stocks/articles/jamie-dimon-warns-markets-too-105500576.html" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
-                    </div>
-                    
-                </div>
-                
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-slate-800 transition duration-300 hover:bg-slate-900/50" data-sectors='["Virtual Assets", "Fintech", "Financial Services"]' data-search-text='clarity act chaos? automating compliant crypto yield with ai  미국의 가상자산 규제 명확성 법안(clarity act)과 ai를 활용한 컴플라이언스 준수형 이자율 상품 자동화에 대한 분석입니다. 국내 가상자산 거래소 및 핀테크 업계는 글로벌 규제 표준화에 따른 시스템 대응 요구를 받게 될 것이나 직접적인 타격은 제한적일 것으로 전망됩니다. 장기적으로는 규제 투명성 강화가 ai 기반 핀테크 솔루션 도입을 촉진할 수 있습니다. virtual assets, fintech, financial services <span class=\"font-semibold text-slate-300\">dunamu</span>, <span class=\"font-semibold text-slate-300\">bithumb korea</span>, <span class=\"font-semibold text-slate-300\">korbit</span>, <span class=\"font-semibold text-slate-300\">coinone</span> yahoo finance'>
-                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
-                        <div class="flex items-center space-x-3">
-                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Yahoo Finance</span>
-                            <span class="text-xs text-slate-400">
-                                <span class="text-indigo-400 font-medium">작성:</span> 2026-05-27 09:23:43
-                                <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-05-27 09:23:58
-                            </span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">중립 (+0.0)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">중립 (+0.1)</span>
                             <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-700 text-slate-300">경보: 낮음 (LOW)</span>
                         </div>
                     </div>
                     
-                    <h3 class="text-lg font-bold text-slate-100 mb-2">Clarity Act Chaos? Automating Compliant Crypto Yield with AI</h3>
+                    <h3 class="text-lg font-bold text-slate-100 mb-2">Schaeffler, Spire Global team up for space hardware, satellite platforms in Europe</h3>
                     <p class="text-sm text-slate-400 line-clamp-3 mb-4"></p>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
                             <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">Virtual Assets, Fintech, Financial Services</span>
+                                <span class="text-indigo-300">일반경제, 기업동향</span>
                                 <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-300">Dunamu</span>, <span class="font-semibold text-slate-300">Bithumb Korea</span>, <span class="font-semibold text-slate-300">Korbit</span>, <span class="font-semibold text-slate-300">Coinone</span>
+                                <span class="font-semibold text-slate-300">기타 국내 기업</span>
                             </p>
                         </div>
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">환율이나 코스피 지수에 미치는 직접적인 영향은 극히 제한적이나, 글로벌 디지털 자산 규제 변화에 따른 국내 가상자산 테마주 및 기술주의 단기 변동성 요인이 될 수 있습니다.</p>
+                            <p class="text-sm text-slate-200">특정 섹터의 개별 기업 재무/경영 활동으로 거시경제 전반에 대한 영향은 다소 제한적임.</p>
                         </div>
                     </div>
                     
                     <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
                         <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">미국의 가상자산 규제 명확성 법안(Clarity Act)과 AI를 활용한 컴플라이언스 준수형 이자율 상품 자동화에 대한 분석입니다. 국내 가상자산 거래소 및 핀테크 업계는 글로벌 규제 표준화에 따른 시스템 대응 요구를 받게 될 것이나 직접적인 타격은 제한적일 것으로 전망됩니다. 장기적으로는 규제 투명성 강화가 AI 기반 핀테크 솔루션 도입을 촉진할 수 있습니다.</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">'Schaeffler, Spire Global team up for space hardware, satellite platforms in Europe' 뉴스는 특정 기업 또는 경제 섹터의 개별 이슈를 반영하며, 중장기적인 거시경제 영향보다는 단기 업종별 흐름 모니터링이 권장됩니다.</p>
                     </div>
                     
                     <div class="flex justify-between items-center text-xs text-slate-500">
-                        <span>관련성 분류 이유: 암호화폐 시장과 AI 기술은 한국의 금융 및 기술 산업과 밀접하게 연관되어 있어 한국 경제에 영향을 미칠 수 있습니다.</span>
-                        <a href="https://finance.yahoo.com/markets/crypto/articles/clarity-act-chaos-automating-compliant-122549006.html" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
-                    </div>
-                    
-                </div>
-                
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["외식업", "푸드테크", "배달 플랫폼", "정보기술(IT)"]' data-search-text='ai could soon let anyone launch a restaurant in under a minute, wonder founder says  ai 기술을 활용해 누구나 쉽게 가상 레스토랑을 창업할 수 있게 됨으로써, 한국의 고도로 발달된 배달 시장과 외식업 생태계에 큰 변화가 예상됩니다. 자영업자 비율이 높은 국내 시장 특성상 경쟁이 한층 더 치열해질 수 있는 반면, 배달 플랫폼과 it 기업에게는 새로운 비즈니스 기회가 될 것입니다. 외식업, 푸드테크, 배달 플랫폼, 정보기술(it) <span class=\"font-semibold text-slate-300\">coupang</span>, <span class=\"font-semibold text-slate-300\">woowa brothers</span>, <span class=\"font-semibold text-slate-300\">naver</span>, <span class=\"font-semibold text-slate-300\">kakao</span> yahoo finance'>
-                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
-                        <div class="flex items-center space-x-3">
-                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Yahoo Finance</span>
-                            <span class="text-xs text-slate-400">
-                                <span class="text-indigo-400 font-medium">작성:</span> 2026-05-27 07:15:39
-                                <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-05-27 07:15:54
-                            </span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">중립 (-0.1)</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>
-                        </div>
-                    </div>
-                    
-                    <h3 class="text-lg font-bold text-slate-100 mb-2">AI Could Soon Let Anyone Launch A Restaurant In Under A Minute, Wonder Founder Says</h3>
-                    <p class="text-sm text-slate-400 line-clamp-3 mb-4"></p>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
-                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">외식업, 푸드테크, 배달 플랫폼, 정보기술(IT)</span>
-                                <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-300">Coupang</span>, <span class="font-semibold text-slate-300">Woowa Brothers</span>, <span class="font-semibold text-slate-300">Naver</span>, <span class="font-semibold text-slate-300">Kakao</span>
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">자영업 시장의 과포화와 조기 폐업 증가로 인한 서민 금융 부실화 우려가 있으나, 푸드테크 산업 투자 활성화와 관련 IT 기업들의 매출 성장세는 KOSPI 내 관련 기술주에 긍정적으로 작용할 수 있습니다.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
-                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">AI 기술을 활용해 누구나 쉽게 가상 레스토랑을 창업할 수 있게 됨으로써, 한국의 고도로 발달된 배달 시장과 외식업 생태계에 큰 변화가 예상됩니다. 자영업자 비율이 높은 국내 시장 특성상 경쟁이 한층 더 치열해질 수 있는 반면, 배달 플랫폼과 IT 기업에게는 새로운 비즈니스 기회가 될 것입니다.</p>
-                    </div>
-                    
-                    <div class="flex justify-between items-center text-xs text-slate-500">
-                        <span>관련성 분류 이유: AI 기술의 비즈니스 적용은 한국의 푸드테크 및 서비스 산업 혁신과 밀접한 관련이 있습니다.</span>
-                        <a href="https://finance.yahoo.com/sectors/technology/articles/ai-could-soon-let-anyone-140107171.html" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
-                    </div>
-                    
-                </div>
-                
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-slate-800 transition duration-300 hover:bg-slate-900/50" data-sectors='["Virtual Assets", "Blockchain", "Fintech", "Financial Services"]' data-search-text='crypto industry fights senator warren\'s claim that coinbase, ripple bank charter approvals are illegal  엘리자베스 워런 미 상원의원이 코인베이스와 리플의 은행 차터 승인이 불법이라고 주장하면서 미 가상자산 업계가 이에 강력히 반발하고 나섰습니다. 이번 규제 갈등은 미국 내 디지털 자산 입법 전개에 불확실성을 더하며 가상자산 거래가 활발한 국내 시장의 투자 심리에도 영향을 미치고 있습니다. virtual assets, blockchain, fintech, financial services <span class=\"font-semibold text-slate-300\">dunamu</span>, <span class=\"font-semibold text-slate-300\">bithumb korea</span>, <span class=\"font-semibold text-slate-300\">korbit</span>, <span class=\"font-semibold text-slate-300\">coinone</span> yahoo finance'>
-                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
-                        <div class="flex items-center space-x-3">
-                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Yahoo Finance</span>
-                            <span class="text-xs text-slate-400">
-                                <span class="text-indigo-400 font-medium">작성:</span> 2026-05-26 23:19:40
-                                <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-05-26 23:19:52
-                            </span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">부정 (-0.3)</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-700 text-slate-300">경보: 낮음 (LOW)</span>
-                        </div>
-                    </div>
-                    
-                    <h3 class="text-lg font-bold text-slate-100 mb-2">Crypto Industry Fights Senator Warren's Claim That Coinbase, Ripple Bank Charter Approvals Are Illegal</h3>
-                    <p class="text-sm text-slate-400 line-clamp-3 mb-4"></p>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
-                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">Virtual Assets, Blockchain, Fintech, Financial Services</span>
-                                <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-300">Dunamu</span>, <span class="font-semibold text-slate-300">Bithumb Korea</span>, <span class="font-semibold text-slate-300">Korbit</span>, <span class="font-semibold text-slate-300">Coinone</span>
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">원/달러 환율이나 KOSPI 지수 등 거시경제 전반에 미치는 직접적인 영향은 제한적이나 가상자산 규제 리스크로 인해 디지털 자산 관련주 및 핀테크 기업의 주가 변동성이 일시적으로 확대될 수 있습니다.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
-                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">엘리자베스 워런 미 상원의원이 코인베이스와 리플의 은행 차터 승인이 불법이라고 주장하면서 미 가상자산 업계가 이에 강력히 반발하고 나섰습니다. 이번 규제 갈등은 미국 내 디지털 자산 입법 전개에 불확실성을 더하며 가상자산 거래가 활발한 국내 시장의 투자 심리에도 영향을 미치고 있습니다.</p>
-                    </div>
-                    
-                    <div class="flex justify-between items-center text-xs text-slate-500">
-                        <span>관련성 분류 이유: 암호화폐 산업의 규제 논란은 한국의 가상자산 시장 및 관련 정책 방향에 간접적인 영향을 미칠 수 있습니다.</span>
-                        <a href="https://finance.yahoo.com/markets/crypto/articles/crypto-industry-fights-senator-warrens-140055523.html" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
+                        <span>관련성 분류 이유: 글로벌 이슈 및 핵심 키워드 (war) 검색 매칭에 따른 한국 경제 관련성 판별 완료 (데모 모드).</span>
+                        <a href="https://finance.yahoo.com/sectors/technology/articles/schaeffler-spire-global-team-space-110315422.html" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
                     </div>
                     
                 </div>
@@ -1090,7 +1028,7 @@
         }
         
         // Dynamic dynamic AJAX Fetch updates! (Runs every 15s in background, checks total item count, reloads if new)
-        let lastCount = 100;
+        let lastCount = 44;
         setInterval(() => {
             fetch('/api/count')
             .then(res => res.json())
