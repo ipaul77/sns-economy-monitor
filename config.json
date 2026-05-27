@@ -21,6 +21,18 @@
     {
       "name": "Reuters Business",
       "url": "https://www.reutersagency.com/feed/?best-types=business-finance&post_type=best"
+    },
+    {
+      "name": "Maeil Business Economy",
+      "url": "https://www.mk.co.kr/rss/30100041/"
+    },
+    {
+      "name": "Hankyung Finance",
+      "url": "https://www.hankyung.com/feed/finance"
+    },
+    {
+      "name": "Hankyung Economy",
+      "url": "https://www.hankyung.com/feed/economy"
     }
   ],
   "target_personalities": [
@@ -72,6 +84,28 @@
     "연준",
     "관세",
     "유가",
-    "국채"
+    "국채",
+    "코스피",
+    "코스닥",
+    "증시",
+    "주가",
+    "주식",
+    "삼성전자",
+    "SK하이닉스",
+    "현대차",
+    "기아",
+    "반도체",
+    "배터리",
+    "이차전지",
+    "환율",
+    "원화",
+    "한국은행",
+    "한은",
+    "금통위",
+    "수출",
+    "경기",
+    "성장률",
+    "소비자물가",
+    "물가"
   ]
 }

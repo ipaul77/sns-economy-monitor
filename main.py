@@ -1,5 +1,13 @@
 import os
 import sys
+
+# Force standard output and standard error to use UTF-8 to prevent CP949 encoding crashes on Windows
+try:
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+except AttributeError:
+    pass
+
 import json
 import time
 import sqlite3
