@@ -645,6 +645,17 @@ def generate_html_dashboard():
             .then(res => res.json())
             .then(data => {{
                 if (data.count > lastCount) {{
+                    // Skip reload if user is actively viewing briefing, chatting, or searching/filtering
+                    const briefingOpen = !document.getElementById("briefingModal").classList.contains("hidden");
+                    const chatOpen = !document.getElementById("chatWindow").classList.contains("hidden");
+                    const searchInput = document.getElementById("searchInput");
+                    const searchActive = searchInput && (document.activeElement === searchInput || searchInput.value.trim() !== "");
+                    
+                    if (briefingOpen || chatOpen || searchActive) {{
+                        console.log("[Pipeline] New news processed, but skipping reload because user is active.");
+                        return;
+                    }}
+                    
                     console.log("[Pipeline] New news processed! Reloading dashboard page dynamically.");
                     window.location.reload();
                 }}
