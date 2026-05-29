@@ -27,6 +27,40 @@ def query_local_history(query_text, analyzer, db_path="data/monitor.db"):
         print(f"[Error] RAG history fetch failed: {str(e)}")
         history = []
         
+    # Fetch recent paper trading transactions to support investment reasoning queries
+    trading_context = ""
+    try:
+        import trading_engine
+        txs = trading_engine.get_latest_transactions(limit=8)
+        if txs:
+            tx_lines = []
+            for t in txs:
+                ts = t.get("timestamp", "")
+                if ts:
+                    ts = ts[:16].replace("T", " ")
+                action = t.get("action", "HOLD")
+                ticker = t.get("ticker", "")
+                qty = t.get("quantity", 0)
+                price = t.get("price", 0.0)
+                reason = t.get("reasoning", "")
+                
+                ticker_name = ticker
+                tickers_map = {
+                    "005930": "삼성전자", "000660": "SK하이닉스", "005380": "현대차", "000270": "기아",
+                    "035420": "네이버", "035720": "카카오", "373220": "LG에너지솔루션", "006400": "삼성SDI",
+                    "051910": "LG화학", "005490": "POSCO홀딩스", "068270": "셀트리온", "042700": "한미반도체",
+                    "086520": "에코프로", "247540": "에코프로비엠", "003670": "포스코퓨처엠", "096770": "SK이노베이션"
+                }
+                ticker_name = tickers_map.get(ticker, ticker)
+                
+                tx_lines.append(
+                    f"- [{ts}] {ticker_name}({ticker}) {action} {qty}주 @ {price:,.0f}원\n"
+                    f"  * AI 투자 판단 사유: {reason}"
+                )
+            trading_context = "\n".join(tx_lines)
+    except Exception as te:
+        print(f"[Error] Failed to fetch trading context for bot: {str(te)}")
+        
     matching_rows = []
     for r in history:
         if r.get("is_relevant") != 1:
@@ -86,21 +120,26 @@ def query_local_history(query_text, analyzer, db_path="data/monitor.db"):
     system_instruction = (
         "You are an elite economic AI chatbot advisor representing the South Korean macro economy. "
         "Your name is 'K-이코노미 AI 비서'. "
-        "Your task is to answer the user's question in a professional, highly structured, and polite Korean tone. "
-        "You are supplied with a context retrieved from the monitoring database. "
-        "Answer the user's question by leveraging the supplied context. "
-        "If the context does not contain enough information to answer directly, synthesize the context as much as possible, "
-        "and then provide a comprehensive general analysis using your knowledge, clearly making the distinction between the database context and your knowledge. "
+        "Your task is to answer the user's question in a professional, highly structured, and polite Korean tone.\n\n"
+        "You are supplied with two contexts retrieved from the database:\n"
+        "1. News Monitoring Database: Recent analyzed Korean economic news.\n"
+        "2. AI Paper Trading Database: Recent simulated trading transactions and detailed investment reasons (BUY/SELL/HOLD decision reasoning).\n\n"
+        "If the user asks about recent investment decisions, portfolio holdings, why you bought/sold/held specific stocks (e.g. Samsung Electronics '005930'), or current ROI, "
+        "leverage the 'AI Paper Trading Database' context to explain the specific actions, transaction timestamps, quantities, prices, and the AI's core reasoning in detail.\n"
         "Always respond in clean markdown format with bullet points and bold headers."
     )
     
     prompt = (
         f"사용자 질문: {query_text}\n\n"
-        f"수집된 로컬 경제 뉴스 데이터베이스 문맥 정보:\n"
+        f"[문맥 1: 실시간 AI 모의투자 최근 거래 내역 및 투자 판단 사유]\n"
+        f"\"\"\"\n"
+        f"{trading_context or '최근 거래 내역 없음 (예수금 10,000,000원으로 대기 중)'}\n"
+        f"\"\"\"\n\n"
+        f"[문맥 2: 수집된 로컬 경제 뉴스 데이터베이스 정보]\n"
         f"\"\"\"\n"
         f"{context_text}\n"
         f"\"\"\"\n\n"
-        f"위 문맥 정보를 최대한 활용하여 사용자의 질문에 전문적이고 명확한 한글 답변을 작성해 주십시오."
+        f"위 제공된 정보(모의투자 거래 내역, 투자 판단 근거 및 수집된 뉴스 분석 정보)를 결합하여 사용자의 질문에 전문적이고 친절한 한글 답변을 작성해 주십시오."
     )
     
     # 5. Execute using configured Flash model (cost-efficient and low latency!)

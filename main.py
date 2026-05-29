@@ -482,6 +482,27 @@ def generate_html_dashboard():
         </div>
     </div>
 
+    <!-- AI Reasoning Detail Modal -->
+    <div id="reasoningModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+        <div class="glass-card w-full max-w-xl rounded-3xl border border-indigo-500/20 shadow-2xl p-6 overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+                <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
+                    <span id="modalStockName" class="text-indigo-400 font-extrabold"></span>
+                    <span id="modalActionBadge"></span>
+                    <span>상세 투자 판단 사유</span>
+                </h3>
+                <button onclick="closeReasoningModal()" class="text-slate-400 hover:text-slate-200 text-lg font-bold">&times;</button>
+            </div>
+            <div id="modalReasoningContent" class="py-6 overflow-y-auto text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-sans">
+            </div>
+            <div class="pt-4 border-t border-slate-800 flex justify-end">
+                <button onclick="closeReasoningModal()" class="px-5 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-750 transition">
+                    닫기
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- AI Briefing Modal -->
     <div id="briefingModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
         <div class="glass-card w-full max-w-4xl rounded-3xl p-6 border border-slate-800 shadow-2xl flex flex-col max-h-[85vh]">
@@ -675,11 +696,12 @@ def generate_html_dashboard():
                     
                     const row = document.createElement("tr");
                     row.className = "hover:bg-white/5 transition duration-150";
+                    const reasoningSafe = tx.reasoning.replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n');
                     row.innerHTML = '<td class="px-3 py-2 font-mono text-slate-500">' + time + '</td>' +
                                     '<td class="px-3 py-2">' + actionBadge + '</td>' +
                                     '<td class="px-3 py-2 font-medium text-slate-300">' + name + ' <span class="text-[8px] text-slate-500 font-mono">' + tx.ticker + '</span></td>' +
                                     '<td class="px-3 py-2 text-right font-mono text-slate-400">' + (tx.quantity > 0 ? (tx.quantity + '주 / ' + Math.round(price).toLocaleString() + '원') : '-') + '</td>' +
-                                    '<td class="px-3 py-2 text-slate-400 text-left line-clamp-1 max-w-[220px]" title="' + tx.reasoning + '">' + tx.reasoning + '</td>';
+                                    '<td class="px-3 py-2 text-slate-300 text-left truncate max-w-[240px] cursor-pointer hover:text-indigo-400 hover:underline" onclick="showReasoningModal(\'' + name + '\', \'' + tx.action + '\', \'' + reasoningSafe + '\')" title="클릭하여 전체 판단 사유 보기">' + tx.reasoning + '</td>';
                     txBody.appendChild(row);
                 }});
                 
@@ -832,6 +854,33 @@ def generate_html_dashboard():
             if (e.key === "Enter") {{
                 sendChatMessage();
             }}
+        }}
+
+        // Open/Close AI Reasoning Modal
+        function showReasoningModal(name, action, reasoning) {{
+            document.getElementById("modalStockName").textContent = name;
+            
+            const badgeEl = document.getElementById("modalActionBadge");
+            if (action === "BUY") {{
+                badgeEl.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+                badgeEl.textContent = "매수";
+            }} else if (action === "SELL") {{
+                badgeEl.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20";
+                badgeEl.textContent = "매도";
+            }} else if (action === "HOLD") {{
+                badgeEl.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700";
+                badgeEl.textContent = "관망";
+            }} else {{
+                badgeEl.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-rose-600 text-white shadow shadow-rose-900/30";
+                badgeEl.textContent = action;
+            }}
+            
+            document.getElementById("modalReasoningContent").textContent = reasoning;
+            document.getElementById("reasoningModal").classList.remove("hidden");
+        }}
+
+        function closeReasoningModal() {{
+            document.getElementById("reasoningModal").classList.add("hidden");
         }}
 
         // Open/Close AI Briefing Modal
