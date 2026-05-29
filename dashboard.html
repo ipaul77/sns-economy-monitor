@@ -70,8 +70,8 @@
         <div class="glass-card rounded-2xl p-4 glow-green border border-slate-800/80">
             <p class="text-xs font-semibold text-slate-500">원/달러 환율 (USDKRW=X)</p>
             <div class="flex items-baseline justify-between mt-1">
-                <span class="text-lg font-bold text-slate-100">1,507.91원</span>
-                <span class="text-xs font-bold text-emerald-400">+14.12 (+0.95%)</span>
+                <span class="text-lg font-bold text-slate-100">1,507.73원</span>
+                <span class="text-xs font-bold text-emerald-400">+13.94 (+0.93%)</span>
             </div>
         </div>
         
@@ -101,15 +101,15 @@
             </div>
             <div class="glass-card rounded-xl p-3 glow-green">
                 <p class="text-xs font-semibold text-slate-400">연관 기사</p>
-                <p class="mt-1 text-lg font-extrabold text-emerald-400">30 건</p>
+                <p class="mt-1 text-lg font-extrabold text-emerald-400">29 건</p>
             </div>
             <div class="glass-card rounded-xl p-3 glow-red">
                 <p class="text-xs font-semibold text-slate-400">고위험 경보 (HIGH)</p>
-                <p class="mt-1 text-lg font-extrabold text-rose-500">3 건</p>
+                <p class="mt-1 text-lg font-extrabold text-rose-500">4 건</p>
             </div>
             <div class="glass-card rounded-xl p-3 glow-blue">
                 <p class="text-xs font-semibold text-slate-400">평균 감성 지수</p>
-                <p class="mt-1 text-lg font-extrabold text-emerald-400">+0.34</p>
+                <p class="mt-1 text-lg font-extrabold text-emerald-400">+0.37</p>
             </div>
         </section>
 
@@ -282,10 +282,6 @@
             Energy Infrastructure
         </button>
         
-        <button onclick="filterSector('Energy Storage System (ESS)')" id="filter-EnergyStorageSystemESS" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            Energy Storage System (ESS)
-        </button>
-        
         <button onclick="filterSector('Equities')" id="filter-Equities" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
             Equities
         </button>
@@ -362,10 +358,6 @@
             Retail & Consumer
         </button>
         
-        <button onclick="filterSector('Secondary Battery')" id="filter-SecondaryBattery" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            Secondary Battery
-        </button>
-        
         <button onclick="filterSector('Securities')" id="filter-Securities" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
             Securities
         </button>
@@ -382,20 +374,16 @@
             Shipping & Logistics
         </button>
         
+        <button onclick="filterSector('거시경제')" id="filter-거시경제" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            거시경제
+        </button>
+        
         <button onclick="filterSector('건설 및 인프라')" id="filter-건설및인프라" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
             건설 및 인프라
         </button>
         
-        <button onclick="filterSector('건설업')" id="filter-건설업" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            건설업
-        </button>
-        
         <button onclick="filterSector('금융')" id="filter-금융" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
             금융
-        </button>
-        
-        <button onclick="filterSector('금융업')" id="filter-금융업" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            금융업
         </button>
         
         <button onclick="filterSector('기업동향')" id="filter-기업동향" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
@@ -418,22 +406,106 @@
             증권 및 금융
         </button>
         
-        <button onclick="filterSector('증권업')" id="filter-증권업" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            증권업
-        </button>
-        
         <button onclick="filterSector('증시')" id="filter-증시" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
             증시
-        </button>
-        
-        <button onclick="filterSector('채권시장')" id="filter-채권시장" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            채권시장
         </button>
         
         </div>
         
         <div class="space-y-6">
     
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-slate-800 transition duration-300 hover:bg-slate-900/50" data-sectors='["증시", "금융"]' data-search-text='this high-yield defense stock just hiked its dividend nearly 7%  \'this high-yield defense stock just hiked its dividend nearly 7%\' 뉴스는 국내 자본시장 개미 투자자들의 투자 열기와 증시 거래대금 변화를 보여주며, 시장 유동성 및 증권가 전반의 수수료 수익 구조에 단기적 영향을 미칠 수 있습니다. 증시, 금융 <span class=\"font-semibold text-slate-300\">증권사</span>, <span class=\"font-semibold text-slate-300\">자산운용사</span> yahoo finance'>
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
+                        <div class="flex items-center space-x-3">
+                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Yahoo Finance</span>
+                            <span class="text-xs text-slate-400">
+                                <span class="text-indigo-400 font-medium">작성:</span> 2026-05-29 19:58:42
+                                <span class="mx-1 text-slate-600">|</span>
+                                <span class="text-slate-500">수집:</span> 2026-05-29 19:58:47
+                            </span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">중립 (+0.0)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-700 text-slate-300">경보: 낮음 (LOW)</span>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-lg font-bold text-slate-100 mb-2">This High-Yield Defense Stock Just Hiked Its Dividend Nearly 7%</h3>
+                    <p class="text-sm text-slate-400 line-clamp-3 mb-4"></p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
+                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
+                                <span class="text-indigo-300">증시, 금융</span>
+                                <span class="text-slate-500">|</span>
+                                <span class="font-semibold text-slate-300">증권사</span>, <span class="font-semibold text-slate-300">자산운용사</span>
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
+                            <p class="text-sm text-slate-200">개인 투자자 자금 흐름 다변화 및 국내 주식 거래 대금 변동에 따른 증권업종 센티먼트 영향.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
+                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">'This High-Yield Defense Stock Just Hiked Its Dividend Nearly 7%' 뉴스는 국내 자본시장 개미 투자자들의 투자 열기와 증시 거래대금 변화를 보여주며, 시장 유동성 및 증권가 전반의 수수료 수익 구조에 단기적 영향을 미칠 수 있습니다.</p>
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-xs text-slate-500">
+                        <span>관련성 분류 이유: 글로벌 이슈 및 핵심 키워드 (yield) 검색 매칭에 따른 한국 경제 관련성 판별 완료 (데모 모드).</span>
+                        <a href="https://finance.yahoo.com/markets/stocks/articles/high-yield-defense-stock-just-233002925.html" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
+                    </div>
+                    
+                </div>
+                
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-rose-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["거시경제", "금융"]' data-search-text='i took a 100% interest rate payday loan to help a friend with $1,500: am i making a huge mistake?  \'i took a 100% interest rate payday loan to help a friend with $1,500: am i making a huge mistake?\' 분석 결과, 글로벌 통화 정책 불확실성 및 지정학적 리스크가 맞물려 국내 자본 시장 수급 및 외환 시장 변동성 확대 부담으로 작용할 가능성이 큽니다. 거시경제, 금융 <span class=\"font-semibold text-slate-300\">금융지주회사</span>, <span class=\"font-semibold text-slate-300\">한국은행</span> yahoo finance'>
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
+                        <div class="flex items-center space-x-3">
+                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Yahoo Finance</span>
+                            <span class="text-xs text-slate-400">
+                                <span class="text-indigo-400 font-medium">작성:</span> 2026-05-29 19:58:42
+                                <span class="mx-1 text-slate-600">|</span>
+                                <span class="text-slate-500">수집:</span> 2026-05-29 19:58:46
+                            </span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">중립 (+0.0)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-600 text-white shadow-lg shadow-rose-900/40">경보: 높음 (HIGH)</span>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-lg font-bold text-slate-100 mb-2">I took a 100% interest rate payday loan to help a friend with $1,500: am I making a huge mistake?</h3>
+                    <p class="text-sm text-slate-400 line-clamp-3 mb-4"></p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
+                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
+                                <span class="text-indigo-300">거시경제, 금융</span>
+                                <span class="text-slate-500">|</span>
+                                <span class="font-semibold text-slate-300">금융지주회사</span>, <span class="font-semibold text-slate-300">한국은행</span>
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
+                            <p class="text-sm text-slate-200">고금리/고환율 기조 장기화 및 대외 리스크 지속에 따른 원화 가치 변동성 가중 및 KOSPI 시장의 외국인 자금 이탈 경계.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
+                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">'I took a 100% interest rate payday loan to help a friend with $1,500: am I making a huge mistake?' 분석 결과, 글로벌 통화 정책 불확실성 및 지정학적 리스크가 맞물려 국내 자본 시장 수급 및 외환 시장 변동성 확대 부담으로 작용할 가능성이 큽니다.</p>
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-xs text-slate-500">
+                        <span>관련성 분류 이유: 글로벌 이슈 및 핵심 키워드 (interest rate) 검색 매칭에 따른 한국 경제 관련성 판별 완료 (데모 모드).</span>
+                        <a href="https://finance.yahoo.com/news/took-100-interest-rate-payday-225836174.html" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
+                    </div>
+                    
+                </div>
+                
                 <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["반도체", "IT H/W"]' data-search-text='반도체 덕에 수출·성장률 \'뜀박질\'  \'반도체 덕에 수출·성장률 \'뜀박질\'\' 뉴스는 글로벌 ai 및 반도체 공급망 리스크 호재에 따른 국내 주요 반도체 제조사(삼성전자, sk하이닉스)의 실적 성장 가능성을 시사합니다. 반도체, it h/w <span class=\"font-semibold text-slate-100\">삼성전자</span> <span class=\"text-xs text-emerald-400 font-medium\">(317,000원 +5.84%)</span>, <span class=\"font-semibold text-slate-100\">sk하이닉스</span> <span class=\"text-xs text-emerald-400 font-medium\">(2,333,000원 +1.92%)</span> hankyung economy'>
                     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
                         <div class="flex items-center space-x-3">
@@ -1678,144 +1750,6 @@
                     
                 </div>
                 
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["Banking", "Financial Services", "Securities"]' data-search-text='“몇천씩 벌었다니 안 할 수가”…‘빚투’ 광풍, 신용대출 2조 급증 코로나19 이후 月증가폭 최대 잔액도 2년반만에 최대규모 가계대출 총량 규제에 눌리다 역대급 증시 랠리에 다시 폭증 금리 상단 6% 육박해도 ‘빚투’코스피 급등장 속 ‘빚투(빚내서.. 코스피 상승장에 따른 \'빚투\' 열풍으로 신용대출이 2조 원 급증하며 코로나19 이후 최대 증가 폭을 기록했습니다. 금리가 6%에 육박하는 상황에서도 가계 대출이 급증하며 금융 불균형에 대한 우려가 커지고 있습니다. 향후 시장 조정 시 개인 투자자의 손실과 금융권 부실로 이어질 위험이 존재합니다. banking, financial services, securities <span class=\"font-semibold text-slate-300\">kb financial group</span>, <span class=\"font-semibold text-slate-300\">shinhan financial group</span>, <span class=\"font-semibold text-slate-300\">hana financial group</span>, <span class=\"font-semibold text-slate-300\">kiwoom securities</span>, <span class=\"font-semibold text-slate-300\">mirae asset securities</span> maeil business economy'>
-                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
-                        <div class="flex items-center space-x-3">
-                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Maeil Business Economy</span>
-                            <span class="text-xs text-slate-400">
-                                <span class="text-indigo-400 font-medium">작성:</span> 2026-05-29 06:55:17
-                                <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-05-29 06:42:41
-                            </span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">부정 (-0.5)</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>
-                        </div>
-                    </div>
-                    
-                    <h3 class="text-lg font-bold text-slate-100 mb-2">“몇천씩 벌었다니 안 할 수가”…‘빚투’ 광풍, 신용대출 2조 급증</h3>
-                    <p class="text-sm text-slate-400 line-clamp-3 mb-4">코로나19 이후 月증가폭 최대 잔액도 2년반만에 최대규모 가계대출 총량 규제에 눌리다 역대급 증시 랠리에 다시 폭증 금리 상단 6% 육박해도 ‘빚투’코스피 급등장 속 ‘빚투(빚내서..</p>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
-                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">Banking, Financial Services, Securities</span>
-                                <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-300">KB Financial Group</span>, <span class="font-semibold text-slate-300">Shinhan Financial Group</span>, <span class="font-semibold text-slate-300">Hana Financial Group</span>, <span class="font-semibold text-slate-300">Kiwoom Securities</span>, <span class="font-semibold text-slate-300">Mirae Asset Securities</span>
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">가계 대출 규제와 고금리 기조 속에서도 신용대출이 급증함에 따라 가계부채 리스크가 심화되고 있습니다. 이는 한국은행의 기준금리 인하 결정을 지연시키는 요인으로 작용할 수 있으며, 증시 변동성 확대 시 KOSPI 지수 하락 압력을 가중시킬 수 있습니다.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
-                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">코스피 상승장에 따른 '빚투' 열풍으로 신용대출이 2조 원 급증하며 코로나19 이후 최대 증가 폭을 기록했습니다. 금리가 6%에 육박하는 상황에서도 가계 대출이 급증하며 금융 불균형에 대한 우려가 커지고 있습니다. 향후 시장 조정 시 개인 투자자의 손실과 금융권 부실로 이어질 위험이 존재합니다.</p>
-                    </div>
-                    
-                    <div class="flex justify-between items-center text-xs text-slate-500">
-                        <span>관련성 분류 이유: 대한민국 주식 시장의 급등과 그에 따른 가계 신용대출 증가 현상을 다루고 있어 한국 경제 및 금융 시장과 직접적으로 관련이 있습니다.</span>
-                        <a href="https://www.mk.co.kr/news/economy/12060518" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
-                    </div>
-                    
-                </div>
-                
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["Secondary Battery", "Energy Storage System (ESS)"]' data-search-text='물장 뚫고 나온 불기둥 lg엔솔…‘2.4조 계약’에 15% 급등 美에너지사 ‘dte에너지’와 계약 오라클 데이터센터 전력인프라에 2026~2027년 ess 배터리 납품 급성장 美 ai데이터센터 수요공략 연내 북미 생산능력 50gwh 목표lg에너.. lg에너지솔루션이 미국 dte에너지와 약 2.4조 원 규모의 ess 배터리 공급 계약을 체결하며 주가가 15% 급등했습니다. 이번 계약은 오라클 데이터센터 전력 인프라용으로, 급성장하는 미국 ai 데이터센터 전력 수요를 본격 공략하는 계기가 될 것입니다. lg엔솔은 올해 말까지 북미 ess 생산 능력을 50gwh 규모로 확대할 계획입니다. secondary battery, energy storage system (ess) <span class=\"font-semibold text-slate-300\">lg energy solution</span> maeil business economy'>
-                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
-                        <div class="flex items-center space-x-3">
-                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Maeil Business Economy</span>
-                            <span class="text-xs text-slate-400">
-                                <span class="text-indigo-400 font-medium">작성:</span> 2026-05-29 08:00:25
-                                <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-05-29 06:42:13
-                            </span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 (+0.8)</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>
-                        </div>
-                    </div>
-                    
-                    <h3 class="text-lg font-bold text-slate-100 mb-2">물장 뚫고 나온 불기둥 LG엔솔…‘2.4조 계약’에 15% 급등</h3>
-                    <p class="text-sm text-slate-400 line-clamp-3 mb-4">美에너지사 ‘DTE에너지’와 계약 오라클 데이터센터 전력인프라에 2026~2027년 ESS 배터리 납품 급성장 美 AI데이터센터 수요공략 연내 북미 생산능력 50GWh 목표LG에너..</p>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
-                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">Secondary Battery, Energy Storage System (ESS)</span>
-                                <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-300">LG Energy Solution</span>
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">대규모 수주 계약으로 인해 KOSPI 시장 내 이차전지 업종 전반의 투자 심리가 크게 개선될 것으로 보입니다. 또한 대규모 달러 유입 기대감은 원/달러 환율 안정화에 긍정적인 요인으로 작용할 수 있습니다.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
-                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">LG에너지솔루션이 미국 DTE에너지와 약 2.4조 원 규모의 ESS 배터리 공급 계약을 체결하며 주가가 15% 급등했습니다. 이번 계약은 오라클 데이터센터 전력 인프라용으로, 급성장하는 미국 AI 데이터센터 전력 수요를 본격 공략하는 계기가 될 것입니다. LG엔솔은 올해 말까지 북미 ESS 생산 능력을 50GWh 규모로 확대할 계획입니다.</p>
-                    </div>
-                    
-                    <div class="flex justify-between items-center text-xs text-slate-500">
-                        <span>관련성 분류 이유: 대한민국 주요 기업인 LG에너지솔루션의 대규모 해외 계약 및 주가 급등 소식을 다루고 있어 한국 경제 및 주식 시장과 밀접한 관련이 있습니다.</span>
-                        <a href="https://www.mk.co.kr/news/economy/12060566" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
-                    </div>
-                    
-                </div>
-                
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["채권시장", "금융업", "건설업", "증권업"]' data-search-text='8연속 금리동결 바통받은 신현송…‘연내인상’ 매의 발톱 드러냈다 한은, 금리 동결속 깜짝 ‘인상’ 예고 점도표 상단 3.0%로 이동 신현송 총재 첫 금통위 주재 “금통위 위원 인식 일치했다” 매파적 메시지에 채권 ‘긴축 발작’“이번 금융통화위원.. 한국은행 금융통화위원회가 기준금리를 동결했으나 점도표 상단을 3.0%로 상향하며 연내 금리 인상 가능성을 강력히 시사했습니다. 신현송 총재의 첫 금통위 주재 하에 나온 매파적 메시지로 인해 채권 시장에서 긴축 발작이 발생하는 등 금융시장 변동성이 커지고 있습니다. 채권시장, 금융업, 건설업, 증권업 <span class=\"font-semibold text-slate-300\">kb금융지주</span>, <span class=\"font-semibold text-slate-300\">신한금융지주</span>, <span class=\"font-semibold text-slate-300\">삼성물산</span>, <span class=\"font-semibold text-slate-300\">미래에셋증권</span> maeil business economy'>
-                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
-                        <div class="flex items-center space-x-3">
-                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Maeil Business Economy</span>
-                            <span class="text-xs text-slate-400">
-                                <span class="text-indigo-400 font-medium">작성:</span> 2026-05-29 08:47:22
-                                <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-05-29 06:42:04
-                            </span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">부정 (-0.7)</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>
-                        </div>
-                    </div>
-                    
-                    <h3 class="text-lg font-bold text-slate-100 mb-2">8연속 금리동결 바통받은 신현송…‘연내인상’ 매의 발톱 드러냈다</h3>
-                    <p class="text-sm text-slate-400 line-clamp-3 mb-4">한은, 금리 동결속 깜짝 ‘인상’ 예고 점도표 상단 3.0%로 이동 신현송 총재 첫 금통위 주재 “금통위 위원 인식 일치했다” 매파적 메시지에 채권 ‘긴축 발작’“이번 금융통화위원..</p>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
-                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">채권시장, 금융업, 건설업, 증권업</span>
-                                <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-300">KB금융지주</span>, <span class="font-semibold text-slate-300">신한금융지주</span>, <span class="font-semibold text-slate-300">삼성물산</span>, <span class="font-semibold text-slate-300">미래에셋증권</span>
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">기준금리 추가 인상 예고로 인해 국고채 금리가 급등하며 채권 시장 전반에 충격(긴축 발작)을 주고 있습니다. 이는 원/달러 환율의 하방 압력(원화 강세)으로 작용할 수 있으나, 기업 자금 조달 비용 상승과 고금리 부담으로 인해 KOSPI 및 증시 전반에는 하방 압력을 가할 것으로 전망됩니다.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
-                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">한국은행 금융통화위원회가 기준금리를 동결했으나 점도표 상단을 3.0%로 상향하며 연내 금리 인상 가능성을 강력히 시사했습니다. 신현송 총재의 첫 금통위 주재 하에 나온 매파적 메시지로 인해 채권 시장에서 긴축 발작이 발생하는 등 금융시장 변동성이 커지고 있습니다.</p>
-                    </div>
-                    
-                    <div class="flex justify-between items-center text-xs text-slate-500">
-                        <span>관련성 분류 이유: 한국은행의 금리 정책 결정과 금융통화위원회의 통화 긴축 기조를 다루고 있어 한국 경제 및 금융 시장과 직접적인 관련이 있습니다.</span>
-                        <a href="https://www.mk.co.kr/news/economy/12060585" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
-                    </div>
-                    
-                </div>
-                
         </div>
     </div>
 
@@ -2030,9 +1964,7 @@
             .then(res => res.json())
             .then(data => {
                 if (data.status === "success") {
-                    alert("[매매 체결] 구분: " + data.action + ", 종목코드: " + data.ticker + ", 수량: " + data.quantity + "주, 단가: " + Math.round(data.price).toLocaleString() + "원
-
-[이유] " + data.reasoning);
+                    alert("[매매 체결] 구분: " + data.action + ", 종목코드: " + data.ticker + ", 수량: " + data.quantity + "주, 단가: " + Math.round(data.price).toLocaleString() + "원\n\n[이유] " + data.reasoning);
                 } else if (data.status === "skipped") {
                     alert("[매매 관망/건너뜀] 사유: " + data.message);
                 } else {

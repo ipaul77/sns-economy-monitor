@@ -693,7 +693,7 @@ def generate_html_dashboard():
             .then(res => res.json())
             .then(data => {{
                 if (data.status === "success") {{
-                    alert("[매매 체결] 구분: " + data.action + ", 종목코드: " + data.ticker + ", 수량: " + data.quantity + "주, 단가: " + Math.round(data.price).toLocaleString() + "원\n\n[이유] " + data.reasoning);
+                    alert("[매매 체결] 구분: " + data.action + ", 종목코드: " + data.ticker + ", 수량: " + data.quantity + "주, 단가: " + Math.round(data.price).toLocaleString() + "원\\n\\n[이유] " + data.reasoning);
                 }} else if (data.status === "skipped") {{
                     alert("[매매 관망/건너뜀] 사유: " + data.message);
                 }} else {{
