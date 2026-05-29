@@ -432,13 +432,27 @@ def run_simulation_cycle(bypass_hours: bool = False) -> Dict[str, Any]:
         except Exception as e:
             print(f"[Trading Engine] Failed to parse last transaction timestamp: {e}")
 
-    # 4. Fetch Market Prices (Monitored candidates)
+    # 4. Fetch Market Prices (Monitored candidates) in parallel using ThreadPoolExecutor to prevent Gunicorn worker timeouts!
+    from concurrent.futures import ThreadPoolExecutor
     monitored_tickers = ["005930", "000660", "005380", "035420", "035720", "373220", "068270"]
     market_prices = {}
-    for tick in monitored_tickers:
-        price = get_stock_price(tick)
-        if price > 0:
-            market_prices[tick] = price
+    
+    def fetch_price(tick):
+        return tick, get_stock_price(tick)
+        
+    try:
+        with ThreadPoolExecutor(max_workers=len(monitored_tickers)) as executor:
+            results = list(executor.map(fetch_price, monitored_tickers))
+            for tick, price in results:
+                if price > 0:
+                    market_prices[tick] = price
+    except Exception as e:
+        print(f"[Trading Engine] [Warning] Parallel price fetching failed: {e}. Falling back to sequential.")
+        # Fallback to sequential in case of thread pool issues
+        for tick in monitored_tickers:
+            price = get_stock_price(tick)
+            if price > 0:
+                market_prices[tick] = price
 
     # 5. Retrieve news context (latest relevant news in the past 24 hours)
     news_context = db.fetch_recent_relevant(hours=24)
