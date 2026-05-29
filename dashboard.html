@@ -70,8 +70,8 @@
         <div class="glass-card rounded-2xl p-4 glow-green border border-slate-800/80">
             <p class="text-xs font-semibold text-slate-500">원/달러 환율 (USDKRW=X)</p>
             <div class="flex items-baseline justify-between mt-1">
-                <span class="text-lg font-bold text-slate-100">1,507.73원</span>
-                <span class="text-xs font-bold text-emerald-400">+13.94 (+0.93%)</span>
+                <span class="text-lg font-bold text-slate-100">1,507.48원</span>
+                <span class="text-xs font-bold text-emerald-400">+13.69 (+0.92%)</span>
             </div>
         </div>
         
@@ -101,15 +101,15 @@
             </div>
             <div class="glass-card rounded-xl p-3 glow-green">
                 <p class="text-xs font-semibold text-slate-400">연관 기사</p>
-                <p class="mt-1 text-lg font-extrabold text-emerald-400">29 건</p>
+                <p class="mt-1 text-lg font-extrabold text-emerald-400">26 건</p>
             </div>
             <div class="glass-card rounded-xl p-3 glow-red">
                 <p class="text-xs font-semibold text-slate-400">고위험 경보 (HIGH)</p>
-                <p class="mt-1 text-lg font-extrabold text-rose-500">4 건</p>
+                <p class="mt-1 text-lg font-extrabold text-rose-500">3 건</p>
             </div>
             <div class="glass-card rounded-xl p-3 glow-blue">
                 <p class="text-xs font-semibold text-slate-400">평균 감성 지수</p>
-                <p class="mt-1 text-lg font-extrabold text-emerald-400">+0.37</p>
+                <p class="mt-1 text-lg font-extrabold text-emerald-400">+0.38</p>
             </div>
         </section>
 
@@ -242,10 +242,6 @@
             Automotive
         </button>
         
-        <button onclick="filterSector('Aviation')" id="filter-Aviation" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            Aviation
-        </button>
-        
         <button onclick="filterSector('Banking')" id="filter-Banking" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
             Banking
         </button>
@@ -262,20 +258,12 @@
             Corporate Finance
         </button>
         
-        <button onclick="filterSector('Domestic Equities')" id="filter-DomesticEquities" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            Domestic Equities
-        </button>
-        
         <button onclick="filterSector('Electric Power Equipment')" id="filter-ElectricPowerEquipment" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
             Electric Power Equipment
         </button>
         
         <button onclick="filterSector('Electronics')" id="filter-Electronics" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
             Electronics
-        </button>
-        
-        <button onclick="filterSector('Energy & Refining')" id="filter-EnergyRefining" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            Energy & Refining
         </button>
         
         <button onclick="filterSector('Energy Infrastructure')" id="filter-EnergyInfrastructure" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
@@ -338,20 +326,12 @@
             Korean Blue Chips
         </button>
         
-        <button onclick="filterSector('Large-cap Equities')" id="filter-Large-capEquities" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            Large-cap Equities
-        </button>
-        
         <button onclick="filterSector('Manufacturing')" id="filter-Manufacturing" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
             Manufacturing
         </button>
         
         <button onclick="filterSector('Memory Semiconductors')" id="filter-MemorySemiconductors" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
             Memory Semiconductors
-        </button>
-        
-        <button onclick="filterSector('Petrochemicals')" id="filter-Petrochemicals" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            Petrochemicals
         </button>
         
         <button onclick="filterSector('Retail & Consumer')" id="filter-RetailConsumer" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
@@ -368,10 +348,6 @@
         
         <button onclick="filterSector('Semiconductors')" id="filter-Semiconductors" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
             Semiconductors
-        </button>
-        
-        <button onclick="filterSector('Shipping & Logistics')" id="filter-ShippingLogistics" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            Shipping & Logistics
         </button>
         
         <button onclick="filterSector('거시경제')" id="filter-거시경제" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
@@ -1610,146 +1586,6 @@
                     
                 </div>
                 
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-slate-800 transition duration-300 hover:bg-slate-900/50" data-sectors='["Asset Management", "Financial Services", "Domestic Equities"]' data-search-text='넉달만에 국장 목표비중 추가 상향 … 180조 매도부담 덜었다 국민연금기금운용위원회가 5개월 사이에 두 차례나 국내 주식 목표 비중을 높여 잡은 것은 전례가 없는 일이다. 지난 1월 국내 주식 목표 비중을 14.4%에서 14.9%로 높였는데,.. 국민연금이 국내 주식 목표 비중을 추가로 상향 조정하면서 약 180조원에 달하는 잠재적 매도 압력이 완화되었습니다. 이는 전례 없는 조치로 기관 수급 개선을 통해 국내 증시의 안정성을 높일 것으로 기대됩니다. asset management, financial services, domestic equities <span class=\"font-semibold text-slate-300\">samsung electronics</span>, <span class=\"font-semibold text-slate-300\">sk hynix</span>, <span class=\"font-semibold text-slate-300\">hyundai motor company</span> maeil business economy'>
-                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
-                        <div class="flex items-center space-x-3">
-                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Maeil Business Economy</span>
-                            <span class="text-xs text-slate-400">
-                                <span class="text-indigo-400 font-medium">작성:</span> 2026-05-29 05:26:30
-                                <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-05-29 06:43:18
-                            </span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 (+0.8)</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-700 text-slate-300">경보: 낮음 (LOW)</span>
-                        </div>
-                    </div>
-                    
-                    <h3 class="text-lg font-bold text-slate-100 mb-2">넉달만에 국장 목표비중 추가 상향 … 180조 매도부담 덜었다</h3>
-                    <p class="text-sm text-slate-400 line-clamp-3 mb-4">국민연금기금운용위원회가 5개월 사이에 두 차례나 국내 주식 목표 비중을 높여 잡은 것은 전례가 없는 일이다. 지난 1월 국내 주식 목표 비중을 14.4%에서 14.9%로 높였는데,..</p>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
-                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">Asset Management, Financial Services, Domestic Equities</span>
-                                <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-300">Samsung Electronics</span>, <span class="font-semibold text-slate-300">SK Hynix</span>, <span class="font-semibold text-slate-300">Hyundai Motor Company</span>
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">국민연금의 매도 우려 완화로 KOSPI 및 KOSDAQ 시장의 수급 여건이 대폭 개선되며 증시에 긍정적인 요인으로 작용할 전망입니다. 환율이나 인플레이션에 미치는 직접적 영향은 적으나 주식시장 투자 심리 회복에 크게 기여할 것입니다.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
-                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">국민연금이 국내 주식 목표 비중을 추가로 상향 조정하면서 약 180조원에 달하는 잠재적 매도 압력이 완화되었습니다. 이는 전례 없는 조치로 기관 수급 개선을 통해 국내 증시의 안정성을 높일 것으로 기대됩니다.</p>
-                    </div>
-                    
-                    <div class="flex justify-between items-center text-xs text-slate-500">
-                        <span>관련성 분류 이유: 국민연금의 국내 주식 비중 조정은 한국 주식 시장의 수급과 자본 시장 흐름에 직접적인 영향을 미치는 주요 경제 이슈입니다.</span>
-                        <a href="https://www.mk.co.kr/news/economy/12060442" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
-                    </div>
-                    
-                </div>
-                
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-rose-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["Energy & Refining", "Shipping & Logistics", "Aviation", "Petrochemicals"]' data-search-text='휴전, 사실상 붕괴…미국·이란 상호공습에 종전협상 다시 안갯속 미국, 휴전에도 3일만에 또 폭격 혁명수비대도 미군 추가 공습 반격 쿠웨이트 영공서 미사일 공격 포착 트럼프 내각회의서 강경 발언 “협상 만족할 수준 아냐” 호르무즈·이란 제재·핵.. 미국과 이란의 상호 공습으로 중동 지역의 긴장이 다시 최고조에 달하며 휴전 협상이 사실상 붕괴되었습니다. 이는 호르무즈 해협의 긴장 고조와 국제 유가 급등 우려를 유발하여 한국 경제에 심각한 에너지 수급 및 물가 압박을 가할 수 있습니다. energy & refining, shipping & logistics, aviation, petrochemicals <span class=\"font-semibold text-slate-300\">sk innovation</span>, <span class=\"font-semibold text-slate-300\">s-oil</span>, <span class=\"font-semibold text-slate-300\">hmm</span>, <span class=\"font-semibold text-slate-300\">korean air</span> maeil business economy'>
-                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
-                        <div class="flex items-center space-x-3">
-                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Maeil Business Economy</span>
-                            <span class="text-xs text-slate-400">
-                                <span class="text-indigo-400 font-medium">작성:</span> 2026-05-29 05:39:40
-                                <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-05-29 06:43:04
-                            </span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">부정 (-0.8)</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-600 text-white shadow-lg shadow-rose-900/40">경보: 높음 (HIGH)</span>
-                        </div>
-                    </div>
-                    
-                    <h3 class="text-lg font-bold text-slate-100 mb-2">휴전, 사실상 붕괴…미국·이란 상호공습에 종전협상 다시 안갯속</h3>
-                    <p class="text-sm text-slate-400 line-clamp-3 mb-4">미국, 휴전에도 3일만에 또 폭격 혁명수비대도 미군 추가 공습 반격 쿠웨이트 영공서 미사일 공격 포착 트럼프 내각회의서 강경 발언 “협상 만족할 수준 아냐” 호르무즈·이란 제재·핵..</p>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
-                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">Energy & Refining, Shipping & Logistics, Aviation, Petrochemicals</span>
-                                <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-300">SK Innovation</span>, <span class="font-semibold text-slate-300">S-Oil</span>, <span class="font-semibold text-slate-300">HMM</span>, <span class="font-semibold text-slate-300">Korean Air</span>
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">국제 유가 상승으로 인한 국내 수입 물가 및 소비자 물가 상승 압력이 가중될 것입니다. 원화 약세(환율 상승)와 함께 원자재 비용 부담으로 인해 코스피(KOSPI) 지수 하락 및 증시 변동성 확대가 우려됩니다.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
-                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">미국과 이란의 상호 공습으로 중동 지역의 긴장이 다시 최고조에 달하며 휴전 협상이 사실상 붕괴되었습니다. 이는 호르무즈 해협의 긴장 고조와 국제 유가 급등 우려를 유발하여 한국 경제에 심각한 에너지 수급 및 물가 압박을 가할 수 있습니다.</p>
-                    </div>
-                    
-                    <div class="flex justify-between items-center text-xs text-slate-500">
-                        <span>관련성 분류 이유: 중동의 지정학적 긴장 고조는 국제 유가 상승 및 원자재 공급망 불안정을 야기하여 한국 경제와 에너지 수입 비용에 직접적인 영향을 미칠 수 있습니다.</span>
-                        <a href="https://www.mk.co.kr/news/economy/12060453" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
-                    </div>
-                    
-                </div>
-                
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["Securities", "Asset Management", "Large-cap Equities", "Financial Services"]' data-search-text='국민연금 국내 주식 비중 20.8% 국민연금이 국내 주식 목표 비중을 기존 14.9%에서 20.8%로 5.9%포인트 올리기로 결정했다. 
-국민연금기금운용위원회는 28일 정부서울청사에서 2026년도 제5차 회의를 열고.. 국민연금이 국내 주식 목표 비중을 기존 14.9%에서 20.8%로 5.9%포인트 대폭 상향 조정하기로 결정했습니다. 이번 조치로 인해 대규모 자금이 국내 증시로 유입되어 수급 여건이 크게 개선될 것으로 기대됩니다. 이는 코리아 디스카운트 해소와 국내 자본시장 활성화에 긍정적인 전환점이 될 전망입니다. securities, asset management, large-cap equities, financial services <span class=\"font-semibold text-slate-300\">samsung electronics</span>, <span class=\"font-semibold text-slate-300\">sk hynix</span>, <span class=\"font-semibold text-slate-300\">hyundai motor</span>, <span class=\"font-semibold text-slate-300\">naver</span>, <span class=\"font-semibold text-slate-300\">lg energy solution</span> maeil business economy'>
-                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
-                        <div class="flex items-center space-x-3">
-                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Maeil Business Economy</span>
-                            <span class="text-xs text-slate-400">
-                                <span class="text-indigo-400 font-medium">작성:</span> 2026-05-29 05:46:18
-                                <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-05-29 06:42:53
-                            </span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 (+0.8)</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>
-                        </div>
-                    </div>
-                    
-                    <h3 class="text-lg font-bold text-slate-100 mb-2">국민연금 국내 주식 비중 20.8%</h3>
-                    <p class="text-sm text-slate-400 line-clamp-3 mb-4">국민연금이 국내 주식 목표 비중을 기존 14.9%에서 20.8%로 5.9%포인트 올리기로 결정했다. 
-국민연금기금운용위원회는 28일 정부서울청사에서 2026년도 제5차 회의를 열고..</p>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
-                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">Securities, Asset Management, Large-cap Equities, Financial Services</span>
-                                <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-300">Samsung Electronics</span>, <span class="font-semibold text-slate-300">SK Hynix</span>, <span class="font-semibold text-slate-300">Hyundai Motor</span>, <span class="font-semibold text-slate-300">NAVER</span>, <span class="font-semibold text-slate-300">LG Energy Solution</span>
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">국민연금의 매수세 유입으로 KOSPI 및 KOSDAQ 지수의 강한 상승 모멘텀이 기대되며, 국내 증시의 변동성이 완화될 것입니다. 또한 자본시장 활성화에 따른 원화 가치 안정화(환율 하락)에도 기여할 수 있습니다.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
-                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">국민연금이 국내 주식 목표 비중을 기존 14.9%에서 20.8%로 5.9%포인트 대폭 상향 조정하기로 결정했습니다. 이번 조치로 인해 대규모 자금이 국내 증시로 유입되어 수급 여건이 크게 개선될 것으로 기대됩니다. 이는 코리아 디스카운트 해소와 국내 자본시장 활성화에 긍정적인 전환점이 될 전망입니다.</p>
-                    </div>
-                    
-                    <div class="flex justify-between items-center text-xs text-slate-500">
-                        <span>관련성 분류 이유: 국민연금의 국내 주식 비중 확대 결정은 한국 자본시장과 기업 투자 환경에 직접적인 영향을 미치는 주요 경제 이슈입니다.</span>
-                        <a href="https://www.mk.co.kr/news/economy/12060459" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
-                    </div>
-                    
-                </div>
-                
         </div>
     </div>
 
@@ -1870,8 +1706,26 @@
                     "035720": "카카오",
                     "373220": "LG에너지솔루션",
                     "006400": "삼성SDI",
+                    "051910": "LG화학",
                     "005490": "POSCO홀딩스",
-                    "068270": "셀트리온"
+                    "068270": "셀트리온",
+                    "042700": "한미반도체",
+                    "086520": "에코프로",
+                    "247540": "에코프로비엠",
+                    "003670": "포스코퓨처엠",
+                    "096770": "SK이노베이션",
+                    "028260": "삼성물산",
+                    "105560": "KB금융",
+                    "055550": "신한지주",
+                    "086790": "하나금융지주",
+                    "207940": "삼성바이오로직스",
+                    "196170": "알테오젠",
+                    "028300": "HLB",
+                    "011200": "HMM",
+                    "003490": "대한항공",
+                    "034020": "두산에너빌리티",
+                    "329180": "HD현대중공업",
+                    "000100": "유한양행"
                 };
                 
                 let holdingsCount = 0;

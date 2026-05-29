@@ -6,6 +6,8 @@ from typing import List, Dict, Any, Optional, Tuple
 from pydantic import BaseModel, Field
 from typing import Literal
 import yfinance as yf
+from concurrent.futures import ThreadPoolExecutor
+
 
 # Import the existing DB module to reuse Firestore configuration
 import db
@@ -99,6 +101,24 @@ def update_agent_state_in_db(balance: float, total_asset: float, system_lock: bo
         return True
     except Exception as e:
         print(f"[Trading Engine] [Error] Failed to update agent state in Firestore: {e}")
+        return False
+
+def lock_system() -> bool:
+    """
+    Locks the trading system in Firestore due to critical failures.
+    """
+    client = get_firestore_client()
+    if client is None:
+        return False
+    try:
+        state_ref = client.collection("agents").document("state")
+        state_ref.update({
+            "system_lock": True
+        })
+        print("[Trading Engine] [ALERT] System has been locked successfully due to critical anomaly.")
+        return True
+    except Exception as e:
+        print(f"[Trading Engine] [Error] Failed to lock system: {e}")
         return False
 
 def get_portfolio_holdings() -> Dict[str, Dict[str, Any]]:
@@ -196,6 +216,91 @@ def get_latest_transactions(limit: int = 15) -> List[Dict[str, Any]]:
     except Exception as e:
         print(f"[Trading Engine] [Error] Failed to fetch transaction logs: {e}")
         return []
+
+# ---------------------------------------------------------------------------
+# DYNAMIC AI STOCK CANDIDATE PIPELINE MAPPING
+# ---------------------------------------------------------------------------
+COMPANY_TO_TICKER = {
+    "삼성전자": "005930",
+    "SK하이닉스": "000660",
+    "하이닉스": "000660",
+    "현대차": "005380",
+    "현대자동차": "005380",
+    "기아": "000270",
+    "기아차": "000270",
+    "NAVER": "035420",
+    "네이버": "035420",
+    "카카오": "035720",
+    "LG에너지솔루션": "373220",
+    "LG엔솔": "373220",
+    "삼성SDI": "006400",
+    "LG화학": "051910",
+    "포스코홀딩스": "005490",
+    "POSCO홀딩스": "005490",
+    "셀트리온": "068270",
+    "한미반도체": "042700",
+    "에코프로": "086520",
+    "에코프로비엠": "247540",
+    "포스코퓨처엠": "003670",
+    "SK이노베이션": "096770",
+    "삼성물산": "028260",
+    "KB금융": "105560",
+    "KB금융지주": "105560",
+    "신한지주": "055550",
+    "신한금융지주": "055550",
+    "하나금융지주": "086790",
+    "삼성바이오로직스": "207940",
+    "알테오젠": "196170",
+    "HLB": "028300",
+    "HMM": "011200",
+    "대한항공": "003490",
+    "두산에너빌리티": "034020",
+    "HD현대중공업": "329180",
+    "유한양행": "000100"
+}
+
+def get_active_tickers(portfolio: Dict[str, Any], news_context: List[Dict[str, Any]]) -> List[str]:
+    """
+    Dynamically constructs the stock ticker pool for the current simulation cycle:
+    1. Baseline large caps: Samsung Electronics (005930) and SK Hynix (000660) are always included.
+    2. Account holdings: Any stock currently owned in the portfolio is always included to allow selling.
+    3. News context: Any South Korean company mentioned in the latest news context is mapped to a ticker.
+    """
+    # Always include baseline large-cap pillars
+    active_tickers = {"005930", "000660"}
+    
+    # 1. Include currently owned portfolio holdings
+    for ticker in portfolio.keys():
+        active_tickers.add(ticker)
+        
+    # 2. Extract company mentions from the latest analyzed news
+    for item in news_context:
+        impacted_val = item.get("impacted_companies")
+        if not impacted_val:
+            continue
+            
+        try:
+            # Check if it is a JSON list string: '["삼성전자", "한미반도체"]'
+            companies = json.loads(impacted_val)
+            if isinstance(companies, list):
+                for comp in companies:
+                    ticker = COMPANY_TO_TICKER.get(str(comp).strip())
+                    if ticker:
+                        active_tickers.add(ticker)
+            else:
+                ticker = COMPANY_TO_TICKER.get(str(companies).strip())
+                if ticker:
+                    active_tickers.add(ticker)
+        except Exception:
+            # Heuristic parsing for comma-separated or plain text company names
+            parts = [x.strip() for x in str(impacted_val).split(",") if x.strip()]
+            for part in parts:
+                ticker = COMPANY_TO_TICKER.get(part)
+                if ticker:
+                    active_tickers.add(ticker)
+                    
+    print(f"[Trading Engine] Dynamic candidate ticker pool generated: {list(active_tickers)}")
+    return list(active_tickers)
 
 # ---------------------------------------------------------------------------
 # MARKET DATA FETCHING (yfinance)
@@ -417,7 +522,13 @@ def run_simulation_cycle(bypass_hours: bool = False) -> Dict[str, Any]:
         print(f"[Trading Engine] Out of market hours ({now.strftime('%Y-%m-%d %H:%M:%S')} KST). Simulation skipped.")
         return {"status": "skipped", "message": "Market is closed. Simulated runs only occur on weekdays between 09:00 and 15:30 KST."}
 
-    # 3. Idempotency Lock Check
+    # 3. Get Portfolio, State Snapshots, and News Context Early
+    portfolio = get_portfolio_holdings()
+    news_context = db.fetch_recent_relevant(hours=24)
+    balance = float(state.get("balance", 10000000.0))
+    prev_total_asset = float(state.get("total_asset", 10000000.0))
+
+    # 4. Idempotency Lock Check (Time Interval)
     last_txs = get_latest_transactions(limit=1)
     if last_txs:
         last_tx = last_txs[0]
@@ -432,31 +543,7 @@ def run_simulation_cycle(bypass_hours: bool = False) -> Dict[str, Any]:
         except Exception as e:
             print(f"[Trading Engine] Failed to parse last transaction timestamp: {e}")
 
-    # 4. Fetch Market Prices (Monitored candidates) in parallel using ThreadPoolExecutor to prevent Gunicorn worker timeouts!
-    from concurrent.futures import ThreadPoolExecutor
-    monitored_tickers = ["005930", "000660", "005380", "035420", "035720", "373220", "068270"]
-    market_prices = {}
-    
-    def fetch_price(tick):
-        return tick, get_stock_price(tick)
-        
-    try:
-        with ThreadPoolExecutor(max_workers=len(monitored_tickers)) as executor:
-            results = list(executor.map(fetch_price, monitored_tickers))
-            for tick, price in results:
-                if price > 0:
-                    market_prices[tick] = price
-    except Exception as e:
-        print(f"[Trading Engine] [Warning] Parallel price fetching failed: {e}. Falling back to sequential.")
-        # Fallback to sequential in case of thread pool issues
-        for tick in monitored_tickers:
-            price = get_stock_price(tick)
-            if price > 0:
-                market_prices[tick] = price
-
-    # 5. Retrieve news context (latest relevant news in the past 24 hours)
-    news_context = db.fetch_recent_relevant(hours=24)
-    # Check if we have already traded on the latest news item to avoid repeating trades
+    # 5. Idempotency Lock Check (Duplicate News URL Check)
     if news_context:
         latest_news_url = news_context[0].get("url", "")
         # Scan last few transactions to see if we already traded based on this url
@@ -471,10 +558,27 @@ def run_simulation_cycle(bypass_hours: bool = False) -> Dict[str, Any]:
             print(f"[Trading Engine] Idempotency Lock: Already processed and acted upon the latest news URL: {latest_news_url}")
             return {"status": "skipped", "message": "Idempotency Lock: Latest news context has already been acted upon."}
 
-    # 6. Get Portfolio & State Snapshots
-    portfolio = get_portfolio_holdings()
-    balance = float(state.get("balance", 10000000.0))
-    prev_total_asset = float(state.get("total_asset", 10000000.0))
+    # 6. Fetch Market Prices (Monitored candidates) in parallel using ThreadPoolExecutor to prevent Gunicorn worker timeouts!
+    # We dynamically compile the candidate list based on news & portfolio holdings!
+    monitored_tickers = get_active_tickers(portfolio, news_context)
+    market_prices = {}
+    
+    def fetch_price(tick):
+        return tick, get_stock_price(tick)
+        
+    try:
+        with ThreadPoolExecutor(max_workers=max(len(monitored_tickers), 1)) as executor:
+            results = list(executor.map(fetch_price, monitored_tickers))
+            for tick, price in results:
+                if price > 0:
+                    market_prices[tick] = price
+    except Exception as e:
+        print(f"[Trading Engine] [Warning] Parallel price fetching failed: {e}. Falling back to sequential.")
+        # Fallback to sequential in case of thread pool issues
+        for tick in monitored_tickers:
+            price = get_stock_price(tick)
+            if price > 0:
+                market_prices[tick] = price
 
     # Pre-trade asset evaluation for validation logic
     prev_portfolio_value_at_current_prices = sum(
