@@ -721,7 +721,11 @@ def generate_html_dashboard():
             }})
             .then(data => {{
                 if (data._ok && data.status === "success") {{
-                    alert("[매매 체결] 구분: " + data.action + ", 종목코드: " + data.ticker + ", 수량: " + data.quantity + "주, 단가: " + Math.round(data.price).toLocaleString() + "원\\n\\n[이유] " + data.reasoning);
+                    if (data.background) {{
+                        alert("[AI 구동 시작] " + data.message);
+                    }} else {{
+                        alert("[매매 체결] 구분: " + data.action + ", 종목코드: " + data.ticker + ", 수량: " + data.quantity + "주, 단가: " + Math.round(data.price).toLocaleString() + "원\\n\\n[이유] " + data.reasoning);
+                    }}
                 }} else if (data._ok && data.status === "skipped") {{
                     alert("[매매 관망/건너뜀] 사유: " + data.message);
                 }} else {{
@@ -1200,11 +1204,12 @@ def handle_item_count():
 @app.route('/api/trade', methods=['POST', 'GET'])
 def trigger_trading_simulation():
     """
-    API endpoint: Triggers a single simulation cycle of the AI trading engine.
-    Can be triggered by external cron (cron-job.org) or by manual UI refresh.
+    API endpoint: Triggers a single simulation cycle of the AI trading engine in the background
+    to completely prevent Gunicorn / Cloud timeout (30 seconds limit) crashes.
     """
     try:
         import trading_engine
+        import threading
         
         # Check bypass_hours flag (e.g. ?bypass_hours=true)
         bypass_hours = request.args.get("bypass_hours", "false").lower() == "true"
@@ -1217,15 +1222,46 @@ def trigger_trading_simulation():
                 "message": "Trading engine is currently LOCKED due to an accounting integrity failure. System halt enforced."
             }), 423
             
-        result = trading_engine.run_simulation_cycle(bypass_hours=bypass_hours)
-        return jsonify(result)
+        # We check if there's already a trade running in the background to avoid concurrent overlapping trades
+        global is_trading_in_progress
+        if 'is_trading_in_progress' not in globals():
+            is_trading_in_progress = False
+            
+        if is_trading_in_progress:
+            return jsonify({
+                "status": "skipped",
+                "message": "AI 모의투자 매매가 이미 백그라운드에서 분석 및 실행 중입니다. 잠시만 기다려주세요."
+            })
+            
+        def run_async_trade():
+            global is_trading_in_progress
+            is_trading_in_progress = True
+            try:
+                print("[API] Background trading thread started...")
+                trading_engine.run_simulation_cycle(bypass_hours=bypass_hours)
+                print("[API] Background trading thread finished successfully!")
+            except Exception as e:
+                import traceback
+                print(f"[API] [Error] Background trading thread failed: {e}\n{traceback.format_exc()}")
+            finally:
+                is_trading_in_progress = False
+
+        # Launch background thread
+        t = threading.Thread(target=run_async_trade, daemon=True)
+        t.start()
+        
+        return jsonify({
+            "status": "success",
+            "message": "AI 모의투자 엔진이 백그라운드에서 안전하게 기동되었습니다. 약 10~30초 후 분석 및 매매 결과가 자동으로 대시보드에 실시간 반영됩니다.",
+            "background": True
+        })
     except Exception as e:
         import traceback
         err_stack = traceback.format_exc()
         print(f"[Trading Engine] [API Error] {err_stack}")
         return jsonify({
             "status": "error",
-            "message": f"Simulation cycle execution failed: {str(e)}",
+            "message": f"Simulation cycle triggering failed: {str(e)}",
             "traceback": err_stack
         }), 500
 
