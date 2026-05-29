@@ -1262,6 +1262,59 @@ def get_trading_state():
         }), 500
 
 
+@app.route('/api/debug-import')
+def debug_import_trading_engine():
+    """
+    Diagnostic API to dry-run import and basic logic of trading_engine on the cloud platform.
+    Will never return HTTP 500, but rather structural diagnostic traceback info.
+    """
+    try:
+        import sys
+        import os
+        import traceback
+        
+        diagnostic_info = {
+            "python_version": sys.version,
+            "cwd": os.getcwd(),
+            "env_keys": [k for k in os.environ.keys() if "KEY" in k or "CRED" in k or "PORT" in k or "URL" in k],
+            "firebase_creds_exists": "FIREBASE_CREDENTIALS" in os.environ,
+            "gemini_api_key_exists": "GEMINI_API_KEY" in os.environ,
+            "google_api_key_exists": "GOOGLE_API_KEY" in os.environ
+        }
+        
+        try:
+            print("[Diagnostic API] Attempting to import trading_engine...")
+            if 'trading_engine' in sys.modules:
+                # Reload module to enforce latest changes
+                import importlib
+                importlib.reload(sys.modules['trading_engine'])
+            import trading_engine
+            diagnostic_info["import_success"] = True
+            
+            # Dry run loading portfolio & state
+            state = trading_engine.get_agent_state()
+            portfolio = trading_engine.get_portfolio_holdings()
+            diagnostic_info["db_read_success"] = True
+            diagnostic_info["state_sample"] = state
+            diagnostic_info["portfolio_sample"] = portfolio
+        except Exception as inner_e:
+            diagnostic_info["import_success"] = False
+            diagnostic_info["import_error_message"] = str(inner_e)
+            diagnostic_info["import_traceback"] = traceback.format_exc()
+            
+        return jsonify({
+            "status": "diagnosed",
+            "diagnostics": diagnostic_info
+        })
+    except Exception as outer_e:
+        import traceback
+        return jsonify({
+            "status": "critical_diagnostic_failure",
+            "error": str(outer_e),
+            "traceback": traceback.format_exc()
+        })
+
+
 # --- SCHEDULER & RUN THREAD ---
 
 def scheduler_thread():
