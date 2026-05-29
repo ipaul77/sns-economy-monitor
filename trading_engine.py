@@ -125,7 +125,7 @@ def get_portfolio_holdings() -> Dict[str, Dict[str, Any]]:
     """
     Fetches the agent's active stock portfolio holdings from Firestore subcollection.
     Path: agents/state/portfolio/{ticker}
-    Returns a dict: { ticker: { "quantity": int, "average_price": float } }
+    Returns a dict: { ticker: { "quantity": int, "average_price": float, "highest_price_after_buy": float } }
     """
     client = get_firestore_client()
     if client is None:
@@ -140,14 +140,15 @@ def get_portfolio_holdings() -> Dict[str, Dict[str, Any]]:
             ticker = doc.id
             holdings[ticker] = {
                 "quantity": int(data.get("quantity", 0)),
-                "average_price": float(data.get("average_price", 0.0))
+                "average_price": float(data.get("average_price", 0.0)),
+                "highest_price_after_buy": float(data.get("highest_price_after_buy", data.get("average_price", 0.0)))
             }
         return holdings
     except Exception as e:
         print(f"[Trading Engine] [Error] Failed to fetch portfolio holdings from Firestore: {e}")
         return {}
 
-def update_portfolio_holding_in_db(ticker: str, quantity: int, average_price: float) -> bool:
+def update_portfolio_holding_in_db(ticker: str, quantity: int, average_price: float, highest_price_after_buy: Optional[float] = None) -> bool:
     """
     Updates or deletes a specific stock holding in Firestore portfolio subcollection.
     If quantity <= 0, deletes the holding document.
@@ -161,11 +162,22 @@ def update_portfolio_holding_in_db(ticker: str, quantity: int, average_price: fl
             holding_ref.delete()
             print(f"[Trading Engine] Deleted holding for ticker {ticker} (Quantity reached 0).")
         else:
-            holding_ref.set({
+            payload = {
                 "quantity": int(quantity),
                 "average_price": float(average_price)
-            })
-            print(f"[Trading Engine] Updated holding for ticker {ticker}: Quantity={quantity}, AvgPrice={average_price:.1f}")
+            }
+            if highest_price_after_buy is not None:
+                payload["highest_price_after_buy"] = float(highest_price_after_buy)
+            else:
+                # Fallback to existing or initialize with average_price
+                doc = holding_ref.get()
+                if doc.exists:
+                    payload["highest_price_after_buy"] = float(doc.to_dict().get("highest_price_after_buy", average_price))
+                else:
+                    payload["highest_price_after_buy"] = float(average_price)
+                    
+            holding_ref.set(payload)
+            print(f"[Trading Engine] Updated holding for ticker {ticker}: Quantity={quantity}, AvgPrice={average_price:.1f}, Highest={payload['highest_price_after_buy']:.1f}")
         return True
     except Exception as e:
         print(f"[Trading Engine] [Error] Failed to update portfolio holding in Firestore: {e}")
@@ -305,6 +317,126 @@ def get_active_tickers(portfolio: Dict[str, Any], news_context: List[Dict[str, A
 # ---------------------------------------------------------------------------
 # MARKET DATA FETCHING (yfinance)
 # ---------------------------------------------------------------------------
+def get_market_index_change() -> Dict[str, float]:
+    """
+    Fetches the daily return (%) for KOSPI (^KS11) and KOSDAQ (^KQ11) from yfinance.
+    Returns: { "KOSPI": float, "KOSDAQ": float } (e.g., { "KOSPI": -0.85, "KOSDAQ": 0.45 })
+    """
+    indices = {"KOSPI": "^KS11", "KOSDAQ": "^KQ11"}
+    results = {"KOSPI": 0.0, "KOSDAQ": 0.0}
+    for name, ticker in indices.items():
+        try:
+            yt = yf.Ticker(ticker)
+            # Fetch 2 days of history to calculate the daily change
+            hist = yt.history(period="2d")
+            if len(hist) >= 2:
+                prev_close = float(hist["Close"].iloc[-2])
+                curr_close = float(hist["Close"].iloc[-1])
+                pct_change = ((curr_close - prev_close) / prev_close) * 100
+                results[name] = round(pct_change, 2)
+            else:
+                info = yt.fast_info
+                change = info.get("regularMarketChangePercent") or info.get("regular_market_change_percent")
+                if change is not None:
+                    results[name] = round(float(change), 2)
+        except Exception as e:
+            print(f"[Trading Engine] [Warning] Failed to fetch index {name}: {e}")
+    return results
+
+def get_stock_indicators(ticker: str) -> Dict[str, Any]:
+    """
+    Fetches all advanced technical indicators for a given stock ticker:
+    1. Current Price
+    2. 20-day Moving Average (20 MA)
+    3. 20-day Disparity Index (%)
+    4. Daily Volume
+    5. 5-day Average Volume (excluding today)
+    6. Volume Breakout Ratio (daily_vol / avg_5day_vol)
+    """
+    ticker = ticker.strip()
+    result = {
+        "current_price": 0.0,
+        "ma_20": 0.0,
+        "disparity": 100.0,
+        "daily_volume": 0,
+        "avg_volume_5d": 0.0,
+        "volume_ratio": 1.0,
+        "volume_breakout": False
+    }
+    if not ticker:
+        return result
+
+    # Standard suffix translation logic (KS/KQ)
+    full_ticker = ticker
+    if len(ticker) == 6 and ticker.isdigit():
+        for suffix in [".KS", ".KQ"]:
+            t_obj = yf.Ticker(ticker + suffix)
+            try:
+                hist = t_obj.history(period="1mo")
+                if not hist.empty and len(hist) >= 2:
+                    full_ticker = ticker + suffix
+                    break
+            except:
+                pass
+
+    try:
+        yt = yf.Ticker(full_ticker)
+        hist = yt.history(period="1mo")
+        if hist.empty:
+            fallback_prices = {
+                "005930": 78200.0, "000660": 195400.0, "005380": 265000.0,
+                "000270": 121000.0, "035420": 182000.0, "035720": 48500.0
+            }
+            price = fallback_prices.get(ticker, 0.0)
+            if price > 0:
+                result["current_price"] = price
+                result["ma_20"] = price
+                result["disparity"] = 100.0
+            return result
+
+        # 1. Current Price
+        current_price = float(hist["Close"].iloc[-1])
+        result["current_price"] = current_price
+
+        # 2. 20-day Moving Average (20 MA)
+        ma_length = min(len(hist), 20)
+        close_slice = hist["Close"].iloc[-ma_length:]
+        ma_20 = float(close_slice.mean())
+        result["ma_20"] = ma_20
+
+        # 3. 20-day Disparity Index (%)
+        if ma_20 > 0:
+            result["disparity"] = round((current_price / ma_20) * 100, 2)
+
+        # 4. Daily Volume
+        daily_volume = int(hist["Volume"].iloc[-1])
+        result["daily_volume"] = daily_volume
+
+        # 5. 5-day Average Volume (excluding today)
+        if len(hist) >= 6:
+            vol_slice = hist["Volume"].iloc[-6:-1]
+            avg_vol_5d = float(vol_slice.mean())
+        else:
+            avg_vol_5d = float(hist["Volume"].iloc[:-1].mean()) if len(hist) > 1 else float(daily_volume)
+        
+        result["avg_volume_5d"] = avg_vol_5d
+
+        # 6. Volume Breakout Ratio
+        if avg_vol_5d > 0:
+            vol_ratio = daily_volume / avg_vol_5d
+            result["volume_ratio"] = round(vol_ratio, 2)
+            result["volume_breakout"] = vol_ratio > 2.0
+            
+    except Exception as e:
+        print(f"[Trading Engine] [Warning] Failed to calculate indicators for {ticker}: {e}")
+        fallback_prices = {"005930": 78200.0, "000660": 195400.0}
+        price = fallback_prices.get(ticker, 50000.0)
+        result["current_price"] = price
+        result["ma_20"] = price
+        result["disparity"] = 100.0
+
+    return result
+
 def get_stock_price(ticker: str) -> float:
     """
     Fetches the current market price for a given 6-digit stock ticker code (e.g. 005930).
@@ -379,7 +511,7 @@ class TradingDecision(BaseModel):
     quantity: int = Field(description="The integer quantity of shares to buy or sell (must be >= 0). For HOLD, this must be 0.")
     reasoning: str = Field(description="Specific, detailed investment logic in Korean justifying the decision based on provided news sentiment and price analysis.")
 
-def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: float, market_prices: Dict[str, float], news_context: List[Dict[str, Any]], api_key: Optional[str] = None) -> TradingDecision:
+def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: float, market_prices: Dict[str, float], news_context: List[Dict[str, Any]], market_indicators: Optional[Dict[str, Dict[str, Any]]] = None, index_changes: Optional[Dict[str, float]] = None, api_key: Optional[str] = None) -> TradingDecision:
     """
     Calls the Gemini API to formulate a trading decision using strict Pydantic response schema.
     Injects system guardrails to avoid hallucinations and enforce capital constraints.
@@ -419,6 +551,24 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
     # Format market prices
     prices_str = "\n".join([f"- 종목코드: {tick} | 현재 체결가: {price:,.0f}원" for tick, price in market_prices.items()])
 
+    # Format index changes
+    index_str = "지수 정보 없음"
+    if index_changes:
+        index_str = ", ".join([f"{name}: {val:+.2f}%" for name, val in index_changes.items()])
+
+    # Format indicators
+    indicators_str = ""
+    if market_indicators:
+        for tick, ind in market_indicators.items():
+            indicators_str += (
+                f"- 종목코드: {tick} | 현재가: {ind['current_price']:,.0f}원 | "
+                f"20일선 이격도: {ind['disparity']}% | "
+                f"당일/5일평균 거래량 비율: {ind['volume_ratio']}배 "
+                f"({'[거래량돌파 충족]' if ind['volume_breakout'] else '[거래량 부족]'}) \n"
+            )
+    else:
+        indicators_str = "기술적 지표 데이터 없음."
+
     # Format news analysis context
     news_str = ""
     if not news_context:
@@ -434,29 +584,34 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
     # Define system instructions (Guardrails)
     system_instruction = (
         "너는 주어진 가상 자산 범위 내에서만 자금을 운용하는 매우 보수적이고 합리적인 AI 주식 투자 에이전트야.\n"
-        "너의 역할은 시장 가격 및 최신 뉴스 컨텍스트(감성 점수, 영향 수준 등)를 기반으로 최선의 매수/매도/관망(BUY/SELL/HOLD) 의사 결정을 내리는 것이다.\n\n"
+        "너의 역할은 시장 가격, 지수 동향, 개별 기술 지표 및 최신 뉴스 컨텍스트를 기반으로 최선의 매수/매도/관망(BUY/SELL/HOLD) 의사 결정을 내리는 것이다.\n\n"
         "--- 엄격한 행동 강령 (Guardrails) ---\n"
         "1. 너에게는 자산을 직접 계산하거나 체결 장부를 변경할 권한이 없다. 오직 '투자 판단 시그널'만 올바른 JSON 구조로 반환할 수 있다.\n"
-        "2. 뉴스 분석이 누락되거나, 시장 왜곡이 의심되거나, 거래 대상 기업에 대한 충분한 호재/악재 정보가 없을 경우 반드시 'HOLD'를 선택해라.\n"
-        "3. 매수를 할 때는 현재 보유 중인 예수금(Cash Balance) 범위 내에서만 가능한 수량(quantity)을 입력해야 해. 무리한 과다 매수는 필터링되어 거부된다.\n"
+        "2. 뉴스 분석이 누락되거나, 시장 왜곡이 의심되거나, 충분한 정보가 없을 경우 반드시 'HOLD'를 선택해라.\n"
+        "3. 매수를 할 때는 현재 보유 중인 예수금(Cash Balance) 범위 내에서만 가능한 수량(quantity)을 입력해라.\n"
         "4. 매도를 할 때는 반드시 현재 보유 중인 주식 포트폴리오 상의 수량 이하로만 수량을 설정해야 해. 공매도는 절대 불가능하다.\n"
-        "5. 의사 결정 사유(reasoning)는 어떤 뉴스 분석 컨텍스트를 근거로 삼았는지, 현재의 손익 현황과 매치하여 한글로 구체적이고 논리적으로 서술해라."
+        "5. 의사 결정 사유(reasoning)는 어떤 뉴스 분석 컨텍스트를 근거로 삼았는지, 현재의 기술적 지표 상황과 매치하여 한글로 구체적이고 논리적으로 서술해라.\n"
+        "6. 특정 종목의 20일 이격도(Disparity)가 115% 이상으로 급등해 과열 구간일 때는 신규 매수(BUY)를 강하게 차단하거나 관망(HOLD) 조치해라.\n"
+        "7. 호재 뉴스가 떴더라도, 거래량 돌파 비율이 2.0배 이하(Volume Breakout 미충족)이고 거래량이 실리지 않은 상승일 때는 매수를 적극 자제해라."
     )
 
     prompt = f"""
 현재 시각: {get_kst_now().strftime("%Y-%m-%d %H:%M:%S")} (KST)
 현재 사용 가능한 예수금(Cash): {balance:,.0f}원
 
+[시장 전체 Macro 지수 동향]
+- {index_str}
+
 [현재 보유 주식 현황 (Portfolio)]
 {portfolio_str}
 
-[거래 대상 종목 실시간 시세]
-{prices_str}
+[거래 대상 종목 실시간 기술적/거래량 지표]
+{indicators_str}
 
 [최근 24시간 실시간 경제 뉴스 분석 컨텍스트]
 {news_str}
 
-위 자산 상태, 시세 및 뉴스 분석 데이터를 정밀 분석하여 최고의 의사결정을 내리고, 지정된 JSON 스키마에 따라 응답하세요.
+위 자산 상태, 거시 경제 지수, 실시간 기술 지표, 그리고 뉴스 분석 데이터를 정밀 종합 분석하여 최고의 의사결정을 내리고, 지정된 JSON 스키마에 따라 응답하세요.
 """
 
     # We use gemini-3.5-flash or fallback
@@ -495,13 +650,14 @@ def run_simulation_cycle(bypass_hours: bool = False) -> Dict[str, Any]:
     1. Check and Load database state (Check for system locks).
     2. Check KST Market Hours (09:00 - 15:30) with optional test bypass.
     3. Apply Idempotency Lock (30 min minimum gap or news ID validation).
-    4. Fetch target stock market prices via yfinance.
-    5. Retrieve latest news context from DB.
-    6. Call Gemini Agent for decision formulation.
-    7. backend Order Verification (Execution Filter).
-    8. Process Account Updates.
-    9. Run **Accounting Assert** (strict mathematical verification or lock and sys.exit).
-    10. Log transaction & Update Firestore state.
+    4. Fetch target stock market prices & technical indicators in parallel.
+    5. Evaluate Mechanical Rules (Stop-Loss -4.5% & Trailing-Stop -3%) and update Firestore.
+    6. Retrieve latest news context from DB.
+    7. Call Gemini Agent with indicators context for decision formulation.
+    8. backend Order Verification (Execution Filter, Shock & Disparity Override).
+    9. Process Account Updates.
+    10. Run **Accounting Assert** (strict mathematical verification or lock and sys.exit).
+    11. Log transaction & Update Firestore state.
     """
     # 1. State Load & Lock Check
     state = get_agent_state()
@@ -558,27 +714,143 @@ def run_simulation_cycle(bypass_hours: bool = False) -> Dict[str, Any]:
             print(f"[Trading Engine] Idempotency Lock: Already processed and acted upon the latest news URL: {latest_news_url}")
             return {"status": "skipped", "message": "Idempotency Lock: Latest news context has already been acted upon."}
 
-    # 6. Fetch Market Prices (Monitored candidates) in parallel using ThreadPoolExecutor to prevent Gunicorn worker timeouts!
-    # We dynamically compile the candidate list based on news & portfolio holdings!
+    # 6. Fetch Market Prices & Indicators (Monitored candidates) in parallel using ThreadPoolExecutor!
+    index_changes = get_market_index_change()
+    print(f"[Trading Engine] Market Indices changes: {index_changes}")
+    
+    # KOSPI or KOSDAQ 급락 쇼크 경보 (-1.5% 이하)
+    is_market_shock = False
+    shock_reason = ""
+    for idx_name, val in index_changes.items():
+        if val <= -1.5:
+            is_market_shock = True
+            shock_reason = f"지수 급락 쇼크 경보 ({idx_name} 당일 등락률: {val:+.2f}%)"
+            break
+
     monitored_tickers = get_active_tickers(portfolio, news_context)
+    market_indicators = {}
     market_prices = {}
     
-    def fetch_price(tick):
-        return tick, get_stock_price(tick)
+    def fetch_indicators(tick):
+        return tick, get_stock_indicators(tick)
         
     try:
         with ThreadPoolExecutor(max_workers=max(len(monitored_tickers), 1)) as executor:
-            results = list(executor.map(fetch_price, monitored_tickers))
-            for tick, price in results:
+            results = list(executor.map(fetch_indicators, monitored_tickers))
+            for tick, ind in results:
+                market_indicators[tick] = ind
+                price = ind.get("current_price", 0.0)
                 if price > 0:
                     market_prices[tick] = price
     except Exception as e:
-        print(f"[Trading Engine] [Warning] Parallel price fetching failed: {e}. Falling back to sequential.")
-        # Fallback to sequential in case of thread pool issues
+        print(f"[Trading Engine] [Warning] Parallel indicator fetching failed: {e}. Falling back to sequential.")
         for tick in monitored_tickers:
-            price = get_stock_price(tick)
+            ind = get_stock_indicators(tick)
+            market_indicators[tick] = ind
+            price = ind.get("current_price", 0.0)
             if price > 0:
                 market_prices[tick] = price
+
+    # 6.5. Mechanical Stop-Loss (-4.5%) & Trailing-Stop (-3.0%) Evaluation
+    for ticker, holding in portfolio.items():
+        current_price = market_prices.get(ticker, 0.0)
+        if current_price <= 0:
+            continue
+            
+        avg_price = holding["average_price"]
+        prev_highest = holding["highest_price_after_buy"]
+        
+        # 1. Update highest price since buy
+        new_highest = max(current_price, prev_highest)
+        if new_highest > prev_highest:
+            update_portfolio_holding_in_db(ticker, holding["quantity"], avg_price, new_highest)
+            holding["highest_price_after_buy"] = new_highest
+            
+        # 2. Stop-Loss Trigger Check (-4.5%)
+        stop_loss_limit = avg_price * (1 - 0.045)
+        if current_price <= stop_loss_limit:
+            print(f"[Trading Engine] [EX-SL] Stop-Loss triggered for {ticker}! Price {current_price:,.0f} <= Limit {stop_loss_limit:,.0f} KRW.")
+            qty = holding["quantity"]
+            total_sell_val = qty * current_price
+            fee_rate = 0.001
+            tx_fee = total_sell_val * fee_rate
+            new_balance = balance + (total_sell_val - tx_fee)
+            
+            # DB Reset
+            update_portfolio_holding_in_db(ticker, 0, avg_price)
+            new_total_asset = new_balance + sum(
+                p_info["quantity"] * market_prices.get(p_tick, 0.0)
+                for p_tick, p_info in portfolio.items() if p_tick != ticker
+            )
+            update_agent_state_in_db(new_balance, new_total_asset, system_lock=False)
+            
+            reasoning = f"[기계적 손절매 청산] 주가가 매수가({avg_price:,.0f}원) 대비 -4.5% 손실 한계선({stop_loss_limit:,.0f}원)에 도달하여 추가 손실 차단을 위해 전량 시장가 매도 처리하였습니다. (현재가: {current_price:,.0f}원)"
+            
+            snapshot = {
+                "prev_balance": balance,
+                "new_balance": new_balance,
+                "prev_total_asset": prev_total_asset,
+                "new_total_asset": new_total_asset,
+                "transaction_fee": tx_fee,
+                "latest_news_url": news_context[0].get("url", "") if news_context else "",
+                "market_prices": market_prices,
+                "highest_price_after_buy": new_highest
+            }
+            
+            save_transaction_to_db(ticker, "STOP_LOSS_EXIT", qty, current_price, reasoning, snapshot)
+            return {
+                "status": "success",
+                "action": "SELL",
+                "ticker": ticker,
+                "quantity": qty,
+                "price": current_price,
+                "reasoning": reasoning,
+                "balance": new_balance,
+                "total_asset": new_total_asset
+            }
+            
+        # 3. Trailing-Stop Trigger Check (-3.0% from peak)
+        trailing_stop_limit = new_highest * (1 - 0.03)
+        if current_price <= trailing_stop_limit:
+            print(f"[Trading Engine] [EX-TS] Trailing-Stop triggered for {ticker}! Price {current_price:,.0f} <= Limit {trailing_stop_limit:,.0f} KRW (Highest: {new_highest:,.0f}).")
+            qty = holding["quantity"]
+            total_sell_val = qty * current_price
+            fee_rate = 0.001
+            tx_fee = total_sell_val * fee_rate
+            new_balance = balance + (total_sell_val - tx_fee)
+            
+            # DB Reset
+            update_portfolio_holding_in_db(ticker, 0, avg_price)
+            new_total_asset = new_balance + sum(
+                p_info["quantity"] * market_prices.get(p_tick, 0.0)
+                for p_tick, p_info in portfolio.items() if p_tick != ticker
+            )
+            update_agent_state_in_db(new_balance, new_total_asset, system_lock=False)
+            
+            reasoning = f"[기계적 추적손절매 익절] 주가가 매수 후 최고점({new_highest:,.0f}원) 대비 -3.0% 수익보존 한계선({trailing_stop_limit:,.0f}원) 이하로 하락하여, 이익 보존을 위해 전량 시장가 매도 처리하였습니다. (현재가: {current_price:,.0f}원)"
+            
+            snapshot = {
+                "prev_balance": balance,
+                "new_balance": new_balance,
+                "prev_total_asset": prev_total_asset,
+                "new_total_asset": new_total_asset,
+                "transaction_fee": tx_fee,
+                "latest_news_url": news_context[0].get("url", "") if news_context else "",
+                "market_prices": market_prices,
+                "highest_price_after_buy": new_highest
+            }
+            
+            save_transaction_to_db(ticker, "TRAILING_STOP_EXIT", qty, current_price, reasoning, snapshot)
+            return {
+                "status": "success",
+                "action": "SELL",
+                "ticker": ticker,
+                "quantity": qty,
+                "price": current_price,
+                "reasoning": reasoning,
+                "balance": new_balance,
+                "total_asset": new_total_asset
+            }
 
     # Pre-trade asset evaluation for validation logic
     prev_portfolio_value_at_current_prices = sum(
@@ -592,7 +864,9 @@ def run_simulation_cycle(bypass_hours: bool = False) -> Dict[str, Any]:
         portfolio=portfolio,
         balance=balance,
         market_prices=market_prices,
-        news_context=news_context
+        news_context=news_context,
+        market_indicators=market_indicators,
+        index_changes=index_changes
     )
 
     action = decision.action
@@ -601,8 +875,22 @@ def run_simulation_cycle(bypass_hours: bool = False) -> Dict[str, Any]:
     reasoning = decision.reasoning
     current_price = market_prices.get(ticker, 0.0)
 
-    # 8. Execution Filter & Order Validation
-    # If ticker price is 0 (fetch failed), we must treat it as HOLD
+    # 8. backend Order Override & Validation (Beta Market Shock & Disparity Check)
+    disparity = market_indicators.get(ticker, {}).get("disparity", 100.0) if ticker else 100.0
+    
+    if action == "BUY":
+        if is_market_shock:
+            print(f"[Trading Engine] BUY Order Overridden by Market Shock: {shock_reason}")
+            action = "HOLD"
+            reasoning = f"[백엔드 규칙 기각: 시장 쇼크] Gemini AI가 매수를 결정했으나 종합지수가 -1.5% 이상 패닉 급락 중이므로 추가 대방어 기각 규칙이 작동하여 HOLD 처리했습니다. ({shock_reason})"
+            quantity = 0
+        elif disparity >= 115.0:
+            print(f"[Trading Engine] BUY Order Overridden by Disparity Limit: {disparity}% >= 115.0%")
+            action = "HOLD"
+            reasoning = f"[백엔드 규칙 기각: 가격 과열] Gemini AI가 매수를 결정했으나 20일선 이격도가 {disparity}%로 과열 임계치(115%)를 초과하여 상단 꼭대기 설거지 방지 기각 규칙이 작동하여 HOLD 처리했습니다."
+            quantity = 0
+
+    # 8.5. Standard Execution Filter
     if action in ["BUY", "SELL"] and (current_price <= 0 or not ticker):
         print(f"[Trading Engine] Order Rejected: Price for ticker {ticker} is invalid or 0.")
         action = "HOLD"
