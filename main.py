@@ -214,6 +214,100 @@ def generate_html_dashboard():
             </div>
         </section>
 
+        <!-- AI Paper Trading Simulator Widget -->
+        <section id="tradingSimulatorWidget" class="mb-8">
+            <h3 class="text-sm font-semibold text-slate-500 mt-6 mb-3">🤖 AI-Driven 실시간 주식 모의투자 에이전트</h3>
+            <div class="glass-card rounded-2xl p-6 border border-slate-800/80">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
+                    <div class="flex items-center space-x-3">
+                        <span class="h-3 w-3 rounded-full bg-emerald-500 animate-pulse" id="tradingEngineStatusDot"></span>
+                        <div>
+                            <span class="text-base font-bold text-slate-100">AI 에이전트 모의투자 계좌</span>
+                            <span class="text-xs text-slate-500 ml-2">(초기 가상 자산: 10,000,000원 | 운용 30일 제한)</span>
+                        </div>
+                    </div>
+                    <div>
+                        <button onclick="triggerManualTrade()" id="tradeTriggerBtn" class="px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg transition duration-200 flex items-center gap-1.5">
+                            ⚡ AI 모의투자 매매 1사이클 강제 구동
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 my-6">
+                    <div class="bg-slate-950/40 p-4 rounded-xl border border-white/5">
+                        <p class="text-xs font-semibold text-slate-500">예수금 (Cash)</p>
+                        <p class="mt-1 text-lg font-extrabold text-slate-100" id="tradingCash">10,000,000원</p>
+                    </div>
+                    <div class="bg-slate-950/40 p-4 rounded-xl border border-white/5">
+                        <p class="text-xs font-semibold text-slate-500">보유 주식 평가금액</p>
+                        <p class="mt-1 text-lg font-extrabold text-slate-100" id="tradingStockValue">0원</p>
+                    </div>
+                    <div class="bg-slate-950/40 p-4 rounded-xl border border-white/5">
+                        <p class="text-xs font-semibold text-slate-500">총 평가 자산 (Total Asset)</p>
+                        <p class="mt-1 text-lg font-extrabold text-slate-100" id="tradingTotalAsset">10,000,000원</p>
+                    </div>
+                    <div class="bg-slate-950/40 p-4 rounded-xl border border-white/5">
+                        <p class="text-xs font-semibold text-slate-500">누적 수익률 (Total ROI)</p>
+                        <p class="mt-1 text-lg font-extrabold text-slate-100" id="tradingROI">+0.00%</p>
+                    </div>
+                </div>
+
+                <div id="systemLockBanner" class="hidden bg-rose-950/30 border border-rose-500/20 p-4 rounded-xl flex items-center space-x-3 mb-6">
+                    <svg class="h-5 w-5 text-rose-500 flex-shrink-0 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m0 0v3m0-3h3m-3 0H9m12-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <div>
+                        <p class="text-xs font-bold text-rose-400">🚨 시스템 강제 잠금 상태 (Accounting Assert Safety Lock Active)</p>
+                        <p class="text-[11px] text-rose-500 mt-0.5">최근 매매 실행 후 자산 무결성 검증 실패(10원 초과 오차 검출)로 오작동 방지 시스템이 작동하여 모든 에이전트 거래가 정지되었습니다.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">📊 현재 포트폴리오 (Holdings)</h4>
+                        <div class="overflow-x-auto rounded-xl border border-slate-800/80 bg-slate-950/20">
+                            <table class="min-w-full divide-y divide-slate-800/80 text-[11px]">
+                                <thead class="bg-slate-950/50 text-slate-400">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left font-semibold">종목명</th>
+                                        <th class="px-3 py-2 text-right font-semibold">수량</th>
+                                        <th class="px-3 py-2 text-right font-semibold">평단가</th>
+                                        <th class="px-3 py-2 text-right font-semibold">현재가</th>
+                                        <th class="px-3 py-2 text-right font-semibold">평가손익</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-800/50 text-slate-300" id="holdingsTableBody">
+                                    <tr>
+                                        <td colspan="5" class="px-3 py-4 text-center text-slate-500">현재 보유 포트폴리오가 없습니다.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">📜 최근 AI 거래 기록 (Transactions Log)</h4>
+                        <div class="overflow-x-auto rounded-xl border border-slate-800/80 bg-slate-950/20 max-h-[162px] overflow-y-auto">
+                            <table class="min-w-full divide-y divide-slate-800/80 text-[11px]">
+                                <thead class="bg-slate-950/50 text-slate-400 sticky top-0">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left font-semibold">체결시간</th>
+                                        <th class="px-3 py-2 text-left font-semibold">구분</th>
+                                        <th class="px-3 py-2 text-left font-semibold">종목</th>
+                                        <th class="px-3 py-2 text-right font-semibold">수량/가격</th>
+                                        <th class="px-3 py-2 text-left font-semibold">투자 판단 근거</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-800/50 text-slate-300" id="transactionsTableBody">
+                                    <tr>
+                                        <td colspan="5" class="px-3 py-4 text-center text-slate-500">최근 거래 기록이 없습니다.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- List Section -->
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
             <h2 class="text-xl font-bold text-slate-100 flex items-center">
@@ -449,6 +543,180 @@ def generate_html_dashboard():
 
     <!-- Frontend Interactive Javascript -->
     <script>
+        // AI Trading State Loader & Manual Trigger JS (Classic String Concat for Python f-string Safety)
+        function loadTradingState() {{
+            fetch('/api/trading/state')
+            .then(res => res.json())
+            .then(data => {{
+                if (data.status !== "success") return;
+                const state = data.state;
+                const portfolio = data.portfolio;
+                const marketPrices = data.market_prices;
+                const transactions = data.transactions;
+                
+                document.getElementById("tradingCash").textContent = Math.round(state.balance).toLocaleString() + "원";
+                document.getElementById("tradingTotalAsset").textContent = Math.round(state.total_asset).toLocaleString() + "원";
+                
+                let stockVal = state.total_asset - state.balance;
+                document.getElementById("tradingStockValue").textContent = Math.round(stockVal).toLocaleString() + "원";
+                
+                let roi = ((state.total_asset - 10000000) / 10000000 * 100);
+                const roiEl = document.getElementById("tradingROI");
+                roiEl.textContent = (roi >= 0 ? "+" : "") + roi.toFixed(2) + "%";
+                if (roi > 0) {{
+                    roiEl.className = "mt-1 text-lg font-extrabold text-emerald-400";
+                }} else if (roi < 0) {{
+                    roiEl.className = "mt-1 text-lg font-extrabold text-rose-500";
+                }} else {{
+                    roiEl.className = "mt-1 text-lg font-extrabold text-slate-100";
+                }}
+                
+                const statusDot = document.getElementById("tradingEngineStatusDot");
+                const lockBanner = document.getElementById("systemLockBanner");
+                const triggerBtn = document.getElementById("tradeTriggerBtn");
+                
+                if (state.system_lock) {{
+                    statusDot.className = "h-3 w-3 rounded-full bg-rose-500 animate-pulse";
+                    lockBanner.classList.remove("hidden");
+                    triggerBtn.disabled = true;
+                    triggerBtn.className = "px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-600 border border-slate-700 cursor-not-allowed";
+                }} else {{
+                    statusDot.className = "h-3 w-3 rounded-full bg-emerald-500 animate-ping";
+                    lockBanner.classList.add("hidden");
+                    triggerBtn.disabled = false;
+                    triggerBtn.className = "px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg transition duration-200 flex items-center gap-1.5";
+                }}
+                
+                const holdingsBody = document.getElementById("holdingsTableBody");
+                holdingsBody.innerHTML = "";
+                
+                const tickersMap = {{
+                    "005930": "삼성전자",
+                    "000660": "SK하이닉스",
+                    "005380": "현대자동차",
+                    "000270": "기아",
+                    "035420": "NAVER",
+                    "035720": "카카오",
+                    "373220": "LG에너지솔루션",
+                    "006400": "삼성SDI",
+                    "005490": "POSCO홀딩스",
+                    "068270": "셀트리온"
+                }};
+                
+                let holdingsCount = 0;
+                for (const ticker in portfolio) {{
+                    holdingsCount++;
+                    const info = portfolio[ticker];
+                    const currentPrice = marketPrices[ticker] || info.average_price;
+                    const costVal = info.quantity * info.average_price;
+                    const curVal = info.quantity * currentPrice;
+                    const pl = curVal - costVal;
+                    const plRate = ((currentPrice - info.average_price) / info.average_price * 100);
+                    
+                    const name = tickersMap[ticker] || ticker;
+                    const plSign = pl >= 0 ? "+" : "";
+                    const plClass = pl > 0 ? "text-emerald-400 font-semibold" : (pl < 0 ? "text-rose-400 font-semibold" : "text-slate-400");
+                    
+                    const row = document.createElement("tr");
+                    row.className = "hover:bg-white/5 transition duration-150";
+                    row.innerHTML = '<td class="px-3 py-2"><span class="text-slate-100 font-semibold">' + name + '</span> <span class="text-[9px] text-slate-500 font-mono">' + ticker + '</span></td>' +
+                                    '<td class="px-3 py-2 text-right font-mono">' + info.quantity.toLocaleString() + '주</td>' +
+                                    '<td class="px-3 py-2 text-right font-mono text-slate-400">' + Math.round(info.average_price).toLocaleString() + '원</td>' +
+                                    '<td class="px-3 py-2 text-right font-mono text-slate-400">' + Math.round(currentPrice).toLocaleString() + '원</td>' +
+                                    '<td class="px-3 py-2 text-right font-mono ' + plClass + '">' + plSign + Math.round(pl).toLocaleString() + '원 (' + plSign + plRate.toFixed(2) + '%)</td>';
+                    holdingsBody.appendChild(row);
+                }}
+                
+                if (holdingsCount === 0) {{
+                    holdingsBody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="px-3 py-6 text-center text-slate-500">현재 보유 중인 포트폴리오 주식이 없습니다.</td>
+                        </tr>
+                    `;
+                }}
+                
+                const txBody = document.getElementById("transactionsTableBody");
+                txBody.innerHTML = "";
+                let txCount = 0;
+                transactions.forEach(tx => {{
+                    txCount++;
+                    const time = tx.timestamp.replace('T', ' ').substring(5, 16);
+                    const name = tickersMap[tx.ticker] || tx.ticker;
+                    const price = tx.price;
+                    
+                    let actionBadge = "";
+                    if (tx.action === "BUY") {{
+                        actionBadge = '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">매수</span>';
+                    }} else if (tx.action === "SELL") {{
+                        actionBadge = '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">매도</span>';
+                    }} else if (tx.action === "HOLD") {{
+                        actionBadge = '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-slate-400 border border-slate-700">관망</span>';
+                    }} else {{
+                        actionBadge = '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-600 text-white shadow shadow-rose-900/30">' + tx.action + '</span>';
+                    }}
+                    
+                    const row = document.createElement("tr");
+                    row.className = "hover:bg-white/5 transition duration-150";
+                    row.innerHTML = '<td class="px-3 py-2 font-mono text-slate-500">' + time + '</td>' +
+                                    '<td class="px-3 py-2">' + actionBadge + '</td>' +
+                                    '<td class="px-3 py-2 font-medium text-slate-300">' + name + ' <span class="text-[8px] text-slate-500 font-mono">' + tx.ticker + '</span></td>' +
+                                    '<td class="px-3 py-2 text-right font-mono text-slate-400">' + (tx.quantity > 0 ? (tx.quantity + '주 / ' + Math.round(price).toLocaleString() + '원') : '-') + '</td>' +
+                                    '<td class="px-3 py-2 text-slate-400 text-left line-clamp-1 max-w-[220px]" title="' + tx.reasoning + '">' + tx.reasoning + '</td>';
+                    txBody.appendChild(row);
+                }});
+                
+                if (txCount === 0) {{
+                    txBody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="px-3 py-6 text-center text-slate-500">최근 거래 기록이 없습니다.</td>
+                        </tr>
+                    `;
+                }}
+            }})
+            .catch(err => {{
+                console.error("Failed to load trading state:", err);
+            }});
+        }}
+        
+        function triggerManualTrade() {{
+            const btn = document.getElementById("tradeTriggerBtn");
+            btn.disabled = true;
+            btn.innerHTML = `
+                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                AI 분석 및 매매 주문 체결 중...
+            `;
+            
+            fetch('/api/trade?bypass_hours=true', {{ method: 'POST' }})
+            .then(res => res.json())
+            .then(data => {{
+                if (data.status === "success") {{
+                    alert("[매매 체결] 구분: " + data.action + ", 종목코드: " + data.ticker + ", 수량: " + data.quantity + "주, 단가: " + Math.round(data.price).toLocaleString() + "원\n\n[이유] " + data.reasoning);
+                }} else if (data.status === "skipped") {{
+                    alert("[매매 관망/건너뜀] 사유: " + data.message);
+                }} else {{
+                    alert("[매매 실패] 사유: " + data.message);
+                }}
+                btn.disabled = false;
+                btn.innerHTML = `⚡ AI 모의투자 매매 1사이클 강제 구동`;
+                loadTradingState();
+            }})
+            .catch(err => {{
+                alert("매매 거래 수행 도중 백엔드 오류가 발생했습니다.");
+                btn.disabled = false;
+                btn.innerHTML = `⚡ AI 모의투자 매매 1사이클 강제 구동`;
+                loadTradingState();
+            }});
+        }}
+        
+        // Add automatic initialization
+        document.addEventListener("DOMContentLoaded", () => {{
+            loadTradingState();
+            setInterval(loadTradingState, 15000);
+        }});
+
         // Toggle chatbot window
         function toggleChat() {{
             const window = document.getElementById("chatWindow");
@@ -898,6 +1166,66 @@ def handle_item_count():
     """
     count = db.fetch_total_count()
     return jsonify({"count": count})
+
+@app.route('/api/trade', methods=['POST', 'GET'])
+def trigger_trading_simulation():
+    """
+    API endpoint: Triggers a single simulation cycle of the AI trading engine.
+    Can be triggered by external cron (cron-job.org) or by manual UI refresh.
+    """
+    try:
+        import trading_engine
+        
+        # Check bypass_hours flag (e.g. ?bypass_hours=true)
+        bypass_hours = request.args.get("bypass_hours", "false").lower() == "true"
+        
+        # Check system lock first before executing
+        state = trading_engine.get_agent_state()
+        if state.get("system_lock", False):
+            return jsonify({
+                "status": "error",
+                "message": "Trading engine is currently LOCKED due to an accounting integrity failure. System halt enforced."
+            }), 423
+            
+        result = trading_engine.run_simulation_cycle(bypass_hours=bypass_hours)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Simulation cycle execution failed: {str(e)}"
+        }), 500
+
+@app.route('/api/trading/state')
+def get_trading_state():
+    """
+    API endpoint: Returns the current paper trading state, portfolio holdings,
+    and recent transactions to populate the dashboard UI.
+    """
+    try:
+        import trading_engine
+        state = trading_engine.get_agent_state()
+        portfolio = trading_engine.get_portfolio_holdings()
+        transactions = trading_engine.get_latest_transactions(limit=15)
+        
+        # Gather current stock prices to compute real-time value and ROI on front-end
+        market_prices = {}
+        for ticker in portfolio.keys():
+            price = trading_engine.get_stock_price(ticker)
+            if price > 0:
+                market_prices[ticker] = price
+                
+        return jsonify({
+            "status": "success",
+            "state": state,
+            "portfolio": portfolio,
+            "market_prices": market_prices,
+            "transactions": transactions
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Failed to retrieve paper trading state: {str(e)}"
+        }), 500
 
 
 # --- SCHEDULER & RUN THREAD ---

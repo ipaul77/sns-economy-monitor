@@ -6,3 +6,4 @@ colorama>=0.4.6
 Flask>=3.0.0
 gunicorn>=21.2.0
 firebase-admin>=6.5.0
+yfinance>=0.2.40
