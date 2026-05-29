@@ -708,21 +708,33 @@ def generate_html_dashboard():
             `;
             
             fetch('/api/trade?bypass_hours=true', {{ method: 'POST' }})
-            .then(res => res.json())
+            .then(async res => {{
+                const text = await res.text();
+                try {{
+                    const parsed = JSON.parse(text);
+                    // Attach ok flag to the data
+                    parsed._ok = res.ok;
+                    return parsed;
+                }} catch(e) {{
+                    throw new Error("HTTP " + res.status + " | " + text.substring(0, 300));
+                }}
+            }})
             .then(data => {{
-                if (data.status === "success") {{
+                if (data._ok && data.status === "success") {{
                     alert("[매매 체결] 구분: " + data.action + ", 종목코드: " + data.ticker + ", 수량: " + data.quantity + "주, 단가: " + Math.round(data.price).toLocaleString() + "원\\n\\n[이유] " + data.reasoning);
-                }} else if (data.status === "skipped") {{
+                }} else if (data._ok && data.status === "skipped") {{
                     alert("[매매 관망/건너뜀] 사유: " + data.message);
                 }} else {{
-                    alert("[매매 실패] 사유: " + data.message);
+                    const msg = data.message || "알 수 없는 백엔드 실패";
+                    const trace = data.traceback ? "\\n\\n[상세 오류]\\n" + data.traceback : "";
+                    alert("[매매 실패] 사유: " + msg + trace);
                 }}
                 btn.disabled = false;
                 btn.innerHTML = `⚡ AI 모의투자 매매 1사이클 강제 구동`;
                 loadTradingState();
             }})
             .catch(err => {{
-                alert("매매 거래 수행 도중 백엔드 오류가 발생했습니다.");
+                alert("매매 거래 수행 도중 백엔드 오류가 발생했습니다.\\n\\n[에러 내역]\\n" + err.message);
                 btn.disabled = false;
                 btn.innerHTML = `⚡ AI 모의투자 매매 1사이클 강제 구동`;
                 loadTradingState();
@@ -1208,9 +1220,13 @@ def trigger_trading_simulation():
         result = trading_engine.run_simulation_cycle(bypass_hours=bypass_hours)
         return jsonify(result)
     except Exception as e:
+        import traceback
+        err_stack = traceback.format_exc()
+        print(f"[Trading Engine] [API Error] {err_stack}")
         return jsonify({
             "status": "error",
-            "message": f"Simulation cycle execution failed: {str(e)}"
+            "message": f"Simulation cycle execution failed: {str(e)}",
+            "traceback": err_stack
         }), 500
 
 @app.route('/api/trading/state')
