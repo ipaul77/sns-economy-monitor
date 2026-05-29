@@ -696,12 +696,11 @@ def generate_html_dashboard():
                     
                     const row = document.createElement("tr");
                     row.className = "hover:bg-white/5 transition duration-150";
-                    const reasoningSafe = tx.reasoning.replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n');
                     row.innerHTML = '<td class="px-3 py-2 font-mono text-slate-500">' + time + '</td>' +
                                     '<td class="px-3 py-2">' + actionBadge + '</td>' +
                                     '<td class="px-3 py-2 font-medium text-slate-300">' + name + ' <span class="text-[8px] text-slate-500 font-mono">' + tx.ticker + '</span></td>' +
                                     '<td class="px-3 py-2 text-right font-mono text-slate-400">' + (tx.quantity > 0 ? (tx.quantity + '주 / ' + Math.round(price).toLocaleString() + '원') : '-') + '</td>' +
-                                    '<td class="px-3 py-2 text-slate-300 text-left truncate max-w-[240px] cursor-pointer hover:text-indigo-400 hover:underline" onclick="showReasoningModal(\'' + name + '\', \'' + tx.action + '\', \'' + reasoningSafe + '\')" title="클릭하여 전체 판단 사유 보기">' + tx.reasoning + '</td>';
+                                    '<td class="px-3 py-2 text-slate-300 text-left truncate max-w-[240px] cursor-pointer hover:text-indigo-400 hover:underline" data-name="' + name + '" data-action="' + tx.action + '" data-reasoning="' + (tx.reasoning_safe || '') + '" onclick="openReasoningFromElement(this)" title="클릭하여 전체 판단 사유 보기">' + tx.reasoning + '</td>';
                     txBody.appendChild(row);
                 }});
                 
@@ -881,6 +880,13 @@ def generate_html_dashboard():
 
         function closeReasoningModal() {{
             document.getElementById("reasoningModal").classList.add("hidden");
+        }}
+
+        function openReasoningFromElement(el) {{
+            const name = el.getAttribute("data-name");
+            const action = el.getAttribute("data-action");
+            const reasoning = el.getAttribute("data-reasoning");
+            showReasoningModal(name, action, reasoning);
         }}
 
         // Open/Close AI Briefing Modal
@@ -1326,6 +1332,12 @@ def get_trading_state():
         portfolio = trading_engine.get_portfolio_holdings()
         transactions = trading_engine.get_latest_transactions(limit=15)
         
+        # HTML/JS Attribute injection safety formatting at the source
+        for tx in transactions:
+            reason = tx.get("reasoning", "")
+            safe_reason = reason.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;").replace("'", "&#39;").replace("\n", " ")
+            tx["reasoning_safe"] = safe_reason
+            
         # Gather current stock prices to compute real-time value and ROI on front-end
         market_prices = {}
         for ticker in portfolio.keys():
