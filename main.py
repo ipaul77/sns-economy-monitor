@@ -1315,6 +1315,46 @@ def debug_import_trading_engine():
         })
 
 
+@app.route('/api/debug-run')
+def debug_run_trading_engine():
+    """
+    Dry-runs the trading engine simulation cycle step-by-step with raw log capture
+    to pinpoint exactly where the process crashes or gets blocked on the cloud.
+    """
+    import sys
+    import io
+    import traceback
+    
+    # Capture stdout
+    old_stdout = sys.stdout
+    captured_output = io.StringIO()
+    sys.stdout = captured_output
+    
+    try:
+        import trading_engine
+        print("[Debug Run] Module imported successfully. Starting simulation cycle...")
+        
+        # We run the simulation cycle
+        result = trading_engine.run_simulation_cycle(bypass_hours=True)
+        
+        # Restore stdout
+        sys.stdout = old_stdout
+        return jsonify({
+            "status": "success_completed",
+            "cycle_result": result,
+            "logs": captured_output.getvalue()
+        })
+    except Exception as e:
+        # Restore stdout
+        sys.stdout = old_stdout
+        return jsonify({
+            "status": "simulation_failed",
+            "error": str(e),
+            "traceback": traceback.format_exc(),
+            "logs": captured_output.getvalue()
+        })
+
+
 # --- SCHEDULER & RUN THREAD ---
 
 def scheduler_thread():
