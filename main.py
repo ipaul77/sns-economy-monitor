@@ -1311,12 +1311,11 @@ def handle_item_count():
 @app.route('/api/trade', methods=['POST', 'GET'])
 def trigger_trading_simulation():
     """
-    API endpoint: Triggers a single simulation cycle of the AI trading engine in the background
-    to completely prevent Gunicorn / Cloud timeout (30 seconds limit) crashes.
+    API endpoint: Triggers a single simulation cycle of the AI trading engine.
+    Executed synchronously on the cloud to prevent background thread container suspension.
     """
     try:
         import trading_engine
-        import threading
         
         # Check bypass_hours flag (e.g. ?bypass_hours=true)
         bypass_hours = request.args.get("bypass_hours", "false").lower() == "true"
@@ -1329,7 +1328,6 @@ def trigger_trading_simulation():
                 "message": "Trading engine is currently LOCKED due to an accounting integrity failure. System halt enforced."
             }), 423
             
-        # We check if there's already a trade running in the background to avoid concurrent overlapping trades
         global is_trading_in_progress
         if 'is_trading_in_progress' not in globals():
             is_trading_in_progress = False
@@ -1337,42 +1335,45 @@ def trigger_trading_simulation():
         if is_trading_in_progress:
             return jsonify({
                 "status": "skipped",
-                "message": "AI 모의투자 매매가 이미 백그라운드에서 분석 및 실행 중입니다. 잠시만 기다려주세요."
+                "message": "AI 모의투자 매매가 이미 분석 및 실행 중입니다. 잠시만 기다려주세요."
             })
             
-        def run_async_trade():
-            global is_trading_in_progress
+        try:
             is_trading_in_progress = True
+            print("[API] Starting synchronous trading cycle...")
+            
+            # 1. Clear briefing cache & Crawl fresh news first!
             try:
-                print("[API] Background trading thread started...")
+                from briefing import clear_briefing_cache
+                clear_briefing_cache()
+                print("[API] Crawling fresh news first...")
+                run_pipeline(global_config, global_analyzer)
+            except Exception as crawl_err:
+                print(f"[API] [Warning] Crawling failed before trade: {crawl_err}")
+            
+            # 2. Run simulation cycle on the fresh news!
+            result = trading_engine.run_simulation_cycle(bypass_hours=bypass_hours)
+            print("[API] Synchronous trading cycle finished successfully!")
+            
+            if result.get("status") == "skipped":
+                return jsonify({
+                    "status": "skipped",
+                    "message": result.get("message", "매매 조건이 충족되지 않아 건너뛰었습니다.")
+                })
                 
-                # 1. Clear briefing cache & Crawl fresh news in the background first!
-                try:
-                    from briefing import clear_briefing_cache
-                    clear_briefing_cache()
-                    print("[API] Background trading: Crawling fresh news first...")
-                    run_pipeline(global_config, global_analyzer)
-                except Exception as crawl_err:
-                    print(f"[API] [Warning] Background crawling failed before trade: {crawl_err}")
-                
-                # 2. Run simulation cycle on the fresh news!
-                trading_engine.run_simulation_cycle(bypass_hours=bypass_hours)
-                print("[API] Background trading thread finished successfully!")
-            except Exception as e:
-                import traceback
-                print(f"[API] [Error] Background trading thread failed: {e}\n{traceback.format_exc()}")
-            finally:
-                is_trading_in_progress = False
-
-        # Launch background thread
-        t = threading.Thread(target=run_async_trade, daemon=True)
-        t.start()
-        
-        return jsonify({
-            "status": "success",
-            "message": "AI 모의투자 엔진이 백그라운드에서 안전하게 기동되었습니다. 약 10~30초 후 분석 및 매매 결과가 자동으로 대시보드에 실시간 반영됩니다.",
-            "background": True
-        })
+            return jsonify({
+                "status": "success",
+                "message": "AI 모의투자 엔진이 성공적으로 구동되었습니다.",
+                "background": False,
+                "action": result.get("action", "HOLD"),
+                "ticker": result.get("ticker", ""),
+                "quantity": result.get("quantity", 0),
+                "price": result.get("price", 0.0),
+                "reasoning": result.get("reasoning", "")
+            })
+        finally:
+            is_trading_in_progress = False
+            
     except Exception as e:
         import traceback
         err_stack = traceback.format_exc()
