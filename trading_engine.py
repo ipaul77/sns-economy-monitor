@@ -367,8 +367,6 @@ def get_active_tickers(portfolio: Dict[str, Any], news_context: List[Dict[str, A
     Dynamically constructs the stock ticker pool for the current simulation cycle:
     1. Dynamic Top 7 stocks are always included for priority monitoring.
     2. Account holdings: Any stock currently owned in the portfolio is always included to allow selling.
-    3. News context: Any South Korean company mentioned in the latest news context is mapped to a ticker.
-    4. Ticker context: Tickers dynamically resolved by Gemini are directly added.
     """
     dynamic_7 = get_dynamic_top_7_stocks()
     active_tickers = set(dynamic_7)
@@ -377,57 +375,6 @@ def get_active_tickers(portfolio: Dict[str, Any], news_context: List[Dict[str, A
     for ticker in portfolio.keys():
         active_tickers.add(ticker)
         
-    # 2. Extract tickers dynamically resolved by Gemini Deep Analysis
-    for item in news_context:
-        tickers_val = item.get("impacted_tickers")
-        if tickers_val:
-            try:
-                if isinstance(tickers_val, str):
-                    tickers_list = json.loads(tickers_val)
-                elif isinstance(tickers_val, list):
-                    tickers_list = tickers_val
-                else:
-                    tickers_list = []
-                
-                if isinstance(tickers_list, list):
-                    for t in tickers_list:
-                        t = str(t).strip()
-                        if len(t) == 6 and t.isdigit():
-                            active_tickers.add(t)
-            except Exception:
-                pass
-
-    # 3. Extract company mentions from the latest analyzed news (Legacy fallback)
-    for item in news_context:
-        impacted_val = item.get("impacted_companies")
-        if not impacted_val:
-            continue
-            
-        try:
-            if isinstance(impacted_val, str):
-                companies = json.loads(impacted_val)
-            elif isinstance(impacted_val, list):
-                companies = impacted_val
-            else:
-                companies = []
-                
-            if isinstance(companies, list):
-                for comp in companies:
-                    ticker = COMPANY_TO_TICKER.get(str(comp).strip())
-                    if ticker:
-                        active_tickers.add(ticker)
-            else:
-                ticker = COMPANY_TO_TICKER.get(str(impacted_val).strip())
-                if ticker:
-                    active_tickers.add(ticker)
-        except Exception:
-            # Heuristic parsing for comma-separated or plain text company names
-            parts = [x.strip() for x in str(impacted_val).split(",") if x.strip()]
-            for part in parts:
-                ticker = COMPANY_TO_TICKER.get(part)
-                if ticker:
-                    active_tickers.add(ticker)
-                    
     print(f"[Trading Engine] Dynamic candidate ticker pool generated: {list(active_tickers)}")
     return list(active_tickers)
 
