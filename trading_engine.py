@@ -786,10 +786,21 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
 
 위 자산 상태, 거시 경제 지수, 실시간 기술 지표, 그리고 뉴스 분석 데이터를 정밀 종합 분석하여 최고의 의사결정을 내리고, 지정된 JSON 스키마에 따라 응답하세요.
 """
-    # We use gemini-3.5-flash or fallback
+    # Load model name from config.json or default to gemini-1.5-flash (ultra cost-effective stable model)
+    model_name = "gemini-1.5-flash"
+    try:
+        with open("config.json", "r", encoding="utf-8") as f:
+            cfg = json.load(f)
+            model_name = cfg.get("models", {}).get("pro_model", "gemini-1.5-flash")
+            # If config has non-existent future model names, fall back to gemini-1.5-flash
+            if "3.5" in model_name or "3.1" in model_name:
+                model_name = "gemini-1.5-flash"
+    except:
+        pass
+
     try:
         model = genai.GenerativeModel(
-            model_name="gemini-3.5-flash",
+            model_name=model_name,
             system_instruction=system_instruction
         )
         response = model.generate_content(
