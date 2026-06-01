@@ -212,10 +212,12 @@ def generate_html_dashboard():
                 <p class="text-xs font-semibold text-slate-400">평균 감성 지수</p>
                 <p class="mt-1 text-lg font-extrabold {sentiment_class}">{avg_sentiment:+.2f}</p>
             </div>
+        </section>
+
         <!-- AI Dynamic Watchlist Widget -->
         <section id="dynamicWatchlistWidget" class="mb-4">
             <h3 class="text-sm font-semibold text-slate-500 mt-6 mb-3">🔥 실시간 AI 선정 Dynamic 감시 7대 종목</h3>
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3" id="dynamicWatchlistBody">
+            <div class="flex overflow-x-auto gap-3 pb-3 snap-x snap-mandatory scrollbar-none md:grid md:grid-cols-4 lg:grid-cols-7" id="dynamicWatchlistBody">
                 <!-- Dynamic stock cards will be rendered here by JS -->
             </div>
         </section>
@@ -616,7 +618,7 @@ def generate_html_dashboard():
                         }}
                         
                         const card = document.createElement("div");
-                        card.className = "glass-card rounded-xl p-3 border " + borderGlow + " transition duration-200 hover:scale-[1.02]";
+                        card.className = "glass-card rounded-xl p-3 border " + borderGlow + " transition duration-200 hover:scale-[1.02] min-w-[135px] md:min-w-0 snap-center flex-shrink-0";
                         card.innerHTML = '<div class="flex justify-between items-start mb-1">' +
                                          '  <p class="text-[10px] font-semibold text-slate-400 truncate max-w-[80px]" title="' + name + '">' + name + '</p>' +
                                          '  ' + badgeHtml +
