@@ -1293,6 +1293,17 @@ def trigger_trading_simulation():
             is_trading_in_progress = True
             try:
                 print("[API] Background trading thread started...")
+                
+                # 1. Clear briefing cache & Crawl fresh news in the background first!
+                try:
+                    from briefing import clear_briefing_cache
+                    clear_briefing_cache()
+                    print("[API] Background trading: Crawling fresh news first...")
+                    run_pipeline(global_config, global_analyzer)
+                except Exception as crawl_err:
+                    print(f"[API] [Warning] Background crawling failed before trade: {crawl_err}")
+                
+                # 2. Run simulation cycle on the fresh news!
                 trading_engine.run_simulation_cycle(bypass_hours=bypass_hours)
                 print("[API] Background trading thread finished successfully!")
             except Exception as e:
