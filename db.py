@@ -126,6 +126,58 @@ def setup_db():
         pass # Already exists
         
     conn.close()
+    
+    # Warm start SQLite cache from Firestore on startup
+    if USE_FIREBASE:
+        try:
+            _warm_start_cache()
+        except Exception as e:
+            print(f"[Warning] Failed to warm start SQLite cache: {str(e)}")
+
+
+def _warm_start_cache():
+    """
+    Fetches the latest 50 records from Firestore and populates the local SQLite database.
+    This acts as a local cache so that we don't have to query Firestore for duplicate checks
+    every time the scraper runs.
+    """
+    if not USE_FIREBASE or db_client is None:
+        return
+    try:
+        print("[DB] Warm-starting local SQLite cache from Firestore...")
+        
+        # Query Firestore
+        docs = db_client.collection("history")\
+                        .order_by("processed_at", direction=firestore.Query.DESCENDING)\
+                        .limit(50)\
+                        .stream()
+                        
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        count = 0
+        for doc in docs:
+            r = doc.to_dict()
+            cursor.execute("""
+                INSERT OR REPLACE INTO history (
+                    url, title, content, source, published_at, processed_at, 
+                    is_relevant, relevance_reason, sentiment, sentiment_score, 
+                    relevance_score, impacted_sectors, impacted_companies, impacted_tickers,
+                    macro_impacts, korean_summary, alert_level, other_sources
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                r.get("url"), r.get("title"), r.get("content"), r.get("source"), r.get("published_at"), r.get("processed_at"),
+                r.get("is_relevant"), r.get("relevance_reason"), r.get("sentiment"), r.get("sentiment_score"), 
+                r.get("relevance_score"), r.get("impacted_sectors"), r.get("impacted_companies"), r.get("impacted_tickers"),
+                r.get("macro_impacts"), r.get("korean_summary"), r.get("alert_level"), r.get("other_sources")
+            ))
+            count += 1
+        conn.commit()
+        conn.close()
+        print(f"[DB] Successfully loaded {count} recent records from Firestore into local SQLite cache.")
+    except Exception as e:
+        check_firestore_quota_error(e)
+        print(f"[Warning] Firestore warm start failed: {str(e)}")
+
 
 
 def check_firestore_quota_error(error_exception):
@@ -239,6 +291,12 @@ def update_other_sources(url: str, new_source: str):
                         "other_sources": json.dumps(current_sources, ensure_ascii=False)
                     })
                     print(f"[Firestore] Merged source '{new_source}' into existing story.")
+                    
+                    # Also write to local SQLite as a cache
+                    try:
+                        _sqlite_update_other_sources(url, new_source)
+                    except Exception as sq_err:
+                        print(f"[Warning] Failed to update local SQLite cache: {str(sq_err)}")
             return
         except Exception as e:
             check_firestore_quota_error(e)
@@ -325,6 +383,13 @@ def save_analysis_result(item: dict, rel_check, analysis, other_sources=None):
             
             doc_ref.set(doc_data)
             print(f"[Firestore] Successfully saved record: {item['title']}")
+            
+            # Also write to local SQLite as a cache
+            try:
+                _sqlite_save_analysis_result(item, rel_check, analysis, other_sources, now_str, is_relevant_int, relevance_reason, sentiment, sentiment_score, relevance_score, impacted_sectors, impacted_companies, impacted_tickers, macro_impacts, korean_summary, alert_level, other_sources_json)
+            except Exception as sq_err:
+                print(f"[Warning] Failed to write local SQLite cache: {str(sq_err)}")
+                
             return
         except Exception as e:
             check_firestore_quota_error(e)
