@@ -1485,6 +1485,23 @@ def debug_import_trading_engine():
             diagnostic_info["db_read_success"] = True
             diagnostic_info["state_sample"] = state
             diagnostic_info["portfolio_sample"] = portfolio
+            
+            # List available models for their key on Render
+            try:
+                import google.generativeai as genai
+                api_key = os.getenv("GEMINI_API_KEY")
+                if not api_key:
+                    with open("config.json", "r", encoding="utf-8") as f:
+                        config_data = json.load(f)
+                        api_key = config_data.get("GEMINI_API_KEY")
+                if api_key:
+                    genai.configure(api_key=api_key.strip())
+                    models = genai.list_models()
+                    diagnostic_info["available_models"] = [m.name for m in models]
+                else:
+                    diagnostic_info["available_models_error"] = "API Key not found"
+            except Exception as model_err:
+                diagnostic_info["available_models_error"] = str(model_err)
         except Exception as inner_e:
             diagnostic_info["import_success"] = False
             diagnostic_info["import_error_message"] = str(inner_e)
