@@ -572,7 +572,7 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
     # Format news analysis context
     news_str = ""
     if not news_context:
-        news_str = "최근 24시간 동안 수집된 한국 경제 관련 신규 뉴스가 없습니다. 시장 모멘텀이 모호하므로 HOLD를 고려하세요."
+        news_str = "최근 24시간 동안 수집된 한국 경제 관련 신규 뉴스가 없습니다. 뉴스 호재가 없더라도 이격도, 거래량 돌파 비율 등 기술적 분석(차트) 및 시장 지수에 기반하여 현명한 투자 기회가 보인다면 매매 결정을 내릴 수 있습니다."
     else:
         for idx, item in enumerate(news_context):
             news_str += f"[{idx+1}] 제목: {item.get('title', '')}\n"
@@ -587,12 +587,13 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
         "너의 역할은 시장 가격, 지수 동향, 개별 기술 지표 및 최신 뉴스 컨텍스트를 기반으로 최선의 매수/매도/관망(BUY/SELL/HOLD) 의사 결정을 내리는 것이다.\n\n"
         "--- 엄격한 행동 강령 (Guardrails) ---\n"
         "1. 너에게는 자산을 직접 계산하거나 체결 장부를 변경할 권한이 없다. 오직 '투자 판단 시그널'만 올바른 JSON 구조로 반환할 수 있다.\n"
-        "2. 뉴스 분석이 누락되거나, 시장 왜곡이 의심되거나, 충분한 정보가 없을 경우 반드시 'HOLD'를 선택해라.\n"
+        "2. 뉴스 분석이 없고 기술적 지표(이격도, 거래량) 측면에서도 거래할 뚜렷한 시그널(돌파 또는 낙폭 과대 반등)이 없다면 'HOLD'를 선택해라.\n"
         "3. 매수를 할 때는 현재 보유 중인 예수금(Cash Balance) 범위 내에서만 가능한 수량(quantity)을 입력해라.\n"
         "4. 매도를 할 때는 반드시 현재 보유 중인 주식 포트폴리오 상의 수량 이하로만 수량을 설정해야 해. 공매도는 절대 불가능하다.\n"
         "5. 의사 결정 사유(reasoning)는 어떤 뉴스 분석 컨텍스트를 근거로 삼았는지, 현재의 기술적 지표 상황과 매치하여 한글로 구체적이고 논리적으로 서술해라.\n"
         "6. 특정 종목의 20일 이격도(Disparity)가 115% 이상으로 급등해 과열 구간일 때는 신규 매수(BUY)를 강하게 차단하거나 관망(HOLD) 조치해라.\n"
-        "7. 호재 뉴스가 떴더라도, 거래량 돌파 비율이 2.0배 이하(Volume Breakout 미충족)이고 거래량이 실리지 않은 상승일 때는 매수를 적극 자제해라."
+        "7. 호재 뉴스가 떴더라도, 거래량 돌파 비율이 2.0배 이하(Volume Breakout 미충족)이고 거래량이 실리지 않은 상승일 때는 매수를 적극 자제해라.\n"
+        "8. 뉴스가 없는 평시 상황에서는 '거래량 돌파 비율 2.0배 돌파(Volume Breakout)' 시 수급 유입에 따른 모멘텀 매수(BUY)를 고려하거나, '20일선 이격도(Disparity)가 90% 이하'로 극도의 과매도(낙폭 과대) 구간일 때 기술적 반등을 노린 저가 매수(BUY)를 수행할 수 있다."
     )
 
     prompt = f"""
@@ -699,20 +700,8 @@ def run_simulation_cycle(bypass_hours: bool = False) -> Dict[str, Any]:
         except Exception as e:
             print(f"[Trading Engine] Failed to parse last transaction timestamp: {e}")
 
-    # 5. Idempotency Lock Check (Duplicate News URL Check)
-    if news_context:
-        latest_news_url = news_context[0].get("url", "")
-        # Scan last few transactions to see if we already traded based on this url
-        already_processed_news = False
-        for tx in get_latest_transactions(limit=5):
-            snapshot = tx.get("snapshot_context", {})
-            if snapshot.get("latest_news_url") == latest_news_url and tx.get("action") != "HOLD" and not bypass_hours:
-                already_processed_news = True
-                break
-        
-        if already_processed_news:
-            print(f"[Trading Engine] Idempotency Lock: Already processed and acted upon the latest news URL: {latest_news_url}")
-            return {"status": "skipped", "message": "Idempotency Lock: Latest news context has already been acted upon."}
+    # (Duplicate News URL Check moved to after market indicator fetching to support technical triggers)
+    pass
 
     # 6. Fetch Market Prices & Indicators (Monitored candidates) in parallel using ThreadPoolExecutor!
     index_changes = get_market_index_change()
@@ -750,6 +739,28 @@ def run_simulation_cycle(bypass_hours: bool = False) -> Dict[str, Any]:
             price = ind.get("current_price", 0.0)
             if price > 0:
                 market_prices[tick] = price
+
+    # 5. Idempotency Lock Check (Duplicate News URL Check)
+    # ONLY apply this if we don't have any significant technical triggers (like volume breakout)
+    # to ensure we don't skip technical momentum/breakout trades.
+    has_technical_trigger = False
+    for tick, ind in market_indicators.items():
+        if ind.get("volume_breakout", False) or abs(ind.get("disparity", 100.0) - 100.0) >= 10.0:
+            has_technical_trigger = True
+            break
+            
+    if news_context and not has_technical_trigger:
+        latest_news_url = news_context[0].get("url", "")
+        already_processed_news = False
+        for tx in get_latest_transactions(limit=5):
+            snapshot = tx.get("snapshot_context", {})
+            if snapshot.get("latest_news_url") == latest_news_url and tx.get("action") != "HOLD" and not bypass_hours:
+                already_processed_news = True
+                break
+        
+        if already_processed_news:
+            print(f"[Trading Engine] Idempotency Lock: Already processed and acted upon the latest news URL: {latest_news_url}")
+            return {"status": "skipped", "message": "Idempotency Lock: Latest news context has already been acted upon."}
 
     # 6.5. Mechanical Stop-Loss (-4.5%) & Trailing-Stop (-3.0%) Evaluation
     for ticker, holding in portfolio.items():
