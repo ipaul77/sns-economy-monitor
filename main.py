@@ -1058,10 +1058,11 @@ def generate_html_dashboard():
                     // Skip reload if user is actively viewing briefing, chatting, or searching/filtering
                     const briefingOpen = !document.getElementById("briefingModal").classList.contains("hidden");
                     const chatOpen = !document.getElementById("chatWindow").classList.contains("hidden");
+                    const reasoningOpen = !document.getElementById("reasoningModal").classList.contains("hidden");
                     const searchInput = document.getElementById("searchInput");
                     const searchActive = searchInput && (document.activeElement === searchInput || searchInput.value.trim() !== "");
                     
-                    if (briefingOpen || chatOpen || searchActive) {{
+                    if (briefingOpen || chatOpen || reasoningOpen || searchActive) {{
                         console.log("[Pipeline] New news processed, but skipping reload because user is active.");
                         return;
                     }}
