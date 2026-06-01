@@ -1342,14 +1342,9 @@ def trigger_trading_simulation():
             is_trading_in_progress = True
             print("[API] Starting synchronous trading cycle...")
             
-            # 1. Clear briefing cache & Crawl fresh news first!
-            try:
-                from briefing import clear_briefing_cache
-                clear_briefing_cache()
-                print("[API] Crawling fresh news first...")
-                run_pipeline(global_config, global_analyzer)
-            except Exception as crawl_err:
-                print(f"[API] [Warning] Crawling failed before trade: {crawl_err}")
+            # 1. Skipped synchronous crawling to prevent 30s Render timeout.
+            # Scraped news is already periodically collected by the background scheduler thread.
+            print("[API] Running trade simulation cycle directly on existing database news cache...")
             
             # 2. Run simulation cycle on the fresh news!
             result = trading_engine.run_simulation_cycle(bypass_hours=bypass_hours)
