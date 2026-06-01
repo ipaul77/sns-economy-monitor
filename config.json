@@ -4,8 +4,8 @@
   "telegram_chat_id": "",
   "slack_webhook_url": "",
   "models": {
-    "flash_model": "gemini-1.5-flash",
-    "pro_model": "gemini-1.5-flash"
+    "flash_model": "gemini-3.1-flash-lite",
+    "pro_model": "gemini-3.5-flash"
   },
   "scraping_interval_seconds": 600,
   "realtime_monitoring_enabled": false,
