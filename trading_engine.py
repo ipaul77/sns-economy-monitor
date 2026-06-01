@@ -458,13 +458,15 @@ def get_stock_indicators(ticker: str) -> Dict[str, Any]:
         "daily_volume": 0,
         "avg_volume_5d": 0.0,
         "volume_ratio": 1.0,
-        "volume_breakout": False
+        "volume_breakout": False,
+        "market": "KOSPI"  # Default to KOSPI
     }
     if not ticker:
         return result
 
     # Standard suffix translation logic (KS/KQ)
     full_ticker = ticker
+    resolved_suffix = ".KS"
     if len(ticker) == 6 and ticker.isdigit():
         for suffix in [".KS", ".KQ"]:
             t_obj = yf.Ticker(ticker + suffix)
@@ -472,9 +474,13 @@ def get_stock_indicators(ticker: str) -> Dict[str, Any]:
                 hist = t_obj.history(period="1mo")
                 if not hist.empty and len(hist) >= 2:
                     full_ticker = ticker + suffix
+                    resolved_suffix = suffix
                     break
             except:
                 pass
+
+    if resolved_suffix == ".KQ":
+        result["market"] = "KOSDAQ"
 
     try:
         yt = yf.Ticker(full_ticker)
@@ -1100,10 +1106,16 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
                 has_bad_news = True
                 bad_news_reason = f"최근 24시간 감성 점수 극도 악재 ({avg_sent:+.2f})"
         
-        if is_market_shock:
+        # Targeted Market Shock: Block ONLY if the stock's specific home exchange (KOSPI vs KOSDAQ) crashed by -1.5% or more!
+        ticker_market = market_indicators.get(ticker, {}).get("market", "KOSPI") if ticker else "KOSPI"
+        market_change = index_changes.get(ticker_market, 0.0)
+        is_ticker_market_shock = market_change <= -1.5
+        shock_reason = f"소속 거래소: {ticker_market} | 지수 당일 등락률: {market_change:+.2f}%"
+
+        if is_ticker_market_shock:
             print(f"[Trading Engine] BUY Order Overridden by Market Shock: {shock_reason}")
             action = "HOLD"
-            reasoning = f"[백엔드 규칙 기각: 시장 쇼크] Gemini AI가 매수를 결정했으나 종합지수가 -1.5% 이상 패닉 급락 중이므로 추가 대방어 기각 규칙이 작동하여 HOLD 처리했습니다. ({shock_reason})"
+            reasoning = f"[백엔드 규칙 기각: 시장 쇼크] Gemini AI가 매수를 결정했으나 해당 주식의 소속 거래소({ticker_market}) 지수가 -1.5% 이상 패닉 급락 중이므로 추가 대방어 기각 규칙이 작동하여 HOLD 처리했습니다. ({shock_reason})"
         elif disparity >= 115.0:
             print(f"[Trading Engine] BUY Order Overridden by Disparity Limit: {disparity}% >= 115.0%")
             action = "HOLD"
