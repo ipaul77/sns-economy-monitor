@@ -212,6 +212,12 @@ def generate_html_dashboard():
                 <p class="text-xs font-semibold text-slate-400">평균 감성 지수</p>
                 <p class="mt-1 text-lg font-extrabold {sentiment_class}">{avg_sentiment:+.2f}</p>
             </div>
+        <!-- AI Dynamic Watchlist Widget -->
+        <section id="dynamicWatchlistWidget" class="mb-4">
+            <h3 class="text-sm font-semibold text-slate-500 mt-6 mb-3">🔥 실시간 AI 선정 Dynamic 감시 7대 종목</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3" id="dynamicWatchlistBody">
+                <!-- Dynamic stock cards will be rendered here by JS -->
+            </div>
         </section>
 
         <!-- AI Paper Trading Simulator Widget -->
@@ -580,6 +586,49 @@ def generate_html_dashboard():
                 
                 let stockVal = state.total_asset - state.balance;
                 document.getElementById("tradingStockValue").textContent = Math.round(stockVal).toLocaleString() + "원";
+                
+                // AI Dynamic Watchlist Rendering
+                const watchlistBody = document.getElementById("dynamicWatchlistBody");
+                if (watchlistBody && data.watchlist && data.dynamic_tickers) {{
+                    watchlistBody.innerHTML = "";
+                    data.dynamic_tickers.forEach(ticker => {{
+                        const ind = data.watchlist[ticker] || {{}};
+                        const price = ind.current_price || 0;
+                        const disparity = ind.disparity || 100.0;
+                        const volRatio = ind.volume_ratio || 1.0;
+                        
+                        const name = tickersMap[ticker] || ticker;
+                        
+                        // Determine technical status & badge
+                        let badgeHtml = "";
+                        let borderGlow = "border-slate-800/80";
+                        if (disparity >= 115.0) {{
+                            badgeHtml = '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">⚠️ 과열경계</span>';
+                            borderGlow = "border-rose-500/30 glow-red";
+                        }} else if (disparity <= 90.0) {{
+                            badgeHtml = '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">📉 낙폭과대</span>';
+                            borderGlow = "border-emerald-500/30 glow-green";
+                        }} else if (ind.volume_breakout) {{
+                            badgeHtml = '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">⚡ 수급돌파</span>';
+                            borderGlow = "border-amber-500/30 glow-orange";
+                        }} else {{
+                            badgeHtml = '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-slate-400 border border-slate-700">🟢 안정</span>';
+                        }}
+                        
+                        const card = document.createElement("div");
+                        card.className = "glass-card rounded-xl p-3 border " + borderGlow + " transition duration-200 hover:scale-[1.02]";
+                        card.innerHTML = '<div class="flex justify-between items-start mb-1">' +
+                                         '  <p class="text-[10px] font-semibold text-slate-400 truncate max-w-[80px]" title="' + name + '">' + name + '</p>' +
+                                         '  ' + badgeHtml +
+                                         '</div>' +
+                                         '<p class="text-sm font-extrabold text-slate-100 font-mono">' + Math.round(price).toLocaleString() + '원</p>' +
+                                         '<div class="flex justify-between items-center mt-2 text-[9px] text-slate-500 font-mono">' +
+                                         '  <span>이격: ' + disparity.toFixed(1) + '%</span>' +
+                                         '  <span>거래: ' + volRatio.toFixed(1) + 'x</span>' +
+                                         '</div>';
+                        watchlistBody.appendChild(card);
+                    }});
+                }}
                 
                 let roi = ((state.total_asset - 10000000) / 10000000 * 100);
                 const roiEl = document.getElementById("tradingROI");
@@ -1356,12 +1405,23 @@ def get_trading_state():
             if price > 0:
                 market_prices[ticker] = price
                 
+        # Gather dynamic top 7 watchlist indicators
+        dynamic_tickers = trading_engine.get_dynamic_top_7_stocks()
+        watchlist_indicators = {}
+        for tick in dynamic_tickers:
+            ind = trading_engine.get_stock_indicators(tick)
+            watchlist_indicators[tick] = ind
+            if ind.get("current_price", 0.0) > 0 and tick not in market_prices:
+                market_prices[tick] = ind["current_price"]
+                
         return jsonify({
             "status": "success",
             "state": state,
             "portfolio": portfolio,
             "market_prices": market_prices,
-            "transactions": transactions
+            "transactions": transactions,
+            "dynamic_tickers": dynamic_tickers,
+            "watchlist": watchlist_indicators
         })
     except Exception as e:
         return jsonify({

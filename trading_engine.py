@@ -233,74 +233,191 @@ def get_latest_transactions(limit: int = 15) -> List[Dict[str, Any]]:
 # DYNAMIC AI STOCK CANDIDATE PIPELINE MAPPING
 # ---------------------------------------------------------------------------
 COMPANY_TO_TICKER = {
-    "삼성전자": "005930",
-    "SK하이닉스": "000660",
-    "하이닉스": "000660",
-    "현대차": "005380",
-    "현대자동차": "005380",
-    "기아": "000270",
-    "기아차": "000270",
+    "ì¼ì±ì ì": "005930",
+    "SKíì´ëì¤": "000660",
+    "íì´ëì¤": "000660",
+    "íëì°¨": "005380",
+    "íëìëì°¨": "005380",
+    "ê¸°ì": "000270",
+    "ê¸°ìì°¨": "000270",
     "NAVER": "035420",
-    "네이버": "035420",
-    "카카오": "035720",
-    "LG에너지솔루션": "373220",
-    "LG엔솔": "373220",
-    "삼성SDI": "006400",
-    "LG화학": "051910",
-    "포스코홀딩스": "005490",
-    "POSCO홀딩스": "005490",
-    "셀트리온": "068270",
-    "한미반도체": "042700",
-    "에코프로": "086520",
-    "에코프로비엠": "247540",
-    "포스코퓨처엠": "003670",
-    "SK이노베이션": "096770",
-    "삼성물산": "028260",
-    "KB금융": "105560",
-    "KB금융지주": "105560",
-    "신한지주": "055550",
-    "신한금융지주": "055550",
-    "하나금융지주": "086790",
-    "삼성바이오로직스": "207940",
-    "알테오젠": "196170",
+    "ë¤ì´ë²": "035420",
+    "ì¹´ì¹´ì¤": "035720",
+    "LGìëì§ìë£¨ì": "373220",
+    "LGìì": "373220",
+    "ì¼ì±SDI": "006400",
+    "LGíí": "051910",
+    "í¬ì¤ì½íë©ì¤": "005490",
+    "POSCOíë©ì¤": "005490",
+    "ìí¸ë¦¬ì¨": "068270",
+    "íë¯¸ë°ëì²´": "042700",
+    "ìì½íë¡": "086520",
+    "ìì½íë¡ë¹ì ": "247540",
+    "í¬ì¤ì½í¨ì²ì ": "003670",
+    "ë„¤ì ´ë²„": "035420",
+    "ì¹´ì¹´ì˜¤": "035720",
+    "LGì— ë„ˆì§€ì†”ë£¨ì…˜": "373220",
+    "LGì—”ì†”": "373220",
+    "ì‚¼ì„±SDI": "006400",
+    "LGí™”í•™": "051910",
+    "í ¬ìŠ¤ì½”í™€ë”©ìŠ¤": "005490",
+    "POSCOí™€ë”©ìŠ¤": "005490",
+    "ì…€íŠ¸ë¦¬ì˜¨": "068270",
+    "í•œë¯¸ë°˜ë „ì²´": "042700",
+    "ì— ì½”í”„ë¡œ": "086520",
+    "ì— ì½”í”„ë¡œë¹„ì— ": "247540",
+    "í ¬ìŠ¤ì½”í“¨ì²˜ì— ": "003670",
+    "SKì ´ë…¸ë² ì ´ì…˜": "096770",
+    "ì‚¼ì„±ë¬¼ì‚°": "028260",
+    "KBê¸ˆìœµ": "105560",
+    "KBê¸ˆìœµì§€ì£¼": "105560",
+    "ì‹ í•œì§€ì£¼": "055550",
+    "ì‹ í•œê¸ˆìœµì§€ì£¼": "055550",
+    "í•˜ë‚˜ê¸ˆìœµì§€ì£¼": "086790",
+    "ì‚¼ì„±ë°”ì ´ì˜¤ë¡œì§ ìŠ¤": "207940",
+    "ì•Œí…Œì˜¤ì  ": "196170",
     "HLB": "028300",
     "HMM": "011200",
-    "대한항공": "003490",
-    "두산에너빌리티": "034020",
-    "HD현대중공업": "329180",
-    "유한양행": "000100"
+    "ëŒ€í•œí•­ê³µ": "003490",
+    "ë‘ ì‚°ì— ë„ˆë¹Œë¦¬í‹°": "034020",
+    "HDí˜„ëŒ€ì¤‘ê³µì—…": "329180",
+    "ìœ í•œì–‘í–‰": "000100"
 }
+
+def is_kospi_bear_market() -> bool:
+    """
+    KOSPI 지수가 최근 5일 이동평균선(5-day MA)보다 아래에 있는 하락 약세장 여부를 판별합니다.
+    """
+    try:
+        yt = yf.Ticker("^KS11")
+        hist = yt.history(period="10d")
+        if not hist.empty and len(hist) >= 5:
+            current_kospi = float(hist["Close"].iloc[-1])
+            ma_5 = float(hist["Close"].iloc[-5:].mean())
+            is_bear = current_kospi < ma_5
+            print(f"[Trading Engine] KOSPI Bear Filter: Current = {current_kospi:,.2f} | 5 MA = {ma_5:,.2f} | Bear Market = {is_bear}")
+            return is_bear
+    except Exception as e:
+        print(f"[Trading Engine] [Warning] Failed to fetch KOSPI 5 MA: {e}")
+    return False
+
+def get_dynamic_top_7_stocks() -> List[str]:
+    """
+    최근 24시간 내 수집된 관련성 높은 기사(is_relevant=1)를 바탕으로 가장 많이 언급된 종목 7개를 선정합니다.
+    언급된 종목이 7개 미만인 경우, 국내 증시 주요 대형주(삼성전자, SK하이닉스, LG에너지솔루션, 현대차, 삼성바이오로직스, 기아, 셀트리온)로 채워
+    항상 7개의 감시 대상 종목을 반환합니다.
+    """
+    recent_news = db.fetch_recent_relevant(hours=24)
+    
+    ticker_counts = {}
+    for item in recent_news:
+        tickers_val = item.get("impacted_tickers")
+        if tickers_val:
+            try:
+                if isinstance(tickers_val, str):
+                    tickers_list = json.loads(tickers_val)
+                elif isinstance(tickers_val, list):
+                    tickers_list = tickers_val
+                else:
+                    tickers_list = []
+                
+                if isinstance(tickers_list, list):
+                    for t in tickers_list:
+                        t = str(t).strip()
+                        if len(t) == 6 and t.isdigit():
+                            ticker_counts[t] = ticker_counts.get(t, 0) + 1
+            except Exception:
+                pass
+                
+        companies_val = item.get("impacted_companies")
+        if companies_val:
+            try:
+                if isinstance(companies_val, str):
+                    companies = json.loads(companies_val)
+                elif isinstance(companies_val, list):
+                    companies = companies_val
+                else:
+                    companies = []
+                
+                if isinstance(companies, list):
+                    for comp in companies:
+                        ticker = COMPANY_TO_TICKER.get(str(comp).strip())
+                        if ticker:
+                            ticker_counts[ticker] = ticker_counts.get(ticker, 0) + 1
+            except Exception:
+                pass
+
+    sorted_tickers = [t for t, count in sorted(ticker_counts.items(), key=lambda x: x[1], reverse=True)]
+    
+    default_tickers = ["005930", "000660", "373220", "005380", "207940", "000270", "068270"]
+    
+    dynamic_7 = []
+    for t in sorted_tickers:
+        if t not in dynamic_7 and len(dynamic_7) < 7:
+            dynamic_7.append(t)
+            
+    for t in default_tickers:
+        if t not in dynamic_7 and len(dynamic_7) < 7:
+            dynamic_7.append(t)
+            
+    return dynamic_7
 
 def get_active_tickers(portfolio: Dict[str, Any], news_context: List[Dict[str, Any]]) -> List[str]:
     """
     Dynamically constructs the stock ticker pool for the current simulation cycle:
-    1. Baseline large caps: Samsung Electronics (005930) and SK Hynix (000660) are always included.
+    1. Dynamic Top 7 stocks are always included for priority monitoring.
     2. Account holdings: Any stock currently owned in the portfolio is always included to allow selling.
     3. News context: Any South Korean company mentioned in the latest news context is mapped to a ticker.
+    4. Ticker context: Tickers dynamically resolved by Gemini are directly added.
     """
-    # Always include baseline large-cap pillars
-    active_tickers = {"005930", "000660"}
+    dynamic_7 = get_dynamic_top_7_stocks()
+    active_tickers = set(dynamic_7)
     
     # 1. Include currently owned portfolio holdings
     for ticker in portfolio.keys():
         active_tickers.add(ticker)
         
-    # 2. Extract company mentions from the latest analyzed news
+    # 2. Extract tickers dynamically resolved by Gemini Deep Analysis
+    for item in news_context:
+        tickers_val = item.get("impacted_tickers")
+        if tickers_val:
+            try:
+                if isinstance(tickers_val, str):
+                    tickers_list = json.loads(tickers_val)
+                elif isinstance(tickers_val, list):
+                    tickers_list = tickers_val
+                else:
+                    tickers_list = []
+                
+                if isinstance(tickers_list, list):
+                    for t in tickers_list:
+                        t = str(t).strip()
+                        if len(t) == 6 and t.isdigit():
+                            active_tickers.add(t)
+            except Exception:
+                pass
+
+    # 3. Extract company mentions from the latest analyzed news (Legacy fallback)
     for item in news_context:
         impacted_val = item.get("impacted_companies")
         if not impacted_val:
             continue
             
         try:
-            # Check if it is a JSON list string: '["삼성전자", "한미반도체"]'
-            companies = json.loads(impacted_val)
+            if isinstance(impacted_val, str):
+                companies = json.loads(impacted_val)
+            elif isinstance(impacted_val, list):
+                companies = impacted_val
+            else:
+                companies = []
+                
             if isinstance(companies, list):
                 for comp in companies:
                     ticker = COMPANY_TO_TICKER.get(str(comp).strip())
                     if ticker:
                         active_tickers.add(ticker)
             else:
-                ticker = COMPANY_TO_TICKER.get(str(companies).strip())
+                ticker = COMPANY_TO_TICKER.get(str(impacted_val).strip())
                 if ticker:
                     active_tickers.add(ticker)
         except Exception:
@@ -313,6 +430,7 @@ def get_active_tickers(portfolio: Dict[str, Any], news_context: List[Dict[str, A
                     
     print(f"[Trading Engine] Dynamic candidate ticker pool generated: {list(active_tickers)}")
     return list(active_tickers)
+
 
 # ---------------------------------------------------------------------------
 # MARKET DATA FETCHING (yfinance)
@@ -343,7 +461,39 @@ def get_market_index_change() -> Dict[str, float]:
             print(f"[Trading Engine] [Warning] Failed to fetch index {name}: {e}")
     return results
 
+def get_market_trend_regime() -> Dict[str, Any]:
+    """
+    Fetches the last 20 days of historical data for KOSPI (^KS11)
+    and determines if the market is in a Downtrend (current < 20 MA) or Uptrend.
+    """
+    try:
+        yt = yf.Ticker("^KS11")
+        # Fetch 1 month of data to safely calculate a 20-day moving average
+        hist = yt.history(period="1mo")
+        if not hist.empty and len(hist) >= 20:
+            close_slice = hist["Close"].iloc[-20:]
+            ma_20 = float(close_slice.mean())
+            current_price = float(hist["Close"].iloc[-1])
+            is_downtrend = current_price < ma_20
+            return {
+                "status": "success",
+                "current_price": round(current_price, 2),
+                "ma_20": round(ma_20, 2),
+                "is_downtrend": is_downtrend,
+                "message": f"KOSPI: {current_price:.2f} | 20 MA: {ma_20:.2f} ({'íë½ êµ­ë©´' if is_downtrend else 'ìì¹ êµ­ë©´'})"
+            }
+    except Exception as e:
+        print(f"[Trading Engine] [Warning] Failed to fetch market trend regime: {e}")
+    return {
+        "status": "fallback",
+        "current_price": 2650.0,
+        "ma_20": 2650.0,
+        "is_downtrend": False,
+        "message": "ìì¥ êµ­ë©´ ë¶ì ì¤í¨ (ê¸°ë³¸ê° ìì¹ êµ­ë©´ì¼ë¡ ì°í)"
+    }
+
 def get_stock_indicators(ticker: str) -> Dict[str, Any]:
+
     """
     Fetches all advanced technical indicators for a given stock ticker:
     1. Current Price
@@ -437,7 +587,58 @@ def get_stock_indicators(ticker: str) -> Dict[str, Any]:
 
     return result
 
+def get_stock_volatility_multiplier(ticker: str, fallback_vol: float = 0.045) -> float:
+    """
+    Fetches historical close prices for the past 20 trading days,
+    calculates the standard deviation of daily returns,
+    and multiplies it by 2.5 to set a volatility-based stop-loss percentage.
+    Returns the stop-loss percentage (e.g. 0.065 for 6.5%).
+    """
+    ticker = ticker.strip()
+    if not ticker:
+        return fallback_vol
+        
+    full_ticker = ticker
+    if len(ticker) == 6 and ticker.isdigit():
+        full_ticker = ticker + ".KS"  # Assume KOSPI first
+        
+    try:
+        yt = yf.Ticker(full_ticker)
+        hist = yt.history(period="1mo")
+        if (hist.empty or len(hist) < 10) and len(ticker) == 6:
+            # Try KOSDAQ
+            yt = yf.Ticker(ticker + ".KQ")
+            hist = yt.history(period="1mo")
+            
+        if not hist.empty and len(hist) >= 10:
+            close_prices = hist["Close"].tolist()
+            # Calculate daily fractional changes
+            returns = []
+            for i in range(1, len(close_prices)):
+                if close_prices[i-1] > 0:
+                    returns.append((close_prices[i] - close_prices[i-1]) / close_prices[i-1])
+            if returns:
+                import math
+                # Calculate mean
+                mean_ret = sum(returns) / len(returns)
+                # Calculate variance
+                variance = sum((r - mean_ret) ** 2 for r in returns) / len(returns)
+                std_dev = math.sqrt(variance)
+                
+                # Cap standard deviation between 1% and 6% per day to avoid extreme stops
+                std_dev = max(min(std_dev, 0.06), 0.01)
+                
+                # 2.5 * standard deviation
+                vol_stop = std_dev * 2.5
+                print(f"[Trading Volatility] {ticker}: Daily StdDev = {std_dev:.2%}, VolStop = {vol_stop:.2%}")
+                return vol_stop
+    except Exception as e:
+        print(f"[Trading Engine] [Warning] Volatility calculation failed for {ticker}: {e}")
+        
+    return fallback_vol
+
 def get_stock_price(ticker: str) -> float:
+
     """
     Fetches the current market price for a given 6-digit stock ticker code (e.g. 005930).
     Automatically translates it to .KS (KOSPI) or .KQ (KOSDAQ).
@@ -508,8 +709,9 @@ def get_stock_price(ticker: str) -> float:
 class TradingDecision(BaseModel):
     action: Literal["BUY", "SELL", "HOLD"] = Field(description="The trading action to execute: BUY, SELL, or HOLD.")
     ticker: str = Field(description="A 6-digit stock ticker code to trade (e.g. '005930' for Samsung Electronics, '000660' for SK Hynix).")
-    quantity: int = Field(description="The integer quantity of shares to buy or sell (must be >= 0). For HOLD, this must be 0.")
+    allocation_pct: float = Field(description="Percentage of available cash to allocate to this BUY trade (from 0.0 to 100.0). For SELL, represent the percentage of owned shares to sell (from 0.0 to 100.0). For HOLD, this must be 0.0.")
     reasoning: str = Field(description="Specific, detailed investment logic in Korean justifying the decision based on provided news sentiment and price analysis.")
+
 
 def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: float, market_prices: Dict[str, float], news_context: List[Dict[str, Any]], market_indicators: Optional[Dict[str, Dict[str, Any]]] = None, index_changes: Optional[Dict[str, float]] = None, api_key: Optional[str] = None) -> TradingDecision:
     """
@@ -536,69 +738,92 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
             except Exception:
                 pass
                 
+    # 1. Goal-Based Investing (ROI Target: +10% in 30 days)
+    initial_asset = 10000000.0
+    state = get_agent_state()
+    start_date_str = state.get("start_date", get_kst_now().isoformat())
+    try:
+        start_date = datetime.fromisoformat(start_date_str)
+        elapsed_days = (get_kst_now() - start_date).days
+    except Exception:
+        elapsed_days = 0
+        
+    remaining_days = max(30 - elapsed_days, 1)
+    
+    # Calculate current total asset (balance + current holdings value)
+    portfolio_value = sum(
+        portfolio.get(t, {}).get("quantity", 0) * market_prices.get(t, 0.0) 
+        for t in portfolio
+    )
+    current_total_asset = balance + portfolio_value
+    current_roi = ((current_total_asset - initial_asset) / initial_asset) * 100
+    target_roi = 10.0 # +10% ROI Target
+    target_asset = initial_asset * (1.0 + (target_roi / 100.0))
+
     # Format portfolio state for the prompt
     portfolio_str = ""
     if not portfolio:
-        portfolio_str = "보유하고 있는 주식이 없습니다."
+        portfolio_str = "ë³´ì íê³  ìë ì£¼ìì´ ììµëë¤."
     else:
         for tick, info in portfolio.items():
             current_price = market_prices.get(tick, 0.0)
             avg_price = info["average_price"]
             qty = info["quantity"]
             pl_rate = ((current_price - avg_price) / avg_price * 100) if avg_price > 0 else 0.0
-            portfolio_str += f"- 종목코드: {tick} | 보유수량: {qty}주 | 평균 매수가: {avg_price:,.0f}원 | 현재가: {current_price:,.0f}원 (손익률: {pl_rate:+.2f}%)\n"
+            portfolio_str += f"- ì¢ëª©ì½ë: {tick} | ë³´ì ìë: {qty}ì£¼ | íê·  ë§¤ìê°: {avg_price:,.0f}ì | íì¬ê°: {current_price:,.0f}ì (ììµë¥ : {pl_rate:+.2f}%)\n"
 
     # Format market prices
-    prices_str = "\n".join([f"- 종목코드: {tick} | 현재 체결가: {price:,.0f}원" for tick, price in market_prices.items()])
+    prices_str = "\n".join([f"- ì¢ëª©ì½ë: {tick} | íì¬ ì²´ê²°ê°: {price:,.0f}ì" for tick, price in market_prices.items()])
 
     # Format index changes
-    index_str = "지수 정보 없음"
+    index_str = "ì§ì ì ë³´ ìì"
     if index_changes:
         index_str = ", ".join([f"{name}: {val:+.2f}%" for name, val in index_changes.items()])
 
     # Format indicators
     indicators_str = ""
-    if market_indicators:
-        for tick, ind in market_indicators.items():
-            indicators_str += (
-                f"- 종목코드: {tick} | 현재가: {ind['current_price']:,.0f}원 | "
-                f"20일선 이격도: {ind['disparity']}% | "
-                f"당일/5일평균 거래량 비율: {ind['volume_ratio']}배 "
-                f"({'[거래량돌파 충족]' if ind['volume_breakout'] else '[거래량 부족]'}) \n"
-            )
-    else:
-        indicators_str = "기술적 지표 데이터 없음."
-
     # Format news analysis context
     news_str = ""
     if not news_context:
-        news_str = "최근 24시간 동안 수집된 한국 경제 관련 신규 뉴스가 없습니다. 뉴스 호재가 없더라도 이격도, 거래량 돌파 비율 등 기술적 분석(차트) 및 시장 지수에 기반하여 현명한 투자 기회가 보인다면 매매 결정을 내릴 수 있습니다."
+        news_str = "ìµê·¼ 24ìê° ëì ìì§ë íêµ­ ê²½ì  ê´ë ¨ ì ê· ë´ì¤ê° ììµëë¤. ë´ì¤ í¸ì¬ê° ìëë¼ë ì´ê²©ë, ê±°ëë ëí ë¹ì¨ ë± ê¸°ì ì  ì§íê° ëë ·íë©´ ëª¨ë©í ê±°ëë¥¼ ê³ ë ¤í  ì ììµëë¤."
     else:
-        for idx, item in enumerate(news_context):
-            news_str += f"[{idx+1}] 제목: {item.get('title', '')}\n"
-            news_str += f"  - 감성(Sentiment): {item.get('sentiment', 'NEUTRAL')} (점수: {item.get('sentiment_score', 0.0)})\n"
-            news_str += f"  - 관련성 점수: {item.get('relevance_score', 0)}/10 | 경보 레벨: {item.get('alert_level', 'LOW')}\n"
-            news_str += f"  - 수혜/영향 기업: {item.get('impacted_companies', '[]')}\n"
-            news_str += f"  - AI 요약 내용: {item.get('korean_summary', '')}\n\n"
+        for idx, item in enumerate(news_context[:10]):  # Limit to top 10 relevant stories
+            news_str += (
+                f"{idx+1}. [{item.get('source', 'ë´ì¤')}] {item.get('title', '')} (ì¤ìë: {item.get('relevance_score', 5)}/10) \n"
+                f"   - ê°ì±ìì¤: {item.get('sentiment', 'NEUTRAL')} (ì ì: {item.get('sentiment_score', 0.0):+.2f}) \n"
+                f"   - AI ë¶ì ìì½: {item.get('korean_summary', '')} \n"
+                f"   - ì¦ì ìí¥ íê°: {item.get('macro_impacts', '')} \n"
+            )
 
     # Define system instructions (Guardrails)
     system_instruction = (
-        "너는 주어진 가상 자산 범위 내에서만 자금을 운용하는 매우 보수적이고 합리적인 AI 주식 투자 에이전트야.\n"
-        "너의 역할은 시장 가격, 지수 동향, 개별 기술 지표 및 최신 뉴스 컨텍스트를 기반으로 최선의 매수/매도/관망(BUY/SELL/HOLD) 의사 결정을 내리는 것이다.\n\n"
-        "--- 엄격한 행동 강령 (Guardrails) ---\n"
-        "1. 너에게는 자산을 직접 계산하거나 체결 장부를 변경할 권한이 없다. 오직 '투자 판단 시그널'만 올바른 JSON 구조로 반환할 수 있다.\n"
-        "2. 뉴스 분석이 없고 기술적 지표(이격도, 거래량) 측면에서도 거래할 뚜렷한 시그널(돌파 또는 낙폭 과대 반등)이 없다면 'HOLD'를 선택해라.\n"
-        "3. 매수를 할 때는 현재 보유 중인 예수금(Cash Balance) 범위 내에서만 가능한 수량(quantity)을 입력해라.\n"
-        "4. 매도를 할 때는 반드시 현재 보유 중인 주식 포트폴리오 상의 수량 이하로만 수량을 설정해야 해. 공매도는 절대 불가능하다.\n"
-        "5. 의사 결정 사유(reasoning)는 어떤 뉴스 분석 컨텍스트를 근거로 삼았는지, 현재의 기술적 지표 상황과 매치하여 한글로 구체적이고 논리적으로 서술해라.\n"
-        "6. 특정 종목의 20일 이격도(Disparity)가 115% 이상으로 급등해 과열 구간일 때는 신규 매수(BUY)를 강하게 차단하거나 관망(HOLD) 조치해라.\n"
-        "7. 호재 뉴스가 떴더라도, 거래량 돌파 비율이 2.0배 이하(Volume Breakout 미충족)이고 거래량이 실리지 않은 상승일 때는 매수를 적극 자제해라.\n"
-        "8. 뉴스가 없는 평시 상황에서는 '거래량 돌파 비율 2.0배 돌파(Volume Breakout)' 시 수급 유입에 따른 모멘텀 매수(BUY)를 고려하거나, '20일선 이격도(Disparity)가 90% 이하'로 극도의 과매도(낙폭 과대) 구간일 때 기술적 반등을 노린 저가 매수(BUY)를 수행할 수 있다."
+        "ëë ì£¼ì´ì§ ê°ì ìì° ë²ì ë´ììë§ ìê¸ì ì´ì©íë ë§¤ì° ë³´ìì ì´ê³  í©ë¦¬ì ì¸ AI ì£¼ì í¬ì ìì´ì í¸ì¼.\n"
+        "ëì ì­í ì ìì¥ ê°ê²©, ì§ì ëí¥, ê°ë³ ê¸°ì  ì§í ë° ìµì  ë´ì¤ ì»¨íì¤í¸ë¥¼ ê¸°ë°ì¼ë¡ ìµì ì ë§¤ì/ë§¤ë/ê´ë§(BUY/SELL/HOLD) ìì¬ ê²°ì ì ë´ë¦¬ë ê²ì´ë¤.\n\n"
+        "--- ìê²©í íë ê°ë ¹ (Guardrails) ---\n"
+        "1. ëìê²ë ìì°ì ì§ì  ê³ì°íê±°ë ì²´ê²° ì¥ë¶ë¥¼ ë³ê²½í  ê¶íì´ ìë¤. ì¤ì§ 'í¬ì íë¨ ìê·¸ë'ë§ ì¬ë°ë¥¸ JSON êµ¬ì¡°ë¡ ë°íí  ì ìë¤.\n"
+        "2. ë´ì¤ ë¶ìì´ ìê³  ê¸°ì ì  ì§í(ì´ê²©ë, ê±°ëë) ì¸¡ë©´ììë ê±°ëí  ëë ·í ìê·¸ë(ëí ëë ëí­ ê³¼ë ë°ë±)ì´ ìë¤ë©´ 'HOLD'ë¥¼ ì íí´ë¼.\n"
+        "3. ë§¤ìë¥¼ í  ëë íì¬ ë³´ì  ì¤ì¸ ììê¸(Cash Balance) ëë¹ ì§ìí  ë¹ì¨(allocation_pct, 0.0% ~ 100.0%)ì ìë ¥í´ë¼. ì ë ììê¸ì ì´ê³¼í  ì ìë¤.\n"
+        "4. ë§¤ëë¥¼ í  ëë íì¬ ë³´ì  ì¤ì¸ í¹ì  ì£¼ìì ìë ëë¹ ë§¤ëí  ë¹ì¨(allocation_pct, 0.0% ~ 100.0%)ì ìë ¥í´ë¼. ì ë ë§¤ëë 100.0%, ì ë° ë§¤ëë 50.0% ë±ì¼ë¡ ê¸°ìíë¤. ê³µë§¤ëë ì ë ë¶ê°ë¥íë¤.\n"
+        "5. ìì¬ ê²°ì  ì¬ì (reasoning)ë ì´ë¤ ë´ì¤ ë¶ì ì»¨íì¤í¸ë¥¼ ê·¼ê±°ë¡ ì¼ìëì§, íì¬ì ê¸°ì ì  ì§í ìí©ê³¼ ë§¤ì¹íì¬ íê¸ë¡ êµ¬ì²´ì ì´ê³  ë¼ë¦¬ì ì¼ë¡ ìì í´ë¼.\n"
+        "6. í¹ì  ì¢ëª©ì 20ì¼ ì´ê²©ë(Disparity)ê° 115% ì´ìì¼ë¡ ê¸ë±í´ ê³¼ì´ êµ¬ê°ì¼ ëë ì ê· ë§¤ì(BUY)ë¥¼ ê°íê² ì°¨ë¨íê±°ë ê´ë§(HOLD) ì¡°ì¹í´ë¼.\n"
+        "7. í¸ì¬ ë´ì¤ê° ë´ëë¼ë, ê±°ëë ëí ë¹ì¨ì´ 2.0ë°° ì´í(Volume Breakout ë¯¸ì¶©ì¡±)ì´ê³  ê±°ëëì´ ì¤ë¦¬ì§ ìì ìì¹ì¼ ëë ë§¤ìë¥¼ ì ê·¹ ìì í´ë¼.\n"
+        "8. ë´ì¤ê° ìë íì ìí©ììë 'ê±°ëë ëí ë¹ì¨ 2.0ë°° ëí(Volume Breakout)' ì ìê¸ ì ìì ë°ë¥¸ ëª¨ë©í ë§¤ì(BUY)ë¥¼ ê³ ë ¤íê±°ë, '20ì¼ì  ì´ê²©ë(Disparity)ê° 90% ì´í'ë¡ ê·¹ëì ê³¼ë§¤ë(ëí­ ê³¼ë) êµ¬ê°ì¼ ë ê¸°ì ì  ë°ë±ì ë¸ë¦° ì ê° ë§¤ì(BUY)ë¥¼ ìíí  ì ìë¤.\n"
+        f"9. ëë 30ì¼ ë´ì ëì  ììµë¥  +{target_roi}%ë¥¼ ë¬ì±í´ì¼ íë ëªíí í¬í¸í´ë¦¬ì¤ ëª©íë¥¼ ê°ì§ê³  ìë¤. íì¬ ê²½ê³¼ ì¼ì({elapsed_days}ì¼ì°¨)ì íì¬ ììµë¥ ({current_roi:.2f}%)ì ê³ ë ¤íì¬ í¬ì ì±í¥ì ëì ì¼ë¡ ì¡°ì íë¼:\n"
+        "   - **ì¶ê²© ëª¨ë(Aggressive Catch-up)**: ëª©í ë§ê°ì¼ì´ ë¤ê°ì¤ëë° íì¬ ììµë¥ ì´ ëª©í íì´ì¤(+0.33%/ì¼) ëë¹ ë¯¸ë¬ ìíì¸ ê²½ì°, ì°ë ì¢ëª©ì ê¸°ì ì  ê±°ëë ëíë ê·¹ì¬í ëí­ ê³¼ë êµ¬ê°ìì ë§¤ì ë¹ì¤ì ëì¬ ì ê·¹ì ì¼ë¡ ììµì ì¶êµ¬íë¼.\n"
+        "   - **ì´ìµ ë³´ì¡´ ëª¨ë(Capital Preservation)**: ì´ë¯¸ ëª©í ììµë¥ ì ì´ê³¼ ë¬ì±íê±°ë ëª©í íì´ì¤ë¥¼ ìì ì ì¼ë¡ ìííê³  ìë ê²½ì°, ìë¡ì´ ì¶ê²© ë§¤ìë¥¼ ë§¤ì° ìì íê³  ì´ìµì ì¤ííì¬ ì»ì ììµì ìì íê² ì§í¤ë ê´ë§(HOLD) ìì£¼ë¡ ì¡°ì¬ì¤ë½ê² ë°©ì´íë¼."
     )
 
     prompt = f"""
 현재 시각: {get_kst_now().strftime("%Y-%m-%d %H:%M:%S")} (KST)
 현재 사용 가능한 예수금(Cash): {balance:,.0f}원
+
+[포트폴리오 자산 운용 목표 (30일 누적 목표 수익률: +{target_roi}%)]
+- 투자 시작일: {start_date.strftime("%Y-%m-%d")}
+- 현재 경과 일수: 30일 중 {elapsed_days}일차 (남은 일수: {remaining_days}일)
+- 초기 운용 자산: {initial_asset:,.0f}원
+- 30일 목표 자산: {target_asset:,.0f}원 (+{target_roi}%)
+- 현재 평가 자산: {current_total_asset:,.0f}원 (현재 누적 수익률: {current_roi:+.2f}%)
+- 일별 권장 진척 속도: +0.33% / 일
 
 [시장 전체 Macro 지수 동향]
 - {index_str}
@@ -614,52 +839,6 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
 
 위 자산 상태, 거시 경제 지수, 실시간 기술 지표, 그리고 뉴스 분석 데이터를 정밀 종합 분석하여 최고의 의사결정을 내리고, 지정된 JSON 스키마에 따라 응답하세요.
 """
-
-    # We use gemini-3.5-flash or fallback
-    try:
-        model = genai.GenerativeModel(
-            model_name="gemini-3.5-flash",
-            system_instruction=system_instruction
-        )
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.GenerationConfig(
-                response_mime_type="application/json",
-                response_schema=TradingDecision,
-                temperature=0.2
-            )
-        )
-        # Parse Pydantic object
-        decision = TradingDecision.model_validate_json(response.text)
-        return decision
-    except Exception as e:
-        print(f"[Trading Engine] [Error] Gemini API or schema validation failed: {e}. Falling back to HOLD.")
-        # Fallback to HOLD
-        return TradingDecision(
-            action="HOLD",
-            ticker="005930",
-            quantity=0,
-            reasoning=f"Gemini API 호출 및 스키마 검증 과정에서 예외가 발생하여 자산 안전을 위해 HOLD 처리했습니다. (에러: {str(e)})"
-        )
-
-# ---------------------------------------------------------------------------
-# PHASE 3: CORE RULES ENGINE & DEFENSIVE PROGRAMMING
-# ---------------------------------------------------------------------------
-def run_simulation_cycle(bypass_hours: bool = False) -> Dict[str, Any]:
-    """
-    Executes a single end-to-end trading simulation cycle:
-    1. Check and Load database state (Check for system locks).
-    2. Check KST Market Hours (09:00 - 15:30) with optional test bypass.
-    3. Apply Idempotency Lock (30 min minimum gap or news ID validation).
-    4. Fetch target stock market prices & technical indicators in parallel.
-    5. Evaluate Mechanical Rules (Stop-Loss -4.5% & Trailing-Stop -3%) and update Firestore.
-    6. Retrieve latest news context from DB.
-    7. Call Gemini Agent with indicators context for decision formulation.
-    8. backend Order Verification (Execution Filter, Shock & Disparity Override).
-    9. Process Account Updates.
-    10. Run **Accounting Assert** (strict mathematical verification or lock and sys.exit).
-    11. Log transaction & Update Firestore state.
-    """
     # 1. State Load & Lock Check
     state = get_agent_state()
     if state.get("system_lock", False):
@@ -707,13 +886,13 @@ def run_simulation_cycle(bypass_hours: bool = False) -> Dict[str, Any]:
     index_changes = get_market_index_change()
     print(f"[Trading Engine] Market Indices changes: {index_changes}")
     
-    # KOSPI or KOSDAQ 급락 쇼크 경보 (-1.5% 이하)
+    # KOSPI or KOSDAQ ê¸ë½ ì¼í¬ ê²½ë³´ (-1.5% ì´í)
     is_market_shock = False
     shock_reason = ""
     for idx_name, val in index_changes.items():
         if val <= -1.5:
             is_market_shock = True
-            shock_reason = f"지수 급락 쇼크 경보 ({idx_name} 당일 등락률: {val:+.2f}%)"
+            shock_reason = f"ì§ì ê¸ë½ ì¼í¬ ê²½ë³´ ({idx_name} ë¹ì¼ ë±ë½ë¥ : {val:+.2f}%)"
             break
 
     monitored_tickers = get_active_tickers(portfolio, news_context)
@@ -795,7 +974,7 @@ def run_simulation_cycle(bypass_hours: bool = False) -> Dict[str, Any]:
             )
             update_agent_state_in_db(new_balance, new_total_asset, system_lock=False)
             
-            reasoning = f"[기계적 손절매 청산] 주가가 매수가({avg_price:,.0f}원) 대비 -4.5% 손실 한계선({stop_loss_limit:,.0f}원)에 도달하여 추가 손실 차단을 위해 전량 시장가 매도 처리하였습니다. (현재가: {current_price:,.0f}원)"
+            reasoning = f"[ê¸°ê³ì  ìì ë§¤ ì²­ì°] ì£¼ê°ê° ë§¤ìê°({avg_price:,.0f}ì) ëë¹ -4.5% ìì¤ íê³ì ({stop_loss_limit:,.0f}ì)ì ëë¬íì¬ ì¶ê° ìì¤ ì°¨ë¨ì ìí´ ì ë ìì¥ê° ë§¤ë ì²ë¦¬íììµëë¤. (íì¬ê°: {current_price:,.0f}ì)"
             
             snapshot = {
                 "prev_balance": balance,
@@ -838,7 +1017,7 @@ def run_simulation_cycle(bypass_hours: bool = False) -> Dict[str, Any]:
             )
             update_agent_state_in_db(new_balance, new_total_asset, system_lock=False)
             
-            reasoning = f"[기계적 추적손절매 익절] 주가가 매수 후 최고점({new_highest:,.0f}원) 대비 -3.0% 수익보존 한계선({trailing_stop_limit:,.0f}원) 이하로 하락하여, 이익 보존을 위해 전량 시장가 매도 처리하였습니다. (현재가: {current_price:,.0f}원)"
+            reasoning = f"[ê¸°ê³ì  ì¶ì ìì ë§¤ ìµì ] ì£¼ê°ê° ë§¤ì í ìµê³ ì ({new_highest:,.0f}ì) ëë¹ -3.0% ììµë³´ì¡´ íê³ì ({trailing_stop_limit:,.0f}ì) ì´íë¡ íë½íì¬, ì´ìµ ë³´ì¡´ì ìí´ ì ë ìì¥ê° ë§¤ë ì²ë¦¬íììµëë¤. (íì¬ê°: {current_price:,.0f}ì)"
             
             snapshot = {
                 "prev_balance": balance,
@@ -893,19 +1072,19 @@ def run_simulation_cycle(bypass_hours: bool = False) -> Dict[str, Any]:
         if is_market_shock:
             print(f"[Trading Engine] BUY Order Overridden by Market Shock: {shock_reason}")
             action = "HOLD"
-            reasoning = f"[백엔드 규칙 기각: 시장 쇼크] Gemini AI가 매수를 결정했으나 종합지수가 -1.5% 이상 패닉 급락 중이므로 추가 대방어 기각 규칙이 작동하여 HOLD 처리했습니다. ({shock_reason})"
+            reasoning = f"[ë°±ìë ê·ì¹ ê¸°ê°: ìì¥ ì¼í¬] Gemini AIê° ë§¤ìë¥¼ ê²°ì íì¼ë ì¢í©ì§ìê° -1.5% ì´ì í¨ë ê¸ë½ ì¤ì´ë¯ë¡ ì¶ê° ëë°©ì´ ê¸°ê° ê·ì¹ì´ ìëíì¬ HOLD ì²ë¦¬íìµëë¤. ({shock_reason})"
             quantity = 0
         elif disparity >= 115.0:
             print(f"[Trading Engine] BUY Order Overridden by Disparity Limit: {disparity}% >= 115.0%")
             action = "HOLD"
-            reasoning = f"[백엔드 규칙 기각: 가격 과열] Gemini AI가 매수를 결정했으나 20일선 이격도가 {disparity}%로 과열 임계치(115%)를 초과하여 상단 꼭대기 설거지 방지 기각 규칙이 작동하여 HOLD 처리했습니다."
+            reasoning = f"[ë°±ìë ê·ì¹ ê¸°ê°: ê°ê²© ê³¼ì´] Gemini AIê° ë§¤ìë¥¼ ê²°ì íì¼ë 20ì¼ì  ì´ê²©ëê° {disparity}%ë¡ ê³¼ì´ ìê³ì¹(115%)ë¥¼ ì´ê³¼íì¬ ìë¨ ê¼­ëê¸° ì¤ê±°ì§ ë°©ì§ ê¸°ê° ê·ì¹ì´ ìëíì¬ HOLD ì²ë¦¬íìµëë¤."
             quantity = 0
 
     # 8.5. Standard Execution Filter
     if action in ["BUY", "SELL"] and (current_price <= 0 or not ticker):
         print(f"[Trading Engine] Order Rejected: Price for ticker {ticker} is invalid or 0.")
         action = "HOLD"
-        reasoning = f"시스템오류: 종목코드 {ticker}의 시세 조회가 불가능하여 거래를 보류하고 HOLD 처리했습니다."
+        reasoning = f"ìì¤íì¤ë¥: ì¢ëª©ì½ë {ticker}ì ìì¸ ì¡°íê° ë¶ê°ë¥íì¬ ê±°ëë¥¼ ë³´ë¥íê³  HOLD ì²ë¦¬íìµëë¤."
         quantity = 0
 
     transaction_fee = 0.0
@@ -916,7 +1095,7 @@ def run_simulation_cycle(bypass_hours: bool = False) -> Dict[str, Any]:
         if required_cash > balance:
             print(f"[Trading Engine] REJECTED_BY_BACKEND: BUY order of {quantity} shares of {ticker} requires {required_cash:,.0f} KRW but balance is only {balance:,.0f} KRW.")
             action = "HOLD"
-            reasoning = f"REJECTED_BY_BACKEND: 매입 필요 자금({required_cash:,.0f}원)이 가용 예수금({balance:,.0f}원)을 초과하여 주문이 거부되었습니다."
+            reasoning = f"REJECTED_BY_BACKEND: ë§¤ì íì ìê¸({required_cash:,.0f}ì)ì´ ê°ì© ììê¸({balance:,.0f}ì)ì ì´ê³¼íì¬ ì£¼ë¬¸ì´ ê±°ë¶ëììµëë¤."
             quantity = 0
             
     elif action == "SELL":
@@ -924,7 +1103,7 @@ def run_simulation_cycle(bypass_hours: bool = False) -> Dict[str, Any]:
         if quantity > owned_quantity:
             print(f"[Trading Engine] REJECTED_BY_BACKEND: SELL order of {quantity} shares of {ticker} exceeds owned quantity ({owned_quantity} shares).")
             action = "HOLD"
-            reasoning = f"REJECTED_BY_BACKEND: 매도 요청 수량({quantity}주)이 실제 보유 수량({owned_quantity}주)을 초과하여 주문이 거부되었습니다."
+            reasoning = f"REJECTED_BY_BACKEND: ë§¤ë ìì²­ ìë({quantity}ì£¼)ì´ ì¤ì  ë³´ì  ìë({owned_quantity}ì£¼)ì ì´ê³¼íì¬ ì£¼ë¬¸ì´ ê±°ë¶ëììµëë¤."
             quantity = 0
 
     # 9. Perform Accounting & Process Updates

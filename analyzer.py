@@ -16,9 +16,11 @@ class DeepAnalysis(BaseModel):
     relevance_score: int = Field(description="Integer between 0 and 10 indicating the importance/impact on South Korea")
     impacted_sectors: List[str] = Field(description="List of Korean business sectors/industries impacted")
     impacted_companies: List[str] = Field(description="List of Korean companies impacted (e.g. Samsung Electronics, SK Hynix)")
+    impacted_tickers: List[str] = Field(description="List of corresponding 6-digit South Korean stock ticker codes (e.g. '005930' for Samsung Electronics, '000660' for SK Hynix) for the impacted companies. Enter empty list if none.")
     macro_impacts: str = Field(description="Summary of macro impacts on exchange rates, inflation, or KOSPI in Korean")
     korean_summary: str = Field(description="Clear and professional 2-3 sentence summary in Korean")
     alert_level: str = Field(description="Alert level: LOW, MEDIUM, or HIGH")
+
 
 
 class GeminiEconomyAnalyzer:
@@ -300,16 +302,59 @@ class GeminiEconomyAnalyzer:
             korean_summary = f"'{title}' 뉴스는 특정 기업 또는 경제 섹터의 개별 이슈를 반영하며, 중장기적인 거시경제 영향보다는 단기 업종별 흐름 모니터링이 권장됩니다."
             alert_level = "LOW"
             
+        # Map mock companies to their standard 6-digit tickers (Extremely expanded for dynamic watchlist selection)
+        mock_ticker_map = {
+            "삼성전자": "005930",
+            "SK하이닉스": "000660",
+            "하이닉스": "000660",
+            "현대차": "005380",
+            "현대자동차": "005380",
+            "기아": "000270",
+            "기아차": "000270",
+            "NAVER": "035420",
+            "네이버": "035420",
+            "카카오": "035720",
+            "LG에너지솔루션": "373220",
+            "LG엔솔": "373220",
+            "삼성SDI": "006400",
+            "LG화학": "051910",
+            "포스코홀딩스": "005490",
+            "POSCO홀딩스": "005490",
+            "셀트리온": "068270",
+            "한미반도체": "042700",
+            "에코프로": "086520",
+            "에코프로비엠": "247540",
+            "포스코퓨처엠": "003670",
+            "SK이노베이션": "096770",
+            "삼성물산": "028260",
+            "KB금융": "105560",
+            "KB금융지주": "105560",
+            "신한지주": "055550",
+            "신한금융지주": "055550",
+            "하나금융지주": "086790",
+            "삼성바이오로직스": "207940",
+            "알테오젠": "196170",
+            "HLB": "028300",
+            "HMM": "011200",
+            "대한항공": "003490",
+            "두산에너빌리티": "034020",
+            "HD현대중공업": "329180",
+            "유한양행": "000100"
+        }
+        tickers = [mock_ticker_map[c] for c in companies if c in mock_ticker_map and mock_ticker_map[c]]
+
         return DeepAnalysis(
             sentiment=sentiment,
             sentiment_score=sentiment_score,
             relevance_score=relevance_score,
             impacted_sectors=sectors,
             impacted_companies=companies,
+            impacted_tickers=tickers,
             macro_impacts=macro_impacts,
             korean_summary=korean_summary,
             alert_level=alert_level
         )
+
 
 
 if __name__ == "__main__":

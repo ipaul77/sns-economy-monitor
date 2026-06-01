@@ -106,7 +106,8 @@ def setup_db():
             macro_impacts TEXT,
             korean_summary TEXT,
             alert_level TEXT,
-            other_sources TEXT
+            other_sources TEXT,
+            impacted_tickers TEXT
         )
     """)
     conn.commit()
@@ -118,7 +119,14 @@ def setup_db():
     except sqlite3.OperationalError:
         pass # Already exists
         
+    try:
+        cursor.execute("ALTER TABLE history ADD COLUMN impacted_tickers TEXT")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass # Already exists
+        
     conn.close()
+
 
 def is_already_processed(url: str) -> bool:
     """
@@ -248,6 +256,7 @@ def save_analysis_result(item: dict, rel_check, analysis, other_sources=None):
         relevance_score = analysis.relevance_score
         impacted_sectors = json.dumps(analysis.impacted_sectors, ensure_ascii=False)
         impacted_companies = json.dumps(analysis.impacted_companies, ensure_ascii=False)
+        impacted_tickers = json.dumps(getattr(analysis, "impacted_tickers", []), ensure_ascii=False)
         macro_impacts = analysis.macro_impacts
         korean_summary = analysis.korean_summary
         alert_level = analysis.alert_level
@@ -257,6 +266,7 @@ def save_analysis_result(item: dict, rel_check, analysis, other_sources=None):
         relevance_score = None
         impacted_sectors = None
         impacted_companies = None
+        impacted_tickers = None
         macro_impacts = None
         korean_summary = None
         alert_level = None
@@ -282,6 +292,7 @@ def save_analysis_result(item: dict, rel_check, analysis, other_sources=None):
                 "relevance_score": relevance_score,
                 "impacted_sectors": impacted_sectors,
                 "impacted_companies": impacted_companies,
+                "impacted_tickers": impacted_tickers,
                 "macro_impacts": macro_impacts,
                 "korean_summary": korean_summary,
                 "alert_level": alert_level,
@@ -293,11 +304,11 @@ def save_analysis_result(item: dict, rel_check, analysis, other_sources=None):
             return
         except Exception as e:
             print(f"[Error] Firestore save_analysis_result failed: {str(e)}")
-            _sqlite_save_analysis_result(item, rel_check, analysis, other_sources, now_str, is_relevant_int, relevance_reason, sentiment, sentiment_score, relevance_score, impacted_sectors, impacted_companies, macro_impacts, korean_summary, alert_level, other_sources_json)
+            _sqlite_save_analysis_result(item, rel_check, analysis, other_sources, now_str, is_relevant_int, relevance_reason, sentiment, sentiment_score, relevance_score, impacted_sectors, impacted_companies, impacted_tickers, macro_impacts, korean_summary, alert_level, other_sources_json)
     else:
-        _sqlite_save_analysis_result(item, rel_check, analysis, other_sources, now_str, is_relevant_int, relevance_reason, sentiment, sentiment_score, relevance_score, impacted_sectors, impacted_companies, macro_impacts, korean_summary, alert_level, other_sources_json)
+        _sqlite_save_analysis_result(item, rel_check, analysis, other_sources, now_str, is_relevant_int, relevance_reason, sentiment, sentiment_score, relevance_score, impacted_sectors, impacted_companies, impacted_tickers, macro_impacts, korean_summary, alert_level, other_sources_json)
 
-def _sqlite_save_analysis_result(item, rel_check, analysis, other_sources, now_str, is_relevant_int, relevance_reason, sentiment, sentiment_score, relevance_score, impacted_sectors, impacted_companies, macro_impacts, korean_summary, alert_level, other_sources_json):
+def _sqlite_save_analysis_result(item, rel_check, analysis, other_sources, now_str, is_relevant_int, relevance_reason, sentiment, sentiment_score, relevance_score, impacted_sectors, impacted_companies, impacted_tickers, macro_impacts, korean_summary, alert_level, other_sources_json):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     try:
@@ -305,13 +316,13 @@ def _sqlite_save_analysis_result(item, rel_check, analysis, other_sources, now_s
             INSERT OR REPLACE INTO history (
                 url, title, content, source, published_at, processed_at, 
                 is_relevant, relevance_reason, sentiment, sentiment_score, 
-                relevance_score, impacted_sectors, impacted_companies, 
+                relevance_score, impacted_sectors, impacted_companies, impacted_tickers,
                 macro_impacts, korean_summary, alert_level, other_sources
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             item["url"], item["title"], item["content"], item["source"], item["published_at"], now_str,
             is_relevant_int, relevance_reason, sentiment, sentiment_score, 
-            relevance_score, impacted_sectors, impacted_companies, 
+            relevance_score, impacted_sectors, impacted_companies, impacted_tickers,
             macro_impacts, korean_summary, alert_level, other_sources_json
         ))
         conn.commit()
@@ -319,6 +330,7 @@ def _sqlite_save_analysis_result(item, rel_check, analysis, other_sources, now_s
         print(f"[Error] Failed to save record to SQLite DB: {str(e)}")
     finally:
         conn.close()
+
 
 def fetch_history(limit=100) -> list:
     """
