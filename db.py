@@ -197,6 +197,11 @@ def is_already_processed(url: str) -> bool:
     """
     Checks if a URL has already been processed.
     """
+    # 1. 1차 로컬 SQLite 사전 판별 (무료 및 초고속 캐시 조회)
+    if _sqlite_is_already_processed(url):
+        return True
+
+    # 2. 로컬에 없는 경우에만 비상 Fallback으로 Firestore를 조회
     if USE_FIREBASE:
         try:
             doc_id = get_doc_id(url)

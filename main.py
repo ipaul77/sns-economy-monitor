@@ -1382,7 +1382,7 @@ def trigger_trading_simulation():
 # API State Caching Globals to prevent Firestore read limits exhaustion
 _trading_state_cache = None
 _trading_state_cache_time = 0
-_trading_state_cache_duration = 30  # 30 seconds cache lifetime
+_trading_state_cache_duration = 60  # 60 seconds cache lifetime
 
 @app.route('/api/trading/state')
 def get_trading_state():
@@ -1390,7 +1390,7 @@ def get_trading_state():
     API endpoint: Returns the current paper trading state, portfolio holdings,
     and recent transactions to populate the dashboard UI.
     
-    [Optimized] 30초 동안의 서버 메모리 캐싱을 적용하여 대시보드 무한 폴링에 따른 Firestore 읽기 폭탄을 차단합니다.
+    [Optimized] 60초 동안의 서버 메모리 캐싱을 적용하여 대시보드 무한 폴링에 따른 Firestore 읽기 폭탄을 차단합니다.
     """
     global _trading_state_cache, _trading_state_cache_time
     import time
