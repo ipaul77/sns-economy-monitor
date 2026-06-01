@@ -128,6 +128,19 @@ def setup_db():
     conn.close()
 
 
+def check_firestore_quota_error(error_exception):
+    """
+    Checks if a Firestore exception is due to quota exhaustion (429 Quota Exceeded).
+    If so, dynamically switches to local SQLite mode to avoid latency and ensure 100% uptime.
+    """
+    global USE_FIREBASE
+    err_msg = str(error_exception)
+    if "429" in err_msg or "quota" in err_msg.lower():
+        if USE_FIREBASE:
+            print("\n[DB] [CRITICAL WARNING] Google Firestore Quota Exceeded (429)! "
+                  "Dynamically switching to local SQLite database (monitor.db) for the rest of this session to ensure 100% uptime.\n")
+            USE_FIREBASE = False
+
 def is_already_processed(url: str) -> bool:
     """
     Checks if a URL has already been processed.
@@ -139,6 +152,7 @@ def is_already_processed(url: str) -> bool:
             doc = doc_ref.get()
             return doc.exists
         except Exception as e:
+            check_firestore_quota_error(e)
             print(f"[Error] Firestore is_already_processed failed: {str(e)}")
             # Fail-safe SQLite check if Firebase fails mid-flight
             return _sqlite_is_already_processed(url)
@@ -173,6 +187,7 @@ def find_similar(title: str) -> dict:
                     return data
             return None
         except Exception as e:
+            check_firestore_quota_error(e)
             print(f"[Error] Firestore find_similar failed: {str(e)}")
             return _sqlite_find_similar(title)
     else:
@@ -218,8 +233,9 @@ def update_other_sources(url: str, new_source: str):
                     print(f"[Firestore] Merged source '{new_source}' into existing story.")
             return
         except Exception as e:
+            check_firestore_quota_error(e)
             print(f"[Error] Firestore update_other_sources failed: {str(e)}")
-            _sqlite_update_other_sources(url, new_source)
+            return _sqlite_update_other_sources(url, new_source)
     else:
         _sqlite_update_other_sources(url, new_source)
 
@@ -303,6 +319,7 @@ def save_analysis_result(item: dict, rel_check, analysis, other_sources=None):
             print(f"[Firestore] Successfully saved record: {item['title']}")
             return
         except Exception as e:
+            check_firestore_quota_error(e)
             print(f"[Error] Firestore save_analysis_result failed: {str(e)}")
             _sqlite_save_analysis_result(item, rel_check, analysis, other_sources, now_str, is_relevant_int, relevance_reason, sentiment, sentiment_score, relevance_score, impacted_sectors, impacted_companies, impacted_tickers, macro_impacts, korean_summary, alert_level, other_sources_json)
     else:
@@ -347,6 +364,7 @@ def fetch_history(limit=100) -> list:
                 results.append(doc.to_dict())
             return results
         except Exception as e:
+            check_firestore_quota_error(e)
             print(f"[Error] Firestore fetch_history failed: {str(e)}")
             return _sqlite_fetch_history(limit)
     else:
@@ -381,6 +399,7 @@ def fetch_recent_relevant(hours=24) -> list:
             results.sort(key=lambda x: x.get("processed_at", ""), reverse=True)
             return results
         except Exception as e:
+            check_firestore_quota_error(e)
             print(f"[Error] Firestore fetch_recent_relevant failed: {str(e)}")
             return _sqlite_fetch_recent_relevant(cutoff)
     else:
@@ -410,6 +429,7 @@ def fetch_total_count() -> int:
             results = count_query.get()
             return results[0][0].value
         except Exception as e:
+            check_firestore_quota_error(e)
             print(f"[Error] Firestore fetch_total_count failed: {str(e)}")
             return _sqlite_fetch_total_count()
     else:
@@ -450,6 +470,7 @@ def purge_old_records(retention_days=14) -> int:
                 print(f"[Firestore Purge] Successfully deleted {deleted_count} records older than {retention_days} days.")
             return deleted_count
         except Exception as e:
+            check_firestore_quota_error(e)
             print(f"[Error] Firestore purge_old_records failed: {str(e)}")
             return _sqlite_purge_old_records(cutoff)
     else:
