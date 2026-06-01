@@ -727,8 +727,24 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
     if index_changes:
         index_str = ", ".join([f"{name}: {val:+.2f}%" for name, val in index_changes.items()])
 
-    # Format indicators
+    # Format indicators (Populated to give Gemini AI the actual technical signals!)
     indicators_str = ""
+    for tick, ind in market_indicators.items():
+        comp_name = tick
+        for c, t in COMPANY_TO_TICKER.items():
+            if t == tick:
+                comp_name = c
+                break
+        indicators_str += (
+            f"- 종목명: {comp_name} ({tick}) | "
+            f"현재가: {ind.get('current_price', 0.0):,.0f}원 | "
+            f"20일선 MA: {ind.get('ma_20', 0.0):,.0f}원 | "
+            f"이격도: {ind.get('disparity', 100.0):.1f}% | "
+            f"당일거래량: {ind.get('daily_volume', 0):,}주 | "
+            f"5일평균거래량: {ind.get('avg_volume_5d', 0.0):,.0f}주 | "
+            f"거래량 돌파 비율: {ind.get('volume_ratio', 1.0):.1f}x\n"
+        )
+
     # Format news analysis context
     news_str = ""
     if not news_context:
