@@ -839,6 +839,49 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
 
 위 자산 상태, 거시 경제 지수, 실시간 기술 지표, 그리고 뉴스 분석 데이터를 정밀 종합 분석하여 최고의 의사결정을 내리고, 지정된 JSON 스키마에 따라 응답하세요.
 """
+    # We use gemini-3.5-flash or fallback
+    try:
+        model = genai.GenerativeModel(
+            model_name="gemini-3.5-flash",
+            system_instruction=system_instruction
+        )
+        response = model.generate_content(
+            prompt,
+            generation_config=genai.GenerationConfig(
+                response_mime_type="application/json",
+                response_schema=TradingDecision,
+                temperature=0.2
+            )
+        )
+        # Parse Pydantic object
+        decision = TradingDecision.model_validate_json(response.text)
+        return decision
+    except Exception as e:
+        print(f"[Trading Engine] [Error] Gemini API or schema validation failed: {e}. Falling back to HOLD.")
+        # Fallback to HOLD
+        return TradingDecision(
+            action="HOLD",
+            ticker="005930",
+            allocation_pct=0.0,
+            reasoning=f"Gemini API 호출 및 스키마 검증 과정에서 예외가 발생하여 자산 안전을 위해 HOLD 처리했습니다. (에러: {str(e)})"
+        )
+
+
+def run_simulation_cycle(bypass_hours: bool = False) -> dict:
+    """
+    Executes a single end-to-end trading simulation cycle:
+    1. Check and Load database state (Check for system locks).
+    2. Check KST Market Hours (09:00 - 15:30) with optional test bypass.
+    3. Apply Idempotency Lock (30 min minimum gap or news ID validation).
+    4. Fetch target stock market prices & technical indicators in parallel.
+    5. Evaluate Mechanical Rules (Stop-Loss -4.5% & Trailing-Stop -3%) and update Firestore.
+    6. Retrieve latest news context from DB.
+    7. Call Gemini Agent with indicators context for decision formulation.
+    8. backend Order Verification (Execution Filter, Shock & Disparity Override).
+    9. Process Account Updates.
+    10. Run **Accounting Assert** (strict mathematical verification or lock and sys.exit).
+    11. Log transaction & Update Firestore state.
+    """
     # 1. State Load & Lock Check
     state = get_agent_state()
     if state.get("system_lock", False):
@@ -879,20 +922,17 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
         except Exception as e:
             print(f"[Trading Engine] Failed to parse last transaction timestamp: {e}")
 
-    # (Duplicate News URL Check moved to after market indicator fetching to support technical triggers)
-    pass
-
     # 6. Fetch Market Prices & Indicators (Monitored candidates) in parallel using ThreadPoolExecutor!
     index_changes = get_market_index_change()
     print(f"[Trading Engine] Market Indices changes: {index_changes}")
     
-    # KOSPI or KOSDAQ ê¸ë½ ì¼í¬ ê²½ë³´ (-1.5% ì´í)
+    # KOSPI or KOSDAQ 급락 쇼크 경보 (-1.5% 이하)
     is_market_shock = False
     shock_reason = ""
     for idx_name, val in index_changes.items():
         if val <= -1.5:
             is_market_shock = True
-            shock_reason = f"ì§ì ê¸ë½ ì¼í¬ ê²½ë³´ ({idx_name} ë¹ì¼ ë±ë½ë¥ : {val:+.2f}%)"
+            shock_reason = f"지수 급락 쇼크 경보 ({idx_name} 당일 등락률: {val:+.2f}%)"
             break
 
     monitored_tickers = get_active_tickers(portfolio, news_context)
@@ -920,8 +960,6 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
                 market_prices[tick] = price
 
     # 5. Idempotency Lock Check (Duplicate News URL Check)
-    # ONLY apply this if we don't have any significant technical triggers (like volume breakout)
-    # to ensure we don't skip technical momentum/breakout trades.
     has_technical_trigger = False
     for tick, ind in market_indicators.items():
         if ind.get("volume_breakout", False) or abs(ind.get("disparity", 100.0) - 100.0) >= 10.0:
@@ -974,7 +1012,7 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
             )
             update_agent_state_in_db(new_balance, new_total_asset, system_lock=False)
             
-            reasoning = f"[ê¸°ê³ì  ìì ë§¤ ì²­ì°] ì£¼ê°ê° ë§¤ìê°({avg_price:,.0f}ì) ëë¹ -4.5% ìì¤ íê³ì ({stop_loss_limit:,.0f}ì)ì ëë¬íì¬ ì¶ê° ìì¤ ì°¨ë¨ì ìí´ ì ë ìì¥ê° ë§¤ë ì²ë¦¬íììµëë¤. (íì¬ê°: {current_price:,.0f}ì)"
+            reasoning = f"[기계적 손절매 청산] 주가가 매수가({avg_price:,.0f}원) 대비 -4.5% 손실 한계선({stop_loss_limit:,.0f}원)에 도달하여 추가 손실 차단을 위해 전량 시장가 매도 처리하였습니다. (현재가: {current_price:,.0f}원)"
             
             snapshot = {
                 "prev_balance": balance,
@@ -1017,7 +1055,7 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
             )
             update_agent_state_in_db(new_balance, new_total_asset, system_lock=False)
             
-            reasoning = f"[ê¸°ê³ì  ì¶ì ìì ë§¤ ìµì ] ì£¼ê°ê° ë§¤ì í ìµê³ ì ({new_highest:,.0f}ì) ëë¹ -3.0% ììµë³´ì¡´ íê³ì ({trailing_stop_limit:,.0f}ì) ì´íë¡ íë½íì¬, ì´ìµ ë³´ì¡´ì ìí´ ì ë ìì¥ê° ë§¤ë ì²ë¦¬íììµëë¤. (íì¬ê°: {current_price:,.0f}ì)"
+            reasoning = f"[기계적 추적손절매 익절] 주가가 매수 후 최고점({new_highest:,.0f}원) 대비 -3.0% 수익보존 한계선({trailing_stop_limit:,.0f}원) 이하로 하락하여, 이익 보존을 위해 전량 시장가 매도 처리하였습니다. (현재가: {current_price:,.0f}원)"
             
             snapshot = {
                 "prev_balance": balance,
@@ -1061,49 +1099,124 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
 
     action = decision.action
     ticker = decision.ticker
-    quantity = decision.quantity
+    allocation_pct = decision.allocation_pct
     reasoning = decision.reasoning
     current_price = market_prices.get(ticker, 0.0)
-
-    # 8. backend Order Override & Validation (Beta Market Shock & Disparity Check)
-    disparity = market_indicators.get(ticker, {}).get("disparity", 100.0) if ticker else 100.0
     
-    if action == "BUY":
-        if is_market_shock:
-            print(f"[Trading Engine] BUY Order Overridden by Market Shock: {shock_reason}")
-            action = "HOLD"
-            reasoning = f"[ë°±ìë ê·ì¹ ê¸°ê°: ìì¥ ì¼í¬] Gemini AIê° ë§¤ìë¥¼ ê²°ì íì¼ë ì¢í©ì§ìê° -1.5% ì´ì í¨ë ê¸ë½ ì¤ì´ë¯ë¡ ì¶ê° ëë°©ì´ ê¸°ê° ê·ì¹ì´ ìëíì¬ HOLD ì²ë¦¬íìµëë¤. ({shock_reason})"
-            quantity = 0
-        elif disparity >= 115.0:
-            print(f"[Trading Engine] BUY Order Overridden by Disparity Limit: {disparity}% >= 115.0%")
-            action = "HOLD"
-            reasoning = f"[ë°±ìë ê·ì¹ ê¸°ê°: ê°ê²© ê³¼ì´] Gemini AIê° ë§¤ìë¥¼ ê²°ì íì¼ë 20ì¼ì  ì´ê²©ëê° {disparity}%ë¡ ê³¼ì´ ìê³ì¹(115%)ë¥¼ ì´ê³¼íì¬ ìë¨ ê¼­ëê¸° ì¤ê±°ì§ ë°©ì§ ê¸°ê° ê·ì¹ì´ ìëíì¬ HOLD ì²ë¦¬íìµëë¤."
-            quantity = 0
-
-    # 8.5. Standard Execution Filter
-    if action in ["BUY", "SELL"] and (current_price <= 0 or not ticker):
-        print(f"[Trading Engine] Order Rejected: Price for ticker {ticker} is invalid or 0.")
-        action = "HOLD"
-        reasoning = f"ìì¤íì¤ë¥: ì¢ëª©ì½ë {ticker}ì ìì¸ ì¡°íê° ë¶ê°ë¥íì¬ ê±°ëë¥¼ ë³´ë¥íê³  HOLD ì²ë¦¬íìµëë¤."
-        quantity = 0
-
+    quantity = 0
     transaction_fee = 0.0
     fee_rate = 0.001  # 0.1% transaction fee / slippage allowance
 
+    # 8. backend Order Override & Validation (Beta Market Shock & Disparity Check)
     if action == "BUY":
+        disparity = market_indicators.get(ticker, {}).get("disparity", 100.0) if ticker else 100.0
+        
+        # Guardrail 4: News Sentiment Filter (Negative News <= -0.3)
+        has_bad_news = False
+        bad_news_reason = ""
+        ticker_news = []
+        for n in news_context:
+            try:
+                tickers_list = json.loads(n.get("impacted_tickers") or "[]")
+                if ticker in tickers_list:
+                    ticker_news.append(n)
+            except:
+                pass
+                
+        if ticker_news:
+            avg_sent = sum(n.get("sentiment_score", 0.0) for n in ticker_news) / len(ticker_news)
+            if avg_sent <= -0.3:
+                has_bad_news = True
+                bad_news_reason = f"최근 24시간 감성 점수 극도 악재 ({avg_sent:+.2f})"
+        
+        if is_market_shock:
+            print(f"[Trading Engine] BUY Order Overridden by Market Shock: {shock_reason}")
+            action = "HOLD"
+            reasoning = f"[백엔드 규칙 기각: 시장 쇼크] Gemini AI가 매수를 결정했으나 종합지수가 -1.5% 이상 패닉 급락 중이므로 추가 대방어 기각 규칙이 작동하여 HOLD 처리했습니다. ({shock_reason})"
+        elif disparity >= 115.0:
+            print(f"[Trading Engine] BUY Order Overridden by Disparity Limit: {disparity}% >= 115.0%")
+            action = "HOLD"
+            reasoning = f"[백엔드 규칙 기각: 가격 과열] Gemini AI가 매수를 결정했으나 20일선 이격도가 {disparity}%로 과열 임계치(115%)를 초과하여 상단 꼭대기 설거지 방지 기각 규칙이 작동하여 HOLD 처리했습니다."
+        elif has_bad_news:
+            print(f"[Trading Engine] BUY Order Overridden by Bad News Filter: {bad_news_reason}")
+            action = "HOLD"
+            reasoning = f"[백엔드 규칙 기각: 악재 뉴스 필터] Gemini AI가 매수를 결정했으나 {bad_news_reason} 우려로 백엔드 필터가 매수를 전면 차단하였습니다."
+        else:
+            # Sizing & Guardrails cash calculation
+            allocated_cash = balance * (allocation_pct / 100.0)
+            
+            # Guardrail 1: 30% Sizing Limit of Total Asset
+            portfolio_value = sum(portfolio.get(t, {}).get("quantity", 0) * market_prices.get(t, 0.0) for t in portfolio)
+            total_asset = balance + portfolio_value
+            max_allowed_cash = total_asset * 0.3
+            
+            # Already owned value check
+            owned_value = portfolio.get(ticker, {}).get("quantity", 0) * current_price
+            max_new_cash = max(max_allowed_cash - owned_value, 0.0)
+            
+            spend_cash = min(allocated_cash, max_new_cash)
+            sizing_triggered = allocated_cash > max_new_cash
+            
+            # Guardrail 2: KOSPI 5일선 연동 약세장 방어
+            bear_triggered = False
+            if is_kospi_bear_market():
+                spend_cash *= 0.5
+                bear_triggered = True
+                
+            # Guardrail 3: 이격도 108%~115% 비례 매수 제한 (50% 감감)
+            disparity_50_triggered = False
+            if 108.0 <= disparity < 115.0:
+                spend_cash *= 0.5
+                disparity_50_triggered = True
+                
+            # Final quantity calculation
+            quantity = int(spend_cash / (current_price * (1 + fee_rate)))
+            
+            # Reasoning logging
+            gate_reasons = []
+            if sizing_triggered:
+                gate_reasons.append("30% 보유 한도 제한")
+            if bear_triggered:
+                gate_reasons.append("약세장 방어")
+            if disparity_50_triggered:
+                gate_reasons.append("이격 과열 50% 감폭")
+                
+            if gate_reasons:
+                reasoning += f" [가드레일 작동: {', '.join(gate_reasons)}]"
+                
+            if quantity <= 0:
+                action = "HOLD"
+                reasoning += " (매수 가용 자금 또는 수량 부족으로 HOLD 처리됨)"
+
+    elif action == "SELL":
+        owned_quantity = portfolio.get(ticker, {}).get("quantity", 0)
+        quantity = int(owned_quantity * (allocation_pct / 100.0))
+        if quantity <= 0:
+            action = "HOLD"
+            reasoning += " (매도 가능 수량 부족으로 HOLD 처리됨)"
+
+    # 8.5. Standard Execution Filter
+    if action in ["BUY", "SELL"] and (current_price <= 0 or not ticker or quantity <= 0):
+        if action in ["BUY", "SELL"]:
+            print(f"[Trading Engine] Order Rejected: Price for ticker {ticker} is invalid or quantity is 0.")
+            action = "HOLD"
+            reasoning = f"시스템오류: 종목코드 {ticker}의 시세 조회가 불가능하거나 거래 수량이 0이어서 HOLD 처리했습니다."
+            quantity = 0
+
+    if action == "BUY" and quantity > 0:
         required_cash = quantity * current_price * (1 + fee_rate)
         if required_cash > balance:
             print(f"[Trading Engine] REJECTED_BY_BACKEND: BUY order of {quantity} shares of {ticker} requires {required_cash:,.0f} KRW but balance is only {balance:,.0f} KRW.")
             action = "HOLD"
-            reasoning = f"REJECTED_BY_BACKEND: ë§¤ì íì ìê¸({required_cash:,.0f}ì)ì´ ê°ì© ììê¸({balance:,.0f}ì)ì ì´ê³¼íì¬ ì£¼ë¬¸ì´ ê±°ë¶ëììµëë¤."
+            reasoning = f"REJECTED_BY_BACKEND: 매입 필요 자금({required_cash:,.0f}원)이 가용 예수금({balance:,.0f}원)을 초과하여 주문이 거부되었습니다."
             quantity = 0
             
-    elif action == "SELL":
+    elif action == "SELL" and quantity > 0:
         owned_quantity = portfolio.get(ticker, {}).get("quantity", 0)
         if quantity > owned_quantity:
             print(f"[Trading Engine] REJECTED_BY_BACKEND: SELL order of {quantity} shares of {ticker} exceeds owned quantity ({owned_quantity} shares).")
             action = "HOLD"
-            reasoning = f"REJECTED_BY_BACKEND: ë§¤ë ìì²­ ìë({quantity}ì£¼)ì´ ì¤ì  ë³´ì  ìë({owned_quantity}ì£¼)ì ì´ê³¼íì¬ ì£¼ë¬¸ì´ ê±°ë¶ëììµëë¤."
+            reasoning = f"REJECTED_BY_BACKEND: 매도 요청 수량({quantity}주)이 실제 보유 수량({owned_quantity}주)을 초과하여 주문이 거부되었습니다."
             quantity = 0
 
     # 9. Perform Accounting & Process Updates
@@ -1126,11 +1239,12 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
         
         new_portfolio[ticker] = {
             "quantity": new_qty,
-            "average_price": new_avg
+            "average_price": new_avg,
+            "highest_price_after_buy": max(current_price, current_holding.get("highest_price_after_buy", current_price))
         }
         
         # Save to DB
-        update_portfolio_holding_in_db(ticker, new_qty, new_avg)
+        update_portfolio_holding_in_db(ticker, new_qty, new_avg, new_portfolio[ticker]["highest_price_after_buy"])
 
     elif action == "SELL" and quantity > 0:
         total_sell_val = quantity * current_price
@@ -1150,11 +1264,12 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
         else:
             new_portfolio[ticker] = {
                 "quantity": new_qty,
-                "average_price": prev_avg  # Average buying cost stays the same upon selling
+                "average_price": prev_avg,
+                "highest_price_after_buy": current_holding.get("highest_price_after_buy", current_price)
             }
             
         # Save to DB
-        update_portfolio_holding_in_db(ticker, new_qty, prev_avg)
+        update_portfolio_holding_in_db(ticker, new_qty, prev_avg, current_holding.get("highest_price_after_buy", current_price))
 
     # Calculate new total asset based on current prices
     new_portfolio_value_at_current_prices = sum(
@@ -1164,15 +1279,12 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
     new_total_asset = new_balance + new_portfolio_value_at_current_prices
 
     # 10. Accounting Assert Check
-    # Total Asset Equation: Total = Balance + Sum(Qty * Price)
-    # The new calculated asset must match: Expected = ExpectedPrevTotalAssetAtCurrentPrices - TransactionFee
     expected_new_total_asset = expected_prev_total_asset_at_current_prices - transaction_fee
     discrepancy = abs(new_total_asset - expected_new_total_asset)
 
     print(f"[Trading Engine] Accounting Check: Calculated New Asset = {new_total_asset:,.2f} KRW | Expected New Asset = {expected_new_total_asset:,.2f} KRW")
     
     if discrepancy > 10.0 or new_balance < 0:
-        # Trigger CRITICAL_ACCOUNTING_FAULT
         error_msg = f"CRITICAL_ACCOUNTING_FAULT: Discrepancy of {discrepancy:,.2f} KRW detected or Negative Balance ({new_balance:,.2f} KRW) reached! Mathematical safety breach."
         print(f"[Trading Engine] {error_msg}")
         lock_system()
