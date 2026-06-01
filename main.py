@@ -1382,12 +1382,27 @@ def trigger_trading_simulation():
             "traceback": err_stack
         }), 500
 
+# API State Caching Globals to prevent Firestore read limits exhaustion
+_trading_state_cache = None
+_trading_state_cache_time = 0
+_trading_state_cache_duration = 30  # 30 seconds cache lifetime
+
 @app.route('/api/trading/state')
 def get_trading_state():
     """
     API endpoint: Returns the current paper trading state, portfolio holdings,
     and recent transactions to populate the dashboard UI.
+    
+    [Optimized] 30초 동안의 서버 메모리 캐싱을 적용하여 대시보드 무한 폴링에 따른 Firestore 읽기 폭탄을 차단합니다.
     """
+    global _trading_state_cache, _trading_state_cache_time
+    import time
+    now_time = time.time()
+    
+    if _trading_state_cache and (now_time - _trading_state_cache_time < _trading_state_cache_duration):
+        # Cache hit! Return cached json immediately to save Firestore read limits!
+        return jsonify(_trading_state_cache)
+        
     try:
         import trading_engine
         state = trading_engine.get_agent_state()
@@ -1416,7 +1431,7 @@ def get_trading_state():
             if ind.get("current_price", 0.0) > 0 and tick not in market_prices:
                 market_prices[tick] = ind["current_price"]
                 
-        return jsonify({
+        response_data = {
             "status": "success",
             "state": state,
             "portfolio": portfolio,
@@ -1424,7 +1439,13 @@ def get_trading_state():
             "transactions": transactions,
             "dynamic_tickers": dynamic_tickers,
             "watchlist": watchlist_indicators
-        })
+        }
+        
+        # Save cache
+        _trading_state_cache = response_data
+        _trading_state_cache_time = now_time
+        
+        return jsonify(response_data)
     except Exception as e:
         return jsonify({
             "status": "error",

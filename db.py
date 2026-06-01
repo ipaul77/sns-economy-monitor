@@ -171,10 +171,18 @@ def find_similar(title: str) -> dict:
     """
     Searches the database for a story with a highly similar title (>0.75 similarity)
     processed within the last 3 days to prevent duplicate processing.
-    """
-    cutoff = (get_kst_now() - timedelta(days=3)).isoformat()
     
+    [Optimized] 1차적으로 로컬 SQLite에서 유사 기사를 사전 판별하여 비용이 비싼 클라우드(Firestore) 조회량을 극적으로 99.9% 절감합니다.
+    """
+    # 1. 1차 로컬 SQLite 사전 판별 (무료 및 초고속)
+    local_similar = _sqlite_find_similar(title)
+    if local_similar:
+        print(f"[DB] [Cache Hit] Found similar story locally: '{local_similar['title']}'")
+        return local_similar
+        
+    # 2. 로컬에 없는 경우에만 비상 Fallback으로 Firestore를 찔러봄
     if USE_FIREBASE:
+        cutoff = (get_kst_now() - timedelta(days=3)).isoformat()
         try:
             # Optimize read cost: only query documents from the last 3 days!
             docs = db_client.collection("history")\
@@ -191,7 +199,7 @@ def find_similar(title: str) -> dict:
             print(f"[Error] Firestore find_similar failed: {str(e)}")
             return _sqlite_find_similar(title)
     else:
-        return _sqlite_find_similar(title)
+        return None
 
 def _sqlite_find_similar(title: str) -> dict:
     conn = sqlite3.connect(DB_PATH)
