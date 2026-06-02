@@ -905,11 +905,11 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
         try:
             last_time = datetime.fromisoformat(last_tx["timestamp"])
             time_diff = now - last_time
-            # Cooldown duration: 30 minutes
-            cooldown = timedelta(minutes=30)
+            # Cooldown duration: 15 minutes (Safe limit to avoid yfinance rate limiting)
+            cooldown = timedelta(minutes=15)
             if time_diff < cooldown and not bypass_hours:
-                print(f"[Trading Engine] Idempotency Lock: Trade within 30 minutes cooldown is blocked. Last trade was {time_diff.total_seconds() / 60:.1f} mins ago.")
-                return {"status": "skipped", "message": "Idempotency Lock: Minimum 30-minute interval between trades required."}
+                print(f"[Trading Engine] Idempotency Lock: Trade within 15 minutes cooldown is blocked. Last trade was {time_diff.total_seconds() / 60:.1f} mins ago.")
+                return {"status": "skipped", "message": "Idempotency Lock: Minimum 15-minute interval between trades required."}
         except Exception as e:
             print(f"[Trading Engine] Failed to parse last transaction timestamp: {e}")
 
