@@ -284,6 +284,9 @@ COMPANY_TO_TICKER = {
     "ìœ í•œì–‘í–‰": "000100"
 }
 
+# Static mapping of KOSDAQ tickers to bypass slow yfinance network checks
+KOSDAQ_TICKERS = {"086520", "247540", "196170", "028300", "066970"}
+
 def is_kospi_bear_market() -> bool:
     """
     KOSPI 지수가 최근 5일 이동평균선(5-day MA)보다 아래에 있는 하락 약세장 여부를 판별합니다.
@@ -464,27 +467,28 @@ def get_stock_indicators(ticker: str) -> Dict[str, Any]:
     if not ticker:
         return result
 
-    # Standard suffix translation logic (KS/KQ)
-    full_ticker = ticker
+    # Standard suffix translation logic optimized using static KOSDAQ set
     resolved_suffix = ".KS"
     if len(ticker) == 6 and ticker.isdigit():
-        for suffix in [".KS", ".KQ"]:
-            t_obj = yf.Ticker(ticker + suffix)
-            try:
-                hist = t_obj.history(period="1mo")
-                if not hist.empty and len(hist) >= 2:
-                    full_ticker = ticker + suffix
-                    resolved_suffix = suffix
-                    break
-            except:
-                pass
-
-    if resolved_suffix == ".KQ":
-        result["market"] = "KOSDAQ"
+        if ticker in KOSDAQ_TICKERS:
+            resolved_suffix = ".KQ"
+            result["market"] = "KOSDAQ"
+        else:
+            resolved_suffix = ".KS"
+            result["market"] = "KOSPI"
+            
+    full_ticker = ticker + resolved_suffix if (len(ticker) == 6 and ticker.isdigit()) else ticker
 
     try:
         yt = yf.Ticker(full_ticker)
         hist = yt.history(period="1mo")
+        # Try fallback if history is empty (e.g. new ticker or wrong suffix mapping)
+        if hist.empty and len(ticker) == 6 and ticker.isdigit():
+            fallback_suffix = ".KQ" if resolved_suffix == ".KS" else ".KS"
+            yt = yf.Ticker(ticker + fallback_suffix)
+            hist = yt.history(period="1mo")
+            if not hist.empty:
+                result["market"] = "KOSDAQ" if fallback_suffix == ".KQ" else "KOSPI"
         if hist.empty:
             fallback_prices = {
                 "005930": 78200.0, "000660": 195400.0, "005380": 265000.0,
@@ -603,23 +607,33 @@ def get_stock_price(ticker: str) -> float:
 
     # Handle standard 6-digit Korean stock tickers
     if len(ticker) == 6 and ticker.isdigit():
-        suffixes = [".KS", ".KQ"]
-        for suffix in suffixes:
-            full_ticker = ticker + suffix
+        resolved_suffix = ".KQ" if ticker in KOSDAQ_TICKERS else ".KS"
+        full_ticker = ticker + resolved_suffix
+        try:
+            # Use fast_info first (extremely fast, low overhead)
+            yt = yf.Ticker(full_ticker)
+            info = yt.fast_info
+            price = info.get("lastPrice") or info.get("last_price")
+            if price is not None and price > 0:
+                return float(price)
+            
+            # Fallback to history
+            hist = yt.history(period="1d")
+            if not hist.empty:
+                return float(hist["Close"].iloc[-1])
+        except Exception:
+            # Try the alternative suffix as fallback
+            alt_suffix = ".KS" if resolved_suffix == ".KQ" else ".KQ"
             try:
-                # Use fast_info first (extremely fast, low overhead)
-                yt = yf.Ticker(full_ticker)
+                yt = yf.Ticker(ticker + alt_suffix)
                 info = yt.fast_info
                 price = info.get("lastPrice") or info.get("last_price")
                 if price is not None and price > 0:
                     return float(price)
-                
-                # Fallback to history
                 hist = yt.history(period="1d")
                 if not hist.empty:
                     return float(hist["Close"].iloc[-1])
-            except Exception as e:
-                # Silently try next suffix
+            except Exception:
                 pass
         
         # Static mock pricing fallbacks if network is down or yfinance fails completely
