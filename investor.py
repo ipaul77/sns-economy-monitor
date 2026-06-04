@@ -276,6 +276,41 @@ def calculate_leading_flow_score(soxx_change: float, usdkrw_change: float) -> in
     # Boundary clipping
     score = max(min(score, 10), 1)
     return score
+def get_latest_cached_price(ticker: str) -> float:
+    """
+    Retrieves the most recent closing price for a ticker from local SQLite DB.
+    Used as a dynamic fallback price when yfinance API goes down.
+    """
+    ticker = ticker.strip()
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT close_price FROM investor_trends 
+            WHERE ticker = ? 
+            ORDER BY date DESC 
+            LIMIT 1
+        """, (ticker,))
+        row = cursor.fetchone()
+        conn.close()
+        if row and row[0] > 0:
+            return float(row[0])
+    except Exception as e:
+        print(f"[Investor DB] [Warning] Failed to fetch latest cached price for {ticker}: {e}")
+        
+    fallback_prices = {
+        "005930": 78200.0,  # Samsung Electronics
+        "000660": 195400.0, # SK Hynix
+        "005380": 265000.0, # Hyundai Motor
+        "000270": 121000.0, # Kia
+        "035420": 182000.0, # Naver
+        "035720": 48500.0,  # Kakao
+        "373220": 365000.0, # LG Energy Solution
+        "006400": 395000.0, # Samsung SDI
+        "005490": 382000.0, # POSCO Holdings
+        "068270": 188000.0  # Celltrion
+    }
+    return fallback_prices.get(ticker, 50000.0)
 
 if __name__ == "__main__":
     setup_investor_db()

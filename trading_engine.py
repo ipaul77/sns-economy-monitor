@@ -11,11 +11,40 @@ from concurrent.futures import ThreadPoolExecutor
 
 # Import the existing DB module to reuse Firestore configuration
 import db
+import investor
 
 try:
     from firebase_admin import firestore
 except ImportError:
     pass
+
+# Sector Mapping for Risk Management
+TICKER_TO_SECTOR = {
+    "005930": "반도체/IT",      # 삼성전자
+    "000660": "반도체/IT",      # SK하이닉스
+    "042700": "반도체/IT",      # 한미반도체
+    "373220": "이차전지",       # LG에너지솔루션
+    "006400": "이차전지",       # 삼성SDI
+    "051910": "이차전지",       # LG화학
+    "086520": "이차전지",       # 에코프로
+    "247540": "이차전지",       # 에코프로비엠
+    "003670": "이차전지",       # 포스코퓨처엠
+    "096770": "이차전지",       # SK이노베이션
+    "005380": "자동차",         # 현대차
+    "000270": "자동차",         # 기아
+    "035420": "플랫폼",         # 네이버
+    "035720": "플랫폼",         # 카카오
+    "068270": "바이오",         # 셀트리온
+    "207940": "바이오",         # 삼성바이오로직스
+    "196170": "바이오",         # 알테오젠
+    "028300": "바이오",         # HLB
+    "000100": "바이오",         # 유한양행
+    "105560": "금융/지주",      # KB금융
+    "055550": "금융/지주",      # 신한지주
+    "086790": "금융/지주",      # 하나금융지주
+    "005490": "금융/지주",      # POSCO홀딩스
+    "028260": "금융/지주"       # 삼성물산
+}
 
 # ---------------------------------------------------------------------------
 # KST TIME HELPERS
@@ -527,11 +556,7 @@ def get_stock_indicators(ticker: str) -> Dict[str, Any]:
             if not hist.empty:
                 result["market"] = "KOSDAQ" if fallback_suffix == ".KQ" else "KOSPI"
         if hist.empty:
-            fallback_prices = {
-                "005930": 78200.0, "000660": 195400.0, "005380": 265000.0,
-                "000270": 121000.0, "035420": 182000.0, "035720": 48500.0
-            }
-            price = fallback_prices.get(ticker, 0.0)
+            price = investor.get_latest_cached_price(ticker)
             if price > 0:
                 result["current_price"] = price
                 result["ma_20"] = price
@@ -573,8 +598,7 @@ def get_stock_indicators(ticker: str) -> Dict[str, Any]:
             
     except Exception as e:
         print(f"[Trading Engine] [Warning] Failed to calculate indicators for {ticker}: {e}")
-        fallback_prices = {"005930": 78200.0, "000660": 195400.0}
-        price = fallback_prices.get(ticker, 50000.0)
+        price = investor.get_latest_cached_price(ticker)
         result["current_price"] = price
         result["ma_20"] = price
         result["disparity"] = 100.0
@@ -685,22 +709,10 @@ def get_stock_price(ticker: str) -> float:
             except Exception:
                 pass
         
-        # Static mock pricing fallbacks if network is down or yfinance fails completely
-        fallback_prices = {
-            "005930": 78200.0,  # Samsung Electronics
-            "000660": 195400.0, # SK Hynix
-            "005380": 265000.0, # Hyundai Motor
-            "000270": 121000.0, # Kia
-            "035420": 182000.0, # Naver
-            "035720": 48500.0,  # Kakao
-            "373220": 365000.0, # LG Energy Solution
-            "006400": 395000.0, # Samsung SDI
-            "005490": 382000.0, # POSCO Holdings
-            "068270": 188000.0  # Celltrion
-        }
-        fallback = fallback_prices.get(ticker)
-        if fallback:
-            print(f"[Trading Engine] [Warning] yfinance failed for K-ticker {ticker}. Using static fallback price: {fallback:,.0f} KRW.")
+        # Dynamic cached price fallback from SQLite DB
+        fallback = investor.get_latest_cached_price(ticker)
+        if fallback > 0:
+            print(f"[Trading Engine] [Warning] yfinance failed for K-ticker {ticker}. Using SQLite cached fallback price: {fallback:,.0f} KRW.")
             return fallback
             
     else:
@@ -1254,6 +1266,21 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             if 108.0 <= disparity < 115.0:
                 spend_cash *= 0.5
                 disparity_50_triggered = True
+
+            # Guardrail 4: Sector Allocation Limit (45%)
+            target_sector = TICKER_TO_SECTOR.get(ticker, "기타")
+            current_sector_value = sum(
+                info.get("quantity", 0) * market_prices.get(t, 0.0)
+                for t, info in portfolio.items()
+                if TICKER_TO_SECTOR.get(t, "기타") == target_sector
+            )
+            max_sector_allowed_value = total_asset * 0.45
+            max_additional_sector_cash = max(max_sector_allowed_value - current_sector_value, 0.0)
+            
+            sector_cap_triggered = False
+            if spend_cash > max_additional_sector_cash:
+                spend_cash = max_additional_sector_cash
+                sector_cap_triggered = True
                 
             # Final quantity calculation
             quantity = int(spend_cash / (current_price * (1 + fee_rate)))
@@ -1266,13 +1293,18 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
                 gate_reasons.append("약세장 방어")
             if disparity_50_triggered:
                 gate_reasons.append("이격 과열 50% 감폭")
+            if sector_cap_triggered:
+                gate_reasons.append("섹터 비중 45% 제한")
                 
             if gate_reasons:
                 reasoning += f" [가드레일 작동: {', '.join(gate_reasons)}]"
                 
             if quantity <= 0:
                 action = "HOLD"
-                reasoning += " (매수 가용 자금 또는 수량 부족으로 HOLD 처리됨)"
+                if sector_cap_triggered:
+                    reasoning += " (섹터 비중 45% 초과로 인해 HOLD 처리됨)"
+                else:
+                    reasoning += " (매수 가용 자금 또는 수량 부족으로 HOLD 처리됨)"
 
     elif action == "SELL":
         owned_quantity = portfolio.get(ticker, {}).get("quantity", 0)
