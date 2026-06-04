@@ -209,6 +209,32 @@ def save_transaction_to_db(ticker: str, action: str, quantity: int, price: float
         print(f"[Trading Engine] [Error] Failed to save transaction to Firestore: {e}")
         return False
 
+def trigger_telegram_trade_alert(ticker: str, action: str, quantity: int, price: float, reasoning: str, balance: float, total_asset: float):
+    """
+    Loads Telegram bot settings from config.json and triggers a trade alert if configured.
+    """
+    try:
+        with open("config.json", "r", encoding="utf-8") as f:
+            config = json.load(f)
+            token = config.get("telegram_bot_token")
+            chat_id = config.get("telegram_chat_id")
+            
+        if token and chat_id and token.strip() and chat_id.strip():
+            from alerts import send_telegram_trade_alert
+            send_telegram_trade_alert(
+                token=token,
+                chat_id=chat_id,
+                ticker=ticker,
+                action=action,
+                quantity=quantity,
+                price=price,
+                reasoning=reasoning,
+                balance=balance,
+                total_asset=total_asset
+            )
+    except Exception as e:
+        print(f"[Trading Engine] [Warning] Telegram trade alert trigger failed: {e}")
+
 def get_latest_transactions(limit: int = 15) -> List[Dict[str, Any]]:
     """
     Retrieves the latest transaction logs from Firestore sorted by timestamp descending.
@@ -1017,6 +1043,15 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             }
             
             save_transaction_to_db(ticker, "STOP_LOSS_EXIT", qty, current_price, reasoning, snapshot)
+            trigger_telegram_trade_alert(
+                ticker=ticker,
+                action="STOP_LOSS_EXIT",
+                quantity=qty,
+                price=current_price,
+                reasoning=reasoning,
+                balance=new_balance,
+                total_asset=new_total_asset
+            )
             return {
                 "status": "success",
                 "action": "SELL",
@@ -1060,6 +1095,15 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             }
             
             save_transaction_to_db(ticker, "TRAILING_STOP_EXIT", qty, current_price, reasoning, snapshot)
+            trigger_telegram_trade_alert(
+                ticker=ticker,
+                action="TRAILING_STOP_EXIT",
+                quantity=qty,
+                price=current_price,
+                reasoning=reasoning,
+                balance=new_balance,
+                total_asset=new_total_asset
+            )
             return {
                 "status": "success",
                 "action": "SELL",
@@ -1324,6 +1368,17 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
         reasoning=reasoning,
         snapshot_context=snapshot_context
     )
+
+    if action in ["BUY", "SELL"]:
+        trigger_telegram_trade_alert(
+            ticker=ticker,
+            action=action,
+            quantity=quantity,
+            price=current_price,
+            reasoning=reasoning,
+            balance=new_balance,
+            total_asset=new_total_asset
+        )
 
     return {
         "status": "success",
