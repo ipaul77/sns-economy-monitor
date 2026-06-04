@@ -51,6 +51,42 @@ def find_similar_in_db(title):
 def update_other_sources_in_db(url, new_source):
     db.update_other_sources(url, new_source)
 
+def log_boot_status():
+    """
+    Logs the server boot time to Firestore system/health.
+    Helps the user track cold starts and wake-ups.
+    """
+    if db.USE_FIREBASE and db.db_client is not None:
+        try:
+            now_str = db.get_kst_now().isoformat()
+            doc_ref = db.db_client.collection("system").document("health")
+            doc_ref.set({
+                "last_boot": now_str,
+                "status": "online",
+                "message": "Render Container cold-started successfully."
+            }, merge=True)
+            print(f"[System] Logged boot status to Firestore at {now_str}")
+        except Exception as e:
+            print(f"[Warning] Failed to log boot status to Firestore: {e}")
+
+def log_trigger_status(trigger_type, status, message=""):
+    """
+    Logs API trigger events to Firestore to track Cron execution.
+    """
+    if db.USE_FIREBASE and db.db_client is not None:
+        try:
+            now_str = db.get_kst_now().isoformat()
+            doc_ref = db.db_client.collection("system").document("health")
+            doc_ref.set({
+                "last_trigger_time": now_str,
+                "last_trigger_type": trigger_type,
+                "last_trigger_status": status,
+                "last_trigger_message": message
+            }, merge=True)
+            print(f"[System] Logged trigger event to Firestore: {trigger_type} ({status})")
+        except Exception as e:
+            pass
+
 def generate_html_dashboard():
     """
     Reads SQLite analysis history and generates a stunning, premium, modern HTML dashboard.
@@ -1395,6 +1431,7 @@ def trigger_trading_simulation():
         try:
             is_trading_in_progress = True
             print("[API] Starting synchronous trading cycle...")
+            log_trigger_status("/api/trade", "started", "Simulated trading cycle requested.")
             
             # 1. Skipped synchronous crawling to prevent 30s Render timeout.
             # Scraped news is already periodically collected by the background scheduler thread.
@@ -1405,20 +1442,26 @@ def trigger_trading_simulation():
             print("[API] Synchronous trading cycle finished successfully!")
             
             if result.get("status") == "skipped":
+                msg = result.get("message", "매매 조건이 충족되지 않아 건너뛰었습니다.")
+                log_trigger_status("/api/trade", "skipped", msg)
                 return jsonify({
                     "status": "skipped",
-                    "message": result.get("message", "매매 조건이 충족되지 않아 건너뛰었습니다.")
+                    "message": msg
                 })
                 
+            action = result.get("action", "HOLD")
+            reasoning = result.get("reasoning", "")
+            log_trigger_status("/api/trade", f"success: {action}", f"Ticker: {result.get('ticker', '')} | reasoning: {reasoning}")
+            
             return jsonify({
                 "status": "success",
                 "message": "AI 모의투자 엔진이 성공적으로 구동되었습니다.",
                 "background": False,
-                "action": result.get("action", "HOLD"),
+                "action": action,
                 "ticker": result.get("ticker", ""),
                 "quantity": result.get("quantity", 0),
                 "price": result.get("price", 0.0),
-                "reasoning": result.get("reasoning", "")
+                "reasoning": reasoning
             })
         finally:
             is_trading_in_progress = False
@@ -1427,6 +1470,7 @@ def trigger_trading_simulation():
         import traceback
         err_stack = traceback.format_exc()
         print(f"[Trading Engine] [API Error] {err_stack}")
+        log_trigger_status("/api/trade", "error", f"{str(e)}\n{err_stack}")
         return jsonify({
             "status": "error",
             "message": f"Simulation cycle triggering failed: {str(e)}",
@@ -1656,6 +1700,11 @@ def scheduler_thread():
 
 # Setup Database & Load Configurations at module level (WSGI / Cloud compatible)
 setup_database()
+try:
+    log_boot_status()
+except Exception as e:
+    pass
+
 global_config = load_config()
 global_analyzer = GeminiEconomyAnalyzer()
 
