@@ -1,8 +1,13 @@
 {
   "GEMINI_API_KEY": "",
-  "telegram_bot_token": "",
-  "telegram_chat_id": "",
+  "telegram_bot_token": "8671286076:AAHSYufYg1f9na314YgKz19LX02EpIrTQdw",
+  "telegram_chat_id": "8806397400",
   "slack_webhook_url": "",
+  "kis": {
+    "app_key": "",
+    "app_secret": "",
+    "is_simulation": false
+  },
   "models": {
     "flash_model": "gemini-3.1-flash-lite",
     "pro_model": "gemini-3.5-flash"

@@ -563,14 +563,23 @@ def get_stock_indicators(ticker: str) -> Dict[str, Any]:
                 result["disparity"] = 100.0
             return result
 
-        # 1. Current Price
-        current_price = float(hist["Close"].iloc[-1])
+        # 1. Current Price (Try KIS first)
+        kis_price = None
+        try:
+            from kis_client import kis_client
+            kis_price = kis_client.get_current_price(ticker)
+        except Exception as e:
+            print(f"[Trading Engine] [Warning] KIS price fetch failed for indicators: {e}")
+
+        current_price = kis_price if kis_price is not None else float(hist["Close"].iloc[-1])
         result["current_price"] = current_price
 
         # 2. 20-day Moving Average (20 MA)
         ma_length = min(len(hist), 20)
-        close_slice = hist["Close"].iloc[-ma_length:]
-        ma_20 = float(close_slice.mean())
+        close_slice = hist["Close"].iloc[-ma_length:].tolist()
+        if len(close_slice) > 0 and kis_price is not None:
+            close_slice[-1] = kis_price  # Replace today's close with KIS real-time price
+        ma_20 = sum(close_slice) / len(close_slice)
         result["ma_20"] = ma_20
 
         # 3. 20-day Disparity Index (%)
@@ -680,6 +689,16 @@ def get_stock_price(ticker: str) -> float:
 
     # Handle standard 6-digit Korean stock tickers
     if len(ticker) == 6 and ticker.isdigit():
+        # --- KIS Open API real-time price attempt ---
+        try:
+            from kis_client import kis_client
+            kis_price = kis_client.get_current_price(ticker)
+            if kis_price is not None and kis_price > 0:
+                return kis_price
+        except Exception as e:
+            print(f"[Trading Engine] [Warning] KIS API price query failed for {ticker}: {e}")
+
+        # --- Fallback to yfinance ---
         resolved_suffix = ".KQ" if ticker in KOSDAQ_TICKERS else ".KS"
         full_ticker = ticker + resolved_suffix
         try:
