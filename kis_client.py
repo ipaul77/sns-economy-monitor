@@ -14,6 +14,10 @@ class KISClient:
         self.base_url = "https://openapi.koreainvestment.com:9443"
         self.local_token_path = os.path.join("data", "kis_token.json")
         
+        # Memory caching to avoid repeating Firestore queries in the same process
+        self._memory_token = ""
+        self._memory_expires_at = None
+        
         self._load_config()
         self._resolve_base_url()
 
@@ -22,6 +26,18 @@ class KISClient:
         Loads API credentials from environment variables first,
         falling back to config.json.
         """
+        # Load local .env manually if it exists to support local development
+        if os.path.exists(".env"):
+            try:
+                with open(".env", "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and not line.startswith("#") and "=" in line:
+                            k, v = line.split("=", 1)
+                            os.environ[k.strip()] = v.strip()
+            except Exception as e:
+                print(f"[KIS Client] [Warning] Failed to load .env file: {e}")
+
         # 1. Try Environment Variables (Ideal for Render)
         self.app_key = os.getenv("KIS_APP_KEY", "").strip()
         self.app_secret = os.getenv("KIS_APP_SECRET", "").strip()
@@ -106,8 +122,12 @@ class KISClient:
 
     def _save_cached_token(self, token: str, expires_at: datetime):
         """
-        Saves the access_token and its expiration date to Firestore and local fallback.
+        Saves the access_token and its expiration date to memory, Firestore, and local fallback.
         """
+        # Save to memory cache first
+        self._memory_token = token
+        self._memory_expires_at = expires_at
+
         expires_str = expires_at.isoformat()
         payload = {
             "access_token": token,
@@ -135,20 +155,28 @@ class KISClient:
 
     def get_access_token(self) -> str:
         """
-        Returns a valid KIS access token. Checks cache first;
-        issues a new one if expired or not found.
+        Returns a valid KIS access token. Checks memory cache first,
+        then DB/file cache, and issues a new one if expired or not found.
         """
         if not self.app_key or not self.app_secret:
             raise ValueError("[KIS Client] KIS_APP_KEY and KIS_APP_SECRET are not configured!")
 
-        # Check Cache
-        token, expires_at = self._get_cached_token()
         now = self._get_now_utc()
-        
-        # If cache exists and expires in more than 10 minutes, return it
-        if token and expires_at and (expires_at - now > timedelta(minutes=10)):
+
+        # 1. Check Memory Cache (0 reads)
+        if self._memory_token and self._memory_expires_at and (self._memory_expires_at - now > timedelta(minutes=10)):
             # Debug log to verify usage
-            print(f"[KIS Client] Using cached token. (Expires in {(expires_at - now).total_seconds() / 3600:.1f} hours)")
+            print(f"[KIS Client] Using MEMORY cached token. (Expires in {(self._memory_expires_at - now).total_seconds() / 3600:.2f} hours)")
+            return self._memory_token
+
+        # 2. Check DB/File Cache (Only if memory cache missed/expired)
+        token, expires_at = self._get_cached_token()
+        
+        # If cache exists and expires in more than 10 minutes, save to memory and return it
+        if token and expires_at and (expires_at - now > timedelta(minutes=10)):
+            print(f"[KIS Client] Using DB/File cached token. Saving to memory. (Expires in {(expires_at - now).total_seconds() / 3600:.2f} hours)")
+            self._memory_token = token
+            self._memory_expires_at = expires_at
             return token
 
         # Issue new token

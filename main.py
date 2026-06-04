@@ -57,7 +57,8 @@ def generate_html_dashboard():
     Fetches real-time stock/exchange rate market indicators dynamically on generation!
     """
     try:
-        rows = db.fetch_history()
+        # Read only the latest 25 items from local SQLite for zero Firestore cost
+        rows = db._sqlite_fetch_history(limit=25)
     except Exception as e:
         print(f"[Error] Failed to read database for HTML generation: {str(e)}")
         return
@@ -1435,7 +1436,7 @@ def trigger_trading_simulation():
 # API State Caching Globals to prevent Firestore read limits exhaustion
 _trading_state_cache = None
 _trading_state_cache_time = 0
-_trading_state_cache_duration = 60  # 60 seconds cache lifetime
+_trading_state_cache_duration = 300  # 300 seconds (5 minutes) cache lifetime
 
 @app.route('/api/trading/state')
 def get_trading_state():

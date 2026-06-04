@@ -229,34 +229,13 @@ def find_similar(title: str) -> dict:
     Searches the database for a story with a highly similar title (>0.75 similarity)
     processed within the last 3 days to prevent duplicate processing.
     
-    [Optimized] 1차적으로 로컬 SQLite에서 유사 기사를 사전 판별하여 비용이 비싼 클라우드(Firestore) 조회량을 극적으로 99.9% 절감합니다.
+    Optimized: Queries only the local SQLite database cache to avoid expensive Firestore read streams.
     """
-    # 1. 1차 로컬 SQLite 사전 판별 (무료 및 초고속)
     local_similar = _sqlite_find_similar(title)
     if local_similar:
         print(f"[DB] [Cache Hit] Found similar story locally: '{local_similar['title']}'")
         return local_similar
-        
-    # 2. 로컬에 없는 경우에만 비상 Fallback으로 Firestore를 찔러봄
-    if USE_FIREBASE:
-        cutoff = (get_kst_now() - timedelta(days=3)).isoformat()
-        try:
-            # Optimize read cost: only query documents from the last 3 days!
-            docs = db_client.collection("history")\
-                            .where("processed_at", ">=", cutoff)\
-                            .stream()
-            for doc in docs:
-                data = doc.to_dict()
-                db_title = data.get("title", "")
-                if get_similarity(title, db_title) > 0.75:
-                    return data
-            return None
-        except Exception as e:
-            check_firestore_quota_error(e)
-            print(f"[Error] Firestore find_similar failed: {str(e)}")
-            return _sqlite_find_similar(title)
-    else:
-        return None
+    return None
 
 def _sqlite_find_similar(title: str) -> dict:
     conn = sqlite3.connect(DB_PATH)
@@ -460,28 +439,10 @@ def _sqlite_fetch_history(limit=100) -> list:
 def fetch_recent_relevant(hours=24) -> list:
     """
     Fetches relevant articles processed within the last N hours.
+    Optimized: Always queries local SQLite first to avoid expensive Firestore read streams.
     """
     cutoff = (get_kst_now() - timedelta(hours=hours)).isoformat()
-    
-    if USE_FIREBASE:
-        try:
-            docs = db_client.collection("history")\
-                            .where("processed_at", ">=", cutoff)\
-                            .stream()
-            results = []
-            for doc in docs:
-                data = doc.to_dict()
-                if data.get("is_relevant") == 1:
-                    results.append(data)
-            # Sort manually by processed_at DESC
-            results.sort(key=lambda x: x.get("processed_at", ""), reverse=True)
-            return results
-        except Exception as e:
-            check_firestore_quota_error(e)
-            print(f"[Error] Firestore fetch_recent_relevant failed: {str(e)}")
-            return _sqlite_fetch_recent_relevant(cutoff)
-    else:
-        return _sqlite_fetch_recent_relevant(cutoff)
+    return _sqlite_fetch_recent_relevant(cutoff)
 
 def _sqlite_fetch_recent_relevant(cutoff: str) -> list:
     conn = sqlite3.connect(DB_PATH)
