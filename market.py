@@ -19,7 +19,8 @@ def get_market_indicators():
         "KOSPI": "^KS11",
         "USD_KRW": "USDKRW=X",
         "SAMSUNG": "005930.KS",
-        "HYNIX": "000660.KS"
+        "HYNIX": "000660.KS",
+        "SOXX": "^SOX"
     }
     
     results = {}
@@ -64,7 +65,8 @@ def get_fallback_value(label):
         "KOSPI": {"symbol": "^KS11", "price": 2650.45, "change": 12.30, "percent": 0.47, "status": "fallback"},
         "USD_KRW": {"symbol": "USDKRW=X", "price": 1365.50, "change": -2.80, "percent": -0.20, "status": "fallback"},
         "SAMSUNG": {"symbol": "005930.KS", "price": 78200, "change": 1100, "percent": 1.43, "status": "fallback"},
-        "HYNIX": {"symbol": "000660.KS", "price": 195400, "change": -1800, "percent": -0.91, "status": "fallback"}
+        "HYNIX": {"symbol": "000660.KS", "price": 195400, "change": -1800, "percent": -0.91, "status": "fallback"},
+        "SOXX": {"symbol": "^SOX", "price": 5150.20, "change": 85.50, "percent": 1.69, "status": "fallback"}
     }
     return fallbacks.get(label)
 

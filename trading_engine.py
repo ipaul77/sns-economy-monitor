@@ -579,6 +579,18 @@ def get_stock_indicators(ticker: str) -> Dict[str, Any]:
         result["ma_20"] = price
         result["disparity"] = 100.0
 
+    # Fetch investor (sugeup) indicators
+    try:
+        import investor
+        inv_ind = investor.get_investor_indicators(ticker)
+        result.update(inv_ind)
+    except Exception as ex:
+        print(f"[Trading Engine] [Warning] Failed to merge investor indicators for {ticker}: {ex}")
+        result.update({
+            "frgn_net_5d": 0, "inst_net_5d": 0, "frgn_net_10d": 0, "inst_net_10d": 0,
+            "dual_buy_5d_count": 0, "frgn_ratio": 0.0, "frgn_trend_sig": "HOLD", "inst_trend_sig": "HOLD"
+        })
+
     return result
 
 def get_stock_volatility_multiplier(ticker: str, fallback_vol: float = 0.045) -> float:
@@ -742,6 +754,21 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
             except Exception:
                 pass
                 
+    # 0. Calculate Leading Flow Score from SOXX & USD_KRW changes
+    leading_flow_score = 5
+    soxx_change = 0.0
+    usdkrw_change = 0.0
+    try:
+        import market
+        import investor
+        m_data = market.get_market_indicators()
+        if m_data:
+            soxx_change = m_data.get("SOXX", {}).get("percent", 0.0)
+            usdkrw_change = m_data.get("USD_KRW", {}).get("percent", 0.0)
+            leading_flow_score = investor.calculate_leading_flow_score(soxx_change, usdkrw_change)
+    except Exception as e:
+        print(f"[Trading Engine] [Warning] Failed to calculate Leading Flow Score: {e}")
+
     # 1. Goal-Based Investing (ROI Target: +10% in 30 days)
     initial_asset = 10000000.0
     state = get_agent_state()
@@ -767,20 +794,20 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
     # Format portfolio state for the prompt
     portfolio_str = ""
     if not portfolio:
-        portfolio_str = "ë³´ì íê³  ìë ì£¼ìì´ ììµëë¤."
+        portfolio_str = "보유하고 있는 주식이 없습니다."
     else:
         for tick, info in portfolio.items():
             current_price = market_prices.get(tick, 0.0)
             avg_price = info["average_price"]
             qty = info["quantity"]
             pl_rate = ((current_price - avg_price) / avg_price * 100) if avg_price > 0 else 0.0
-            portfolio_str += f"- ì¢ëª©ì½ë: {tick} | ë³´ì ìë: {qty}ì£¼ | íê·  ë§¤ìê°: {avg_price:,.0f}ì | íì¬ê°: {current_price:,.0f}ì (ììµë¥ : {pl_rate:+.2f}%)\n"
+            portfolio_str += f"- 종목코드: {tick} | 보유수량: {qty}주 | 평균 매수가: {avg_price:,.0f}원 | 현재가: {current_price:,.0f}원 (수익률: {pl_rate:+.2f}%)\n"
 
     # Format market prices
-    prices_str = "\n".join([f"- ì¢ëª©ì½ë: {tick} | íì¬ ì²´ê²°ê°: {price:,.0f}ì" for tick, price in market_prices.items()])
+    prices_str = "\n".join([f"- 종목코드: {tick} | 현재 체결가: {price:,.0f}원" for tick, price in market_prices.items()])
 
     # Format index changes
-    index_str = "ì§ì ì ë³´ ìì"
+    index_str = "지수 정보 없음"
     if index_changes:
         index_str = ", ".join([f"{name}: {val:+.2f}%" for name, val in index_changes.items()])
 
@@ -799,37 +826,28 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
             f"이격도: {ind.get('disparity', 100.0):.1f}% | "
             f"당일거래량: {ind.get('daily_volume', 0):,}주 | "
             f"5일평균거래량: {ind.get('avg_volume_5d', 0.0):,.0f}주 | "
-            f"거래량 돌파 비율: {ind.get('volume_ratio', 1.0):.1f}x\n"
+            f"거래량 돌파 비율: {ind.get('volume_ratio', 1.0):.1f}x | "
+            f"외인5일누적: {ind.get('frgn_net_5d', 0):+d}주 | "
+            f"기관5일누적: {ind.get('inst_net_5d', 0):+d}주 | "
+            f"양매수일수(5일): {ind.get('dual_buy_5d_count', 0)}일 | "
+            f"외인보유율: {ind.get('frgn_ratio', 0.0):.2f}%\n"
         )
 
     # Format news analysis context
     news_str = ""
     if not news_context:
-        news_str = "ìµê·¼ 24ìê° ëì ìì§ë íêµ­ ê²½ì  ê´ë ¨ ì ê· ë´ì¤ê° ììµëë¤. ë´ì¤ í¸ì¬ê° ìëë¼ë ì´ê²©ë, ê±°ëë ëí ë¹ì¨ ë± ê¸°ì ì  ì§íê° ëë ·íë©´ ëª¨ë©í ê±°ëë¥¼ ê³ ë ¤í  ì ììµëë¤."
+        news_str = "최근 24시간 동안 수집된 한국 경제 관련 신규 뉴스가 없습니다. 뉴스 호재가 없더라도 이격도, 거래량 돌파 비율 등 기술적 지표가 뚜렷하면 모멘텀 거래를 고려할 수 있습니다."
     else:
         for idx, item in enumerate(news_context[:10]):  # Limit to top 10 relevant stories
             news_str += (
-                f"{idx+1}. [{item.get('source', 'ë´ì¤')}] {item.get('title', '')} (ì¤ìë: {item.get('relevance_score', 5)}/10) \n"
-                f"   - ê°ì±ìì¤: {item.get('sentiment', 'NEUTRAL')} (ì ì: {item.get('sentiment_score', 0.0):+.2f}) \n"
-                f"   - AI ë¶ì ìì½: {item.get('korean_summary', '')} \n"
-                f"   - ì¦ì ìí¥ íê°: {item.get('macro_impacts', '')} \n"
+                f"{idx+1}. [{item.get('source', '뉴스')}] {item.get('title', '')} (중요도: {item.get('relevance_score', 5)}/10) \n"
+                f"   - 감성수준: {item.get('sentiment', 'NEUTRAL')} (점수: {item.get('sentiment_score', 0.0):+.2f}) \n"
+                f"   - AI 분석 요약: {item.get('korean_summary', '')} \n"
+                f"   - 증시 영향 평가: {item.get('macro_impacts', '')} \n"
             )
 
     # Define system instructions (Guardrails)
     system_instruction = (
-        "ëë ì£¼ì´ì§ ê°ì ìì° ë²ì ë´ììë§ ìê¸ì ì´ì©íë ë§¤ì° ë³´ìì ì´ê³  í©ë¦¬ì ì¸ AI ì£¼ì í¬ì ìì´ì í¸ì¼.\n"
-        "ëì ì­í ì ìì¥ ê°ê²©, ì§ì ëí¥, ê°ë³ ê¸°ì  ì§í ë° ìµì  ë´ì¤ ì»¨íì¤í¸ë¥¼ ê¸°ë°ì¼ë¡ ìµì ì ë§¤ì/ë§¤ë/ê´ë§(BUY/SELL/HOLD) ìì¬ ê²°ì ì ë´ë¦¬ë ê²ì´ë¤.\n\n"
-        "--- ìê²©í íë ê°ë ¹ (Guardrails) ---\n"
-        "1. ëìê²ë ìì°ì ì§ì  ê³ì°íê±°ë ì²´ê²° ì¥ë¶ë¥¼ ë³ê²½í  ê¶íì´ ìë¤. ì¤ì§ 'í¬ì íë¨ ìê·¸ë'ë§ ì¬ë°ë¥¸ JSON êµ¬ì¡°ë¡ ë°íí  ì ìë¤.\n"
-        "2. ë´ì¤ ë¶ìì´ ìê³  ê¸°ì ì  ì§í(ì´ê²©ë, ê±°ëë) ì¸¡ë©´ììë ê±°ëí  ëë ·í ìê·¸ë(ëí ëë ëí­ ê³¼ë ë°ë±)ì´ ìë¤ë©´ 'HOLD'ë¥¼ ì íí´ë¼.\n"
-        "3. ë§¤ìë¥¼ í  ëë íì¬ ë³´ì  ì¤ì¸ ììê¸(Cash Balance) ëë¹ ì§ìí  ë¹ì¨(allocation_pct, 0.0% ~ 100.0%)ì ìë ¥í´ë¼. ì ë ììê¸ì ì´ê³¼í  ì ìë¤.\n"
-        "4. ë§¤ëë¥¼ í  ëë íì¬ ë³´ì  ì¤ì¸ í¹ì  ì£¼ìì ìë ëë¹ ë§¤ëí  ë¹ì¨(allocation_pct, 0.0% ~ 100.0%)ì ìë ¥í´ë¼. ì ë ë§¤ëë 100.0%, ì ë° ë§¤ëë 50.0% ë±ì¼ë¡ ê¸°ìíë¤. ê³µë§¤ëë ì ë ë¶ê°ë¥íë¤.\n"
-        "5. ìì¬ ê²°ì  ì¬ì (reasoning)ë ì´ë¤ ë´ì¤ ë¶ì ì»¨íì¤í¸ë¥¼ ê·¼ê±°ë¡ ì¼ìëì§, íì¬ì ê¸°ì ì  ì§í ìí©ê³¼ ë§¤ì¹íì¬ íê¸ë¡ êµ¬ì²´ì ì´ê³  ë¼ë¦¬ì ì¼ë¡ ìì í´ë¼.\n"
-        "6. í¹ì  ì¢ëª©ì 20ì¼ ì´ê²©ë(Disparity)ê° 115% ì´ìì¼ë¡ ê¸ë±í´ ê³¼ì´ êµ¬ê°ì¼ ëë ì ê· ë§¤ì(BUY)ë¥¼ ê°íê² ì°¨ë¨íê±°ë ê´ë§(HOLD) ì¡°ì¹í´ë¼.\n"
-        "7. í¸ì¬ ë´ì¤ê° ë´ëë¼ë, ê±°ëë ëí ë¹ì¨ì´ 2.0ë°° ì´í(Volume Breakout ë¯¸ì¶©ì¡±)ì´ê³  ê±°ëëì´ ì¤ë¦¬ì§ ìì ìì¹ì¼ ëë ë§¤ìë¥¼ ì ê·¹ ìì í´ë¼.\n"
-        "8. ë´ì¤ê° ìë íì ìí©ììë 'ê±°ëë ëí ë¹ì¨ 2.0ë°° ëí(Volume Breakout)' ì ìê¸ ì ìì ë°ë¥¸ ëª¨ë©í ë§¤ì(BUY)ë¥¼ ê³ ë ¤íê±°ë, '20ì¼ì  ì´ê²©ë(Disparity)ê° 90% ì´í'ë¡ ê·¹ëì ê³¼ë§¤ë(ëí­ ê³¼ë) êµ¬ê°ì¼ ë ê¸°ì ì  ë°ë±ì ë¸ë¦° ì ê° ë§¤ì(BUY)ë¥¼ ìíí  ì ìë¤.\n"
-        f"9. ëë 30ì¼ ë´ì ëì  ììµë¥  +{target_roi}%ë¥¼ ë¬ì±í´ì¼ íë ëªíí í¬í¸í´ë¦¬ì¤ ëª©íë¥¼ ê°ì§ê³  ìë¤. íì¬ ê²½ê³¼ ì¼ì({elapsed_days}ì¼ì°¨)ì íì¬ ììµë¥ ({current_roi:.2f}%)ì ê³ ë ¤íì¬ í¬ì ì±í¥ì ëì ì¼ë¡ ì¡°ì íë¼:\n"
-        "   - **ì¶ê²© ëª¨ë(Aggressive Catch-up)**: ëª©í ë§ê°ì¼ì´ ë¤ê°ì¤ëë° íì¬ ììµë¥ ì´ ëª©í íì´ì¤(+0.33%/ì¼) ëë¹ ë¯¸ë¬ ìíì¸ ê²½ì°, ì°ë ì¢ëª©ì ê¸°ì ì  ê±°ëë ëíë ê·¹ì¬í ëí­ ê³¼ë êµ¬ê°ìì ë§¤ì ë¹ì¤ì ëì¬ ì ê·¹ì ì¼ë¡ ììµì ì¶êµ¬íë¼.\n"
         "   - **ì´ìµ ë³´ì¡´ ëª¨ë(Capital Preservation)**: ì´ë¯¸ ëª©í ììµë¥ ì ì´ê³¼ ë¬ì±íê±°ë ëª©í íì´ì¤ë¥¼ ìì ì ì¼ë¡ ìííê³  ìë ê²½ì°, ìë¡ì´ ì¶ê²© ë§¤ìë¥¼ ë§¤ì° ìì íê³  ì´ìµì ì¤ííì¬ ì»ì ììµì ìì íê² ì§í¤ë ê´ë§(HOLD) ìì£¼ë¡ ì¡°ì¬ì¤ë½ê² ë°©ì´íë¼."
     )
 
@@ -1181,6 +1199,18 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
         is_ticker_market_shock = market_change <= -1.5
         shock_reason = f"소속 거래소: {ticker_market} | 지수 당일 등락률: {market_change:+.2f}%"
 
+        # Sugeup Dump Guardrail: Override BUY if both foreigner and institution are selling heavily
+        frgn_net_5d = market_indicators.get(ticker, {}).get("frgn_net_5d", 0)
+        inst_net_5d = market_indicators.get(ticker, {}).get("inst_net_5d", 0)
+        avg_vol_5d = market_indicators.get(ticker, {}).get("avg_volume_5d", 0)
+        
+        is_sugeup_dump = False
+        combined_net_sell = 0
+        if frgn_net_5d < 0 and inst_net_5d < 0:
+            combined_net_sell = abs(frgn_net_5d + inst_net_5d)
+            if combined_net_sell > (avg_vol_5d * 0.5):
+                is_sugeup_dump = True
+
         if is_ticker_market_shock:
             print(f"[Trading Engine] BUY Order Overridden by Market Shock: {shock_reason}")
             action = "HOLD"
@@ -1193,6 +1223,10 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             print(f"[Trading Engine] BUY Order Overridden by Bad News Filter: {bad_news_reason}")
             action = "HOLD"
             reasoning = f"[백엔드 규칙 기각: 악재 뉴스 필터] Gemini AI가 매수를 결정했으나 {bad_news_reason} 우려로 백엔드 필터가 매수를 전면 차단하였습니다."
+        elif is_sugeup_dump:
+            print(f"[Trading Engine] BUY Order Overridden by Sugeup Dump: Frgn={frgn_net_5d}, Inst={inst_net_5d}, 5dAvgVol={avg_vol_5d}")
+            action = "HOLD"
+            reasoning = f"[백엔드 규칙 기각: 수급 폭락] Gemini AI가 매수를 결정했으나 최근 5일간 외국인({frgn_net_5d:+,}주)과 기관({inst_net_5d:+,}주)의 동시 순매도 합산량({combined_net_sell:,}주)이 5일 평균 거래량({avg_vol_5d:,.0f}주)의 50%를 초과하는 수급 폭락 상태이므로 대방어 기각 규칙이 작동하여 HOLD 처리했습니다."
         else:
             # Sizing & Guardrails cash calculation
             allocated_cash = balance * (allocation_pct / 100.0)

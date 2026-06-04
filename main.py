@@ -39,6 +39,11 @@ global_analyzer = None
 
 def setup_database():
     db.setup_db()
+    try:
+        import investor
+        investor.setup_investor_db()
+    except Exception as e:
+        print(f"[Error] Failed to initialize investor database: {e}")
 
 def find_similar_in_db(title):
     return db.find_similar(title)
@@ -241,22 +246,26 @@ def generate_html_dashboard():
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 my-6">
+                <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 my-6">
                     <div class="bg-slate-950/40 p-4 rounded-xl border border-white/5">
                         <p class="text-xs font-semibold text-slate-500">예수금 (Cash)</p>
-                        <p class="mt-1 text-lg font-extrabold text-slate-100" id="tradingCash">10,000,000원</p>
+                        <p class="mt-1 text-base font-extrabold text-slate-100" id="tradingCash">10,000,000원</p>
                     </div>
                     <div class="bg-slate-950/40 p-4 rounded-xl border border-white/5">
                         <p class="text-xs font-semibold text-slate-500">보유 주식 평가금액</p>
-                        <p class="mt-1 text-lg font-extrabold text-slate-100" id="tradingStockValue">0원</p>
+                        <p class="mt-1 text-base font-extrabold text-slate-100" id="tradingStockValue">0원</p>
                     </div>
                     <div class="bg-slate-950/40 p-4 rounded-xl border border-white/5">
                         <p class="text-xs font-semibold text-slate-500">총 평가 자산 (Total Asset)</p>
-                        <p class="mt-1 text-lg font-extrabold text-slate-100" id="tradingTotalAsset">10,000,000원</p>
+                        <p class="mt-1 text-base font-extrabold text-slate-100" id="tradingTotalAsset">10,000,000원</p>
                     </div>
                     <div class="bg-slate-950/40 p-4 rounded-xl border border-white/5">
                         <p class="text-xs font-semibold text-slate-500">누적 수익률 (Total ROI)</p>
-                        <p class="mt-1 text-lg font-extrabold text-slate-100" id="tradingROI">+0.00%</p>
+                        <p class="mt-1 text-base font-extrabold text-slate-100" id="tradingROI">+0.00%</p>
+                    </div>
+                    <div class="bg-slate-950/40 p-4 rounded-xl border border-white/5 glow-orange">
+                        <p class="text-xs font-semibold text-slate-500">수급선행지수 (Leading Score)</p>
+                        <p class="mt-1 text-base font-extrabold text-slate-100" id="leadingFlowScore">5점 / 10점</p>
                     </div>
                 </div>
 
@@ -622,6 +631,15 @@ def generate_html_dashboard():
                 let stockVal = state.total_asset - state.balance;
                 document.getElementById("tradingStockValue").textContent = Math.round(stockVal).toLocaleString() + "원";
                 
+                // Update Leading Flow Score
+                const score = data.leading_flow_score || 5;
+                const soxx = data.soxx_change || 0.0;
+                const usdkrw = data.usdkrw_change || 0.0;
+                const scoreEl = document.getElementById("leadingFlowScore");
+                if (scoreEl) {{
+                    scoreEl.innerHTML = score + '점 / 10점 <span class="text-[9px] block text-slate-500 font-normal mt-0.5">SOXX: ' + (soxx >= 0 ? '+' : '') + soxx.toFixed(2) + '%, 환율: ' + (usdkrw >= 0 ? '+' : '') + usdkrw.toFixed(2) + '%</span>';
+                }}
+
                 // AI Dynamic Watchlist Rendering
                 const watchlistBody = document.getElementById("dynamicWatchlistBody");
                 if (watchlistBody && data.watchlist && data.dynamic_tickers) {{
@@ -631,6 +649,8 @@ def generate_html_dashboard():
                         const price = ind.current_price || 0;
                         const disparity = ind.disparity || 100.0;
                         const volRatio = ind.volume_ratio || 1.0;
+                        const frgn5d = ind.frgn_net_5d || 0;
+                        const inst5d = ind.inst_net_5d || 0;
                         
                         const name = tickersMap[ticker] || ticker;
                         
@@ -650,16 +670,47 @@ def generate_html_dashboard():
                             badgeHtml = '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-slate-400 border border-slate-700">🟢 안정</span>';
                         }}
                         
+                        // Determine sugeup status & badge
+                        let sugeupHtml = "";
+                        if (frgn5d > 0 && inst5d > 0) {{
+                            sugeupHtml = '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">양매수</span>';
+                        }} else if (frgn5d < 0 && inst5d < 0) {{
+                            sugeupHtml = '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">동시매도</span>';
+                        }} else if (frgn5d > 0) {{
+                            sugeupHtml = '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">외인매수</span>';
+                        }} else if (inst5d > 0) {{
+                            sugeupHtml = '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">기관매수</span>';
+                        }} else {{
+                            sugeupHtml = '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-slate-400 border border-slate-700">관망</span>';
+                        }}
+                        
+                        const formatVol = (val) => {{
+                            const absVal = Math.abs(val);
+                            if (absVal >= 1000000) {{
+                                return (val > 0 ? '+' : '-') + (absVal / 1000000).toFixed(1) + 'M';
+                            }} else if (absVal >= 1000) {{
+                                return (val > 0 ? '+' : '-') + Math.round(absVal / 1000) + 'K';
+                            }}
+                            return (val > 0 ? '+' : '-') + absVal;
+                        }};
+                        
                         const card = document.createElement("div");
-                        card.className = "glass-card rounded-xl p-3 border " + borderGlow + " transition duration-200 hover:scale-[1.02] min-w-[135px] md:min-w-0 snap-center flex-shrink-0";
+                        card.className = "glass-card rounded-xl p-3 border " + borderGlow + " transition duration-200 hover:scale-[1.02] min-w-[145px] md:min-w-0 snap-center flex-shrink-0";
                         card.innerHTML = '<div class="flex justify-between items-start mb-1">' +
                                          '  <p class="text-[10px] font-semibold text-slate-400 truncate max-w-[80px]" title="' + name + '">' + name + '</p>' +
                                          '  ' + badgeHtml +
                                          '</div>' +
                                          '<p class="text-sm font-extrabold text-slate-100 font-mono">' + Math.round(price).toLocaleString() + '원</p>' +
-                                         '<div class="flex justify-between items-center mt-2 text-[9px] text-slate-500 font-mono">' +
+                                         '<div class="flex justify-between items-center mt-1 text-[9px] text-slate-400 font-mono">' +
                                          '  <span>이격: ' + disparity.toFixed(1) + '%</span>' +
                                          '  <span>거래: ' + volRatio.toFixed(1) + 'x</span>' +
+                                         '</div>' +
+                                         '<div class="flex justify-between items-center mt-1 pt-1 border-t border-white/5 text-[9px] font-mono">' +
+                                         '  <span class="' + (frgn5d >= 0 ? 'text-emerald-400' : 'text-rose-400') + '">외인: ' + formatVol(frgn5d) + '</span>' +
+                                         '  <span class="' + (inst5d >= 0 ? 'text-emerald-400' : 'text-rose-400') + '">기관: ' + formatVol(inst5d) + '</span>' +
+                                         '</div>' +
+                                         '<div class="mt-2 text-center">' +
+                                         '  ' + sugeupHtml +
                                          '</div>';
                         watchlistBody.appendChild(card);
                     }});
@@ -1430,6 +1481,21 @@ def get_trading_state():
             if ind.get("current_price", 0.0) > 0 and tick not in market_prices:
                 market_prices[tick] = ind["current_price"]
                 
+        # Calculate Leading Flow Score to return in the API response
+        leading_flow_score = 5
+        soxx_change = 0.0
+        usdkrw_change = 0.0
+        try:
+            import market
+            import investor
+            m_data = market.get_market_indicators()
+            if m_data:
+                soxx_change = m_data.get("SOXX", {}).get("percent", 0.0)
+                usdkrw_change = m_data.get("USD_KRW", {}).get("percent", 0.0)
+                leading_flow_score = investor.calculate_leading_flow_score(soxx_change, usdkrw_change)
+        except Exception as ex:
+            print(f"[main.py] Failed to calculate Leading Flow Score: {ex}")
+
         response_data = {
             "status": "success",
             "state": state,
@@ -1437,7 +1503,10 @@ def get_trading_state():
             "market_prices": market_prices,
             "transactions": transactions,
             "dynamic_tickers": dynamic_tickers,
-            "watchlist": watchlist_indicators
+            "watchlist": watchlist_indicators,
+            "leading_flow_score": leading_flow_score,
+            "soxx_change": soxx_change,
+            "usdkrw_change": usdkrw_change
         }
         
         # Save cache
