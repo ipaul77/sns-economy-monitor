@@ -339,7 +339,7 @@ def generate_html_dashboard():
 
                     <div>
                         <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">📜 최근 AI 거래 기록 (Transactions Log)</h4>
-                        <div class="overflow-x-auto rounded-xl border border-slate-800/80 bg-slate-950/20 max-h-[162px] overflow-y-auto">
+                        <div class="overflow-x-auto rounded-xl border border-slate-800/80 bg-slate-950/20 max-h-[250px] overflow-y-auto">
                             <table class="min-w-full divide-y divide-slate-800/80 text-[11px]">
                                 <thead class="bg-slate-950/50 text-slate-400 sticky top-0">
                                     <tr>
@@ -1502,7 +1502,7 @@ def get_trading_state():
         import trading_engine
         state = trading_engine.get_agent_state()
         portfolio = trading_engine.get_portfolio_holdings()
-        transactions = trading_engine.get_latest_transactions(limit=15)
+        transactions = trading_engine.get_latest_transactions(limit=100)
         
         # HTML/JS Attribute injection safety formatting at the source
         for tx in transactions:
