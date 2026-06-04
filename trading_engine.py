@@ -211,13 +211,24 @@ def save_transaction_to_db(ticker: str, action: str, quantity: int, price: float
 
 def trigger_telegram_trade_alert(ticker: str, action: str, quantity: int, price: float, reasoning: str, balance: float, total_asset: float):
     """
-    Loads Telegram bot settings from config.json and triggers a trade alert if configured.
+    Loads Telegram bot settings from config.json or environment variables and triggers a trade alert if configured.
     """
     try:
-        with open("config.json", "r", encoding="utf-8") as f:
-            config = json.load(f)
-            token = config.get("telegram_bot_token")
-            chat_id = config.get("telegram_chat_id")
+        token = ""
+        chat_id = ""
+        try:
+            with open("config.json", "r", encoding="utf-8") as f:
+                config = json.load(f)
+                token = config.get("telegram_bot_token", "")
+                chat_id = config.get("telegram_chat_id", "")
+        except Exception:
+            pass
+            
+        # Fallback to environment variables (useful for cloud platforms like Render)
+        if not token or not token.strip():
+            token = os.getenv("TELEGRAM_BOT_TOKEN", "")
+        if not chat_id or not chat_id.strip():
+            chat_id = os.getenv("TELEGRAM_CHAT_ID", "")
             
         if token and chat_id and token.strip() and chat_id.strip():
             from alerts import send_telegram_trade_alert

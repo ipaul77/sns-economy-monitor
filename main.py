@@ -1211,8 +1211,8 @@ def run_pipeline(config, analyzer):
                 send_slack_alert(slack_url, primary_item["title"], analysis.korean_summary, analysis.alert_level, analysis.sentiment)
                 
             # Send Telegram Bot push alert
-            tg_token = config.get("telegram_bot_token")
-            tg_chat_id = config.get("telegram_chat_id")
+            tg_token = config.get("telegram_bot_token") or os.getenv("TELEGRAM_BOT_TOKEN")
+            tg_chat_id = config.get("telegram_chat_id") or os.getenv("TELEGRAM_CHAT_ID")
             if tg_token and tg_chat_id:
                 send_telegram_alert(tg_token, tg_chat_id, primary_item["title"], analysis.korean_summary, analysis.alert_level, analysis.sentiment)
         
