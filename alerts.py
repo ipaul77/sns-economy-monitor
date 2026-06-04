@@ -1,4 +1,29 @@
+import os
+import json
 import requests
+
+def get_dashboard_url():
+    """
+    Resolves the live dashboard URL:
+    1. Checks 'DASHBOARD_URL' environment variable.
+    2. Checks 'dashboard_url' in config.json.
+    3. Falls back to the deployed Render URL.
+    """
+    env_url = os.getenv("DASHBOARD_URL")
+    if env_url and env_url.strip():
+        return env_url.strip().rstrip("/")
+        
+    try:
+        if os.path.exists("config.json"):
+            with open("config.json", "r", encoding="utf-8") as f:
+                config = json.load(f)
+                cfg_url = config.get("dashboard_url")
+                if cfg_url and cfg_url.strip():
+                    return cfg_url.strip().rstrip("/")
+    except Exception:
+        pass
+        
+    return "https://sns-economy-monitor.onrender.com"
 
 def send_telegram_alert(token, chat_id, title, summary, alert_level, sentiment):
     """
@@ -17,7 +42,7 @@ def send_telegram_alert(token, chat_id, title, summary, alert_level, sentiment):
         f"*기사 제목:* {title}\n"
         f"*경보 등급:* {alert_level} | *AI 감성:* {sent_icon} {sentiment}\n\n"
         f"*Gemini 한글 요약 및 거시 영향:*\n{summary}\n\n"
-        f"📊 실시간 현황판: http://localhost:5000"
+        f"📊 실시간 현황판: {get_dashboard_url()}"
     )
     
     payload = {
@@ -67,7 +92,7 @@ def send_slack_alert(webhook_url, title, summary, alert_level, sentiment):
                         "short": False
                     }
                 ],
-                "footer": "한반도 실시간 경제 모니터링 시스템 | http://localhost:5000",
+                "footer": f"한반도 실시간 경제 모니터링 시스템 | {get_dashboard_url()}",
                 "ts": None
             }
         ]
@@ -119,7 +144,7 @@ def send_telegram_trade_alert(token, chat_id, ticker, action, quantity, price, r
         f"*예수금 잔고:* {balance:,.0f}원\n"
         f"*총 평가 자산:* {total_asset:,.0f}원\n\n"
         f"*AI 매매 판단 사유:*\n{reasoning}\n\n"
-        f"📊 실시간 현황판: http://localhost:5000"
+        f"📊 실시간 현황판: {get_dashboard_url()}"
     )
     
     payload = {
