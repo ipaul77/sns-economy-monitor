@@ -22,7 +22,7 @@ def query_local_history(query_text, analyzer, db_path="data/monitor.db"):
     # 2. Fetch history and search locally (works perfectly on both SQLite & Firestore!)
     import db
     try:
-        history = db.fetch_history(limit=100)
+        history = db._sqlite_fetch_history(limit=100)
     except Exception as e:
         print(f"[Error] RAG history fetch failed: {str(e)}")
         history = []

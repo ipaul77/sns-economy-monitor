@@ -21,6 +21,7 @@ DB_PATH = os.path.join(DB_DIR, "monitor.db")
 
 USE_FIREBASE = False
 db_client = None
+CACHE_WARMED = False
 
 # Initialize Database connection (Firebase or SQLite)
 def init_db():
@@ -137,10 +138,11 @@ def setup_db():
 
 def _warm_start_cache():
     """
-    Fetches the latest 50 records from Firestore and populates the local SQLite database.
+    Fetches the latest 300 records from Firestore and populates the local SQLite database.
     This acts as a local cache so that we don't have to query Firestore for duplicate checks
     every time the scraper runs.
     """
+    global CACHE_WARMED
     if not USE_FIREBASE or db_client is None:
         return
     try:
@@ -149,7 +151,7 @@ def _warm_start_cache():
         # Query Firestore
         docs = db_client.collection("history")\
                         .order_by("processed_at", direction=firestore.Query.DESCENDING)\
-                        .limit(50)\
+                        .limit(300)\
                         .stream()
                         
         conn = sqlite3.connect(DB_PATH)
@@ -173,6 +175,7 @@ def _warm_start_cache():
             count += 1
         conn.commit()
         conn.close()
+        CACHE_WARMED = True
         print(f"[DB] Successfully loaded {count} recent records from Firestore into local SQLite cache.")
     except Exception as e:
         check_firestore_quota_error(e)
@@ -201,7 +204,11 @@ def is_already_processed(url: str) -> bool:
     if _sqlite_is_already_processed(url):
         return True
 
-    # 2. 로컬에 없는 경우에만 비상 Fallback으로 Firestore를 조회
+    # 2. 캐시가 워밍업된 상태인 경우, 로컬에 기사가 없다면 Firestore에도 존재하지 않는 신규 기사로 즉시 판단 (Firestore Read 절약)
+    if CACHE_WARMED:
+        return False
+
+    # 3. 로컬에 없는 경우에만 비상 Fallback으로 Firestore를 조회
     if USE_FIREBASE:
         try:
             doc_id = get_doc_id(url)

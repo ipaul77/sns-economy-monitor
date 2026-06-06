@@ -283,7 +283,7 @@ def generate_html_dashboard():
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 my-6">
+                <div class="grid grid-cols-2 lg:grid-cols-6 gap-4 my-6">
                     <div class="bg-slate-950/40 p-4 rounded-xl border border-white/5">
                         <p class="text-xs font-semibold text-slate-500">예수금 (Cash)</p>
                         <p class="mt-1 text-base font-extrabold text-slate-100" id="tradingCash">10,000,000원</p>
@@ -304,6 +304,10 @@ def generate_html_dashboard():
                         <p class="text-xs font-semibold text-slate-500">수급선행지수 (Leading Score)</p>
                         <p class="mt-1 text-base font-extrabold text-slate-100" id="leadingFlowScore">5점 / 10점</p>
                     </div>
+                    <div class="bg-slate-950/40 p-4 rounded-xl border border-white/5 glow-orange">
+                        <p class="text-xs font-semibold text-slate-500">모의투자 경과일</p>
+                        <p class="mt-1 text-base font-extrabold text-slate-100" id="tradingElapsedDays">0일차 / 30일</p>
+                    </div>
                 </div>
 
                 <div id="systemLockBanner" class="hidden bg-rose-950/30 border border-rose-500/20 p-4 rounded-xl flex items-center space-x-3 mb-6">
@@ -311,6 +315,21 @@ def generate_html_dashboard():
                     <div>
                         <p class="text-xs font-bold text-rose-400">🚨 시스템 강제 잠금 상태 (Accounting Assert Safety Lock Active)</p>
                         <p class="text-[11px] text-rose-500 mt-0.5">최근 매매 실행 후 자산 무결성 검증 실패(10원 초과 오차 검출)로 오작동 방지 시스템이 작동하여 모든 에이전트 거래가 정지되었습니다.</p>
+                    </div>
+                </div>
+
+                <div id="periodEndedBanner" class="hidden bg-indigo-950/40 border border-indigo-500/30 p-4 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6 glow-orange">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-xl">⏳</span>
+                        <div>
+                            <p class="text-xs font-bold text-indigo-300">⏳ 모의투자 30일 운용 기간 만료</p>
+                            <p class="text-[11px] text-slate-400 mt-0.5">30일 운용 기간이 종료되었습니다. 에이전트 운용 성과 분석 및 모니터링 연장을 결정해 주세요.</p>
+                        </div>
+                    </div>
+                    <div>
+                        <button onclick="extendTradingPeriod()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg transition duration-200">
+                            🔄 현재 상태로 30일 연장하기
+                        </button>
                     </div>
                 </div>
 
@@ -764,6 +783,18 @@ def generate_html_dashboard():
                     roiEl.className = "mt-1 text-lg font-extrabold text-slate-100";
                 }}
                 
+                // Update Elapsed Days
+                const elapsed = state.elapsed_days || 0;
+                document.getElementById("tradingElapsedDays").textContent = elapsed + "일차 / 30일";
+                
+                // Toggle period ended banner
+                const periodBanner = document.getElementById("periodEndedBanner");
+                if (elapsed >= 30) {{
+                    periodBanner.classList.remove("hidden");
+                }} else {{
+                    periodBanner.classList.add("hidden");
+                }}
+
                 const statusDot = document.getElementById("tradingEngineStatusDot");
                 const lockBanner = document.getElementById("systemLockBanner");
                 const triggerBtn = document.getElementById("tradeTriggerBtn");
@@ -904,6 +935,24 @@ def generate_html_dashboard():
                 btn.disabled = false;
                 btn.innerHTML = `⚡ AI 모의투자 매매 1사이클 강제 구동`;
                 loadTradingState();
+            }});
+        }}
+        
+        function extendTradingPeriod() {{
+            if (!confirm("현재 잔고 및 포트폴리오를 유지한 상태에서 모의투자 시작일을 오늘로 리셋하여 30일을 추가 연장하시겠습니까?")) return;
+            
+            fetch('/api/trading/extend', {{ method: 'POST' }})
+            .then(res => res.json())
+            .then(data => {{
+                if (data.status === "success") {{
+                    alert(data.message);
+                    loadTradingState();
+                }} else {{
+                    alert("오류: " + data.message);
+                }}
+            }})
+            .catch(err => {{
+                alert("기간 연장 중 오류가 발생했습니다: " + err.message);
             }});
         }}
         
@@ -1501,6 +1550,22 @@ def get_trading_state():
     try:
         import trading_engine
         state = trading_engine.get_agent_state()
+        start_date_str = state.get("start_date")
+        elapsed_days = 0
+        if start_date_str:
+            try:
+                start_date = datetime.fromisoformat(start_date_str)
+                if start_date.tzinfo is not None:
+                    import datetime as dt_mod
+                    kst_tz = dt_mod.timezone(dt_mod.timedelta(hours=9))
+                    now_tz = dt_mod.datetime.now(kst_tz)
+                    elapsed_days = (now_tz - start_date).days
+                else:
+                    now_naive = db.get_kst_now()
+                    elapsed_days = (now_naive - start_date).days
+            except Exception as e:
+                print(f"[main.py] Failed to calculate elapsed_days: {e}")
+        state["elapsed_days"] = max(0, elapsed_days)
         portfolio = trading_engine.get_portfolio_holdings()
         transactions = trading_engine.get_latest_transactions(limit=100)
         
@@ -1563,6 +1628,42 @@ def get_trading_state():
         return jsonify({
             "status": "error",
             "message": f"Failed to retrieve paper trading state: {str(e)}"
+        }), 500
+
+
+@app.route('/api/trading/extend', methods=['POST'])
+def extend_trading_period_endpoint():
+    """
+    API endpoint: Resets the simulated trading start date to today
+    to extend the 30-day period.
+    """
+    try:
+        import trading_engine
+        # Check system lock first before executing
+        state = trading_engine.get_agent_state()
+        if state.get("system_lock", False):
+            return jsonify({
+                "status": "error",
+                "message": "Trading engine is currently LOCKED. Cannot extend."
+            }), 423
+            
+        success = trading_engine.extend_trading_period()
+        if success:
+            global _trading_state_cache
+            _trading_state_cache = None # Clear cache to force refresh
+            return jsonify({
+                "status": "success",
+                "message": "모의투자 기간이 성공적으로 30일 연장되었습니다."
+            })
+        else:
+            return jsonify({
+                "status": "error",
+                "message": "기간 연장에 실패했습니다."
+            }), 500
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"기간 연장 중 예외 발생: {str(e)}"
         }), 500
 
 

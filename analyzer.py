@@ -164,6 +164,7 @@ class GeminiEconomyAnalyzer:
         """
         Stage 0: Local heuristic pre-filtering using target_keywords.
         Returns True if any target keyword matches the title or content.
+        Uses word boundaries for purely English/alphanumeric terms to prevent false positives.
         """
         title = item.get("title", "") or ""
         content = item.get("content", "") or ""
@@ -175,8 +176,20 @@ class GeminiEconomyAnalyzer:
             return True
             
         for kw in keywords:
-            if kw.strip() and kw.lower() in text:
-                return True
+            kw = kw.strip()
+            if not kw:
+                continue
+            
+            kw_lower = kw.lower()
+            if kw_lower.isalnum() and kw_lower.isascii():
+                # Enforce word boundaries for English terms to prevent partial substring matches (e.g. 'war' in 'software')
+                pattern = r'\b' + re.escape(kw_lower) + r'\b'
+                if re.search(pattern, text):
+                    return True
+            else:
+                # Standard substring match for Korean and non-ASCII keywords
+                if kw_lower in text:
+                    return True
         return False
 
     def process_item(self, item: dict) -> tuple:
