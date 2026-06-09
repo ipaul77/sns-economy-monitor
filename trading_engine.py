@@ -1260,10 +1260,49 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
 
     # 5. Idempotency Lock Check (Duplicate News URL Check)
     has_technical_trigger = False
+    
+    # Get last transaction's snapshot context to compare indicators
+    last_tx = None
+    if last_txs:
+        last_tx = last_txs[0]
+    last_snapshot = last_tx.get("snapshot_context", {}) if last_tx else {}
+    last_indicators = last_snapshot.get("market_indicators", {})
+    
     for tick, ind in market_indicators.items():
-        if ind.get("volume_breakout", False) or abs(ind.get("disparity", 100.0) - 100.0) >= 10.0:
+        # Condition A: Standard volume breakout (volume > 2x average)
+        if ind.get("volume_breakout", False):
             has_technical_trigger = True
+            print(f"[Trading Engine] Technical Trigger: Volume breakout detected for {tick}.")
             break
+            
+        # Condition B: Extreme disparity (price > 10% from 20 MA)
+        if abs(ind.get("disparity", 100.0) - 100.0) >= 10.0:
+            has_technical_trigger = True
+            print(f"[Trading Engine] Technical Trigger: Extreme disparity ({ind.get('disparity')}% ) detected for {tick}.")
+            break
+            
+        # Condition C: Significant price shift since last transaction (>= 3%)
+        if last_indicators and tick in last_indicators:
+            last_tick_ind = last_indicators[tick]
+            last_price = last_tick_ind.get("current_price", 0.0)
+            curr_price = ind.get("current_price", 0.0)
+            if last_price > 0 and curr_price > 0:
+                price_change_pct = abs(curr_price - last_price) / last_price
+                if price_change_pct >= 0.03:
+                    has_technical_trigger = True
+                    print(f"[Trading Engine] Technical Trigger: Price shifted by {price_change_pct:.1%} since last trade for {tick}.")
+                    break
+                    
+            # Condition D: Foreigner/Institution supply-and-demand (sugeup) signal change since last transaction
+            last_frgn_sig = last_tick_ind.get("frgn_trend_sig", "HOLD")
+            curr_frgn_sig = ind.get("frgn_trend_sig", "HOLD")
+            last_inst_sig = last_tick_ind.get("inst_trend_sig", "HOLD")
+            curr_inst_sig = ind.get("inst_trend_sig", "HOLD")
+            
+            if last_frgn_sig != curr_frgn_sig or last_inst_sig != curr_inst_sig:
+                has_technical_trigger = True
+                print(f"[Trading Engine] Technical Trigger: Sugeup signal changed (Foreigner: {last_frgn_sig}->{curr_frgn_sig}, Institution: {last_inst_sig}->{curr_inst_sig}) for {tick}.")
+                break
             
     if news_context and not has_technical_trigger:
         latest_news_url = news_context[0].get("url", "")
