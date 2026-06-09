@@ -750,7 +750,14 @@ def get_stock_indicators(ticker: str) -> Dict[str, Any]:
         "avg_volume_5d": 0.0,
         "volume_ratio": 1.0,
         "volume_breakout": False,
-        "market": "KOSPI"  # Default to KOSPI
+        "market": "KOSPI",  # Default to KOSPI
+        "roe": None,
+        "pe_ratio": None,
+        "pb_ratio": None,
+        "debt_to_equity": None,
+        "free_cash_flow": None,
+        "target_price": None,
+        "margin_of_safety": None
     }
     if not ticker:
         return result
@@ -845,6 +852,90 @@ def get_stock_indicators(ticker: str) -> Dict[str, Any]:
             "frgn_net_5d": 0, "inst_net_5d": 0, "frgn_net_10d": 0, "inst_net_10d": 0,
             "dual_buy_5d_count": 0, "frgn_ratio": 0.0, "frgn_trend_sig": "HOLD", "inst_trend_sig": "HOLD"
         })
+
+    # Fetch fundamental data and compute real-time valuation (Hybrid 24h cache)
+    try:
+        fund = db.fetch_fundamentals(ticker)
+        needs_update = True
+        if fund and fund.get("last_updated"):
+            try:
+                from datetime import datetime
+                last_up = datetime.fromisoformat(fund["last_updated"])
+                now_kst = db.get_kst_now()
+                # 24 hours caching limit (86400 seconds)
+                if (now_kst - last_up).total_seconds() < 86400:
+                    needs_update = False
+            except Exception as dt_err:
+                print(f"[Trading Engine] Failed parsing fundamental timestamp for {ticker}: {dt_err}")
+                
+        if needs_update:
+            print(f"[Trading Engine] Fundamentals cache expired/empty. Scraping yfinance for {ticker}...")
+            try:
+                suffix = ".KQ" if ticker in KOSDAQ_TICKERS else ".KS"
+                full_t = ticker + suffix if (len(ticker) == 6 and ticker.isdigit()) else ticker
+                yt = yf.Ticker(full_t)
+                
+                info = yt.info
+                if info:
+                    roe_raw = info.get("returnOnEquity")
+                    roe = roe_raw * 100.0 if roe_raw is not None else None
+                    
+                    debt = info.get("debtToEquity")
+                    fcf = info.get("freeCashflow")
+                    target = info.get("targetMeanPrice")
+                    
+                    eps = info.get("trailingEps") or info.get("forwardEps")
+                    bps = info.get("bookValue")
+                    
+                    pe = info.get("trailingPE") or info.get("forwardPE")
+                    pb = info.get("priceToBook")
+                    
+                    fund_data = {
+                        "roe": roe,
+                        "pe_ratio": pe,
+                        "pb_ratio": pb,
+                        "debt_to_equity": debt,
+                        "free_cash_flow": fcf,
+                        "target_price": target,
+                        "eps": eps,
+                        "bps": bps
+                    }
+                    db.save_fundamentals(ticker, fund_data)
+                    fund = db.fetch_fundamentals(ticker)
+            except Exception as yf_err:
+                print(f"[Trading Engine] [Warning] Failed to scrape fundamentals from yfinance for {ticker}: {yf_err}")
+                
+        # Compute real-time valuations using live current price
+        if fund:
+            result["roe"] = fund.get("roe")
+            result["debt_to_equity"] = fund.get("debt_to_equity")
+            result["free_cash_flow"] = fund.get("free_cash_flow")
+            result["target_price"] = fund.get("target_price")
+            
+            # 1. Real-time PER (current_price / EPS)
+            eps = fund.get("eps")
+            if eps and eps > 0 and result["current_price"] > 0:
+                result["pe_ratio"] = round(result["current_price"] / eps, 2)
+            else:
+                result["pe_ratio"] = fund.get("pe_ratio")
+                
+            # 2. Real-time PBR (current_price / BPS)
+            bps = fund.get("bps")
+            if bps and bps > 0 and result["current_price"] > 0:
+                result["pb_ratio"] = round(result["current_price"] / bps, 2)
+            else:
+                result["pb_ratio"] = fund.get("pb_ratio")
+                
+            # 3. Real-time Margin of Safety (discount from analyst consensus target price)
+            target_p = fund.get("target_price")
+            if target_p and target_p > 0 and result["current_price"] > 0:
+                safety = ((target_p - result["current_price"]) / result["current_price"]) * 100.0
+                result["margin_of_safety"] = round(safety, 2)
+            else:
+                result["margin_of_safety"] = None
+                
+    except Exception as fund_err:
+        print(f"[Trading Engine] [Warning] Fundamental hybrid cache pipeline failed for {ticker}: {fund_err}")
 
     return result
 
@@ -1064,7 +1155,7 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
     if index_changes:
         index_str = ", ".join([f"{name}: {val:+.2f}%" for name, val in index_changes.items()])
 
-    # Format indicators (Populated to give Gemini AI the actual technical signals!)
+    # Format indicators (Populated to give Gemini AI the actual technical and fundamental signals!)
     indicators_str = ""
     for tick, ind in market_indicators.items():
         comp_name = tick
@@ -1072,18 +1163,35 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
             if t == tick:
                 comp_name = c
                 break
+                
+        # Fundamental value string formatting
+        roe_val = ind.get("roe")
+        roe_str = f"{roe_val:.1f}%" if roe_val is not None else "N/A"
+        
+        debt_val = ind.get("debt_to_equity")
+        debt_str = f"{debt_val:.1f}%" if debt_val is not None else "N/A"
+        
+        pe_val = ind.get("pe_ratio")
+        pe_str = f"{pe_val:.1f}x" if pe_val is not None else "N/A"
+        
+        pb_val = ind.get("pb_ratio")
+        pb_str = f"{pb_val:.1f}x" if pb_val is not None else "N/A"
+        
+        target_val = ind.get("target_price")
+        target_str = f"{target_val:,.0f}원" if target_val is not None else "N/A"
+        
+        safety_val = ind.get("margin_of_safety")
+        safety_str = f"{safety_val:+.1f}%" if safety_val is not None else "N/A"
+
         indicators_str += (
             f"- 종목명: {comp_name} ({tick}) | "
             f"현재가: {ind.get('current_price', 0.0):,.0f}원 | "
             f"20일선 MA: {ind.get('ma_20', 0.0):,.0f}원 | "
             f"이격도: {ind.get('disparity', 100.0):.1f}% | "
             f"당일거래량: {ind.get('daily_volume', 0):,}주 | "
-            f"5일평균거래량: {ind.get('avg_volume_5d', 0.0):,.0f}주 | "
-            f"거래량 돌파 비율: {ind.get('volume_ratio', 1.0):.1f}x | "
             f"외인5일누적: {ind.get('frgn_net_5d', 0):+d}주 | "
             f"기관5일누적: {ind.get('inst_net_5d', 0):+d}주 | "
-            f"양매수일수(5일): {ind.get('dual_buy_5d_count', 0)}일 | "
-            f"외인보유율: {ind.get('frgn_ratio', 0.0):.2f}%\n"
+            f"ROE: {roe_str} | 부채비율: {debt_str} | PER: {pe_str} | PBR: {pb_str} | 안전마진: {safety_str} (목표주가: {target_str})\n"
         )
 
     # Format news analysis context
@@ -1116,6 +1224,9 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
 
     # Define system instructions (Guardrails)
     system_instruction = (
+        "   - **가치투자 원칙(Warren Buffett's Margin of Safety)**: 기업의 펀더멘털을 항상 최우선으로 검토하라. "
+        "ROE(자기자본이익률)가 높고 부채비율이 낮으며, 현재 주가가 애널리스트 목표주가 대비 충분히 할인되어 안전마진(Margin of Safety > 15% 이상)이 확보된 저평가 우량주 위주로 매수를 지향하라. "
+        "단기 기술적 반등이 있더라도 재무 건전성이 훼손되거나 밸류에이션(PER/PBR)이 역사적 고평가 영역에 속해 있고 안전마진이 전혀 없는 종목은 추격 매수를 매우 금지하라.\n"
         "   - **이익 보존 모드(Capital Preservation)**: 이미 목표 수익률을 초과 달성했거나 목표 페이스를 안정적으로 상회하고 있는 경우, 새로운 추격 매수를 매우 자제하고 이익을 실현하여 얻은 수익을 안전하게 지키는 관망(HOLD) 위주로 조심스럽게 방어하라."
     )
 

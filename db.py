@@ -113,6 +113,35 @@ def setup_db():
     """)
     conn.commit()
     
+    # Fundamentals cache table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS stock_fundamentals (
+            ticker TEXT PRIMARY KEY,
+            roe REAL,
+            pe_ratio REAL,
+            pb_ratio REAL,
+            debt_to_equity REAL,
+            free_cash_flow REAL,
+            target_price REAL,
+            eps REAL,
+            bps REAL,
+            last_updated TEXT
+        )
+    """)
+    conn.commit()
+    
+    # Column migration safety for fundamentals table
+    try:
+        cursor.execute("ALTER TABLE stock_fundamentals ADD COLUMN eps REAL")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE stock_fundamentals ADD COLUMN bps REAL")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass
+    
     # Column migration safety
     try:
         cursor.execute("ALTER TABLE history ADD COLUMN other_sources TEXT")
@@ -536,3 +565,108 @@ def _sqlite_purge_old_records(cutoff: str) -> int:
     except Exception as e:
         print(f"[Error] SQLite database purge failed: {str(e)}")
         return 0
+
+def save_fundamentals(ticker: str, data: dict):
+    """
+    Saves or updates the fundamental financial data for a stock ticker.
+    Writes to both Firestore (if available) and local SQLite.
+    """
+    now_str = get_kst_now().isoformat()
+    # Sanitize inputs (ensure no NaNs or invalid values before database writing)
+    def safe_float(val):
+        if val is None:
+            return None
+        try:
+            f_val = float(val)
+            import math
+            if math.isnan(f_val) or math.isinf(f_val):
+                return None
+            return f_val
+        except:
+            return None
+
+    cleaned = {
+        "ticker": ticker.strip(),
+        "roe": safe_float(data.get("roe")),
+        "pe_ratio": safe_float(data.get("pe_ratio")),
+        "pb_ratio": safe_float(data.get("pb_ratio")),
+        "debt_to_equity": safe_float(data.get("debt_to_equity")),
+        "free_cash_flow": safe_float(data.get("free_cash_flow")),
+        "target_price": safe_float(data.get("target_price")),
+        "eps": safe_float(data.get("eps")),
+        "bps": safe_float(data.get("bps")),
+        "last_updated": now_str
+    }
+    
+    # 1. Firestore Write
+    if USE_FIREBASE and db_client is not None:
+        try:
+            doc_ref = db_client.collection("stock_fundamentals").document(ticker)
+            doc_ref.set(cleaned)
+            print(f"[Firestore] Successfully saved fundamentals for {ticker}")
+        except Exception as e:
+            check_firestore_quota_error(e)
+            print(f"[Warning] Firestore save_fundamentals failed: {e}")
+            
+    # 2. SQLite Write
+    _sqlite_save_fundamentals(cleaned)
+
+def _sqlite_save_fundamentals(data: dict):
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT OR REPLACE INTO stock_fundamentals (
+                ticker, roe, pe_ratio, pb_ratio, debt_to_equity, free_cash_flow, target_price, eps, bps, last_updated
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            data["ticker"], data["roe"], data["pe_ratio"], data["pb_ratio"], 
+            data["debt_to_equity"], data["free_cash_flow"], data["target_price"],
+            data["eps"], data["bps"], data["last_updated"]
+        ))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"[Error] SQLite save_fundamentals failed: {e}")
+
+def fetch_fundamentals(ticker: str) -> dict:
+    """
+    Retrieves fundamental financial data for a stock ticker.
+    Checks SQLite first. If SQLite has no record, falls back to querying Firestore to restore the cache.
+    Returns: Dict or None
+    """
+    ticker = ticker.strip()
+    # 1. Query SQLite Cache first
+    local_data = _sqlite_fetch_fundamentals(ticker)
+    if local_data:
+        return local_data
+        
+    # 2. SQLite cache miss (e.g. Render spin down/reset), try Firestore fallback
+    if USE_FIREBASE and db_client is not None:
+        try:
+            doc_ref = db_client.collection("stock_fundamentals").document(ticker)
+            doc = doc_ref.get()
+            if doc.exists:
+                data = doc.to_dict()
+                # Restore SQLite local cache
+                _sqlite_save_fundamentals(data)
+                print(f"[DB] Restored fundamental cache for {ticker} from Firestore.")
+                return data
+        except Exception as e:
+            check_firestore_quota_error(e)
+            print(f"[Warning] Firestore fetch_fundamentals failed: {e}")
+            
+    return None
+
+def _sqlite_fetch_fundamentals(ticker: str) -> dict:
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM stock_fundamentals WHERE ticker = ?", (ticker,))
+        row = cursor.fetchone()
+        conn.close()
+        return dict(row) if row else None
+    except Exception as e:
+        print(f"[Error] SQLite fetch_fundamentals failed: {e}")
+        return None
