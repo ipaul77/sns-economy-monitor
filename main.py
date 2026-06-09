@@ -21,6 +21,7 @@ from flask import Flask, request, jsonify
 init(autoreset=True)
 
 import scraper
+import report_scraper
 from analyzer import GeminiEconomyAnalyzer
 from market import get_market_indicators
 from alerts import send_telegram_alert, send_slack_alert
@@ -1284,6 +1285,11 @@ def run_pipeline(config, analyzer):
     print(Style.BRIGHT + Fore.CYAN + f"\n--- Starting Monitoring Cycle: {cycle_time} ---")
     
     # 1. Fetch
+    try:
+        report_scraper.run_report_scraper(limit=10)
+    except Exception as e:
+        print(Fore.RED + f"[Pipeline] [Error] Failed running report scraper: {e}")
+
     raw_items = scraper.fetch_all_sources(config)
     if not raw_items:
         print(Fore.YELLOW + "[Pipeline] No articles collected in this cycle.")

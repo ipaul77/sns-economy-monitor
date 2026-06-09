@@ -1087,15 +1087,30 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
         )
 
     # Format news analysis context
+    news_items = [item for item in news_context if item.get("source") != "Naver Research"]
+    report_items = [item for item in news_context if item.get("source") == "Naver Research"]
+
     news_str = ""
-    if not news_context:
+    if not news_items:
         news_str = "최근 24시간 동안 수집된 한국 경제 관련 신규 뉴스가 없습니다. 뉴스 호재가 없더라도 이격도, 거래량 돌파 비율 등 기술적 지표가 뚜렷하면 모멘텀 거래를 고려할 수 있습니다."
     else:
-        for idx, item in enumerate(news_context[:10]):  # Limit to top 10 relevant stories
+        for idx, item in enumerate(news_items[:10]):  # Limit to top 10 relevant stories
             news_str += (
                 f"{idx+1}. [{item.get('source', '뉴스')}] {item.get('title', '')} (중요도: {item.get('relevance_score', 5)}/10) \n"
                 f"   - 감성수준: {item.get('sentiment', 'NEUTRAL')} (점수: {item.get('sentiment_score', 0.0):+.2f}) \n"
                 f"   - AI 분석 요약: {item.get('korean_summary', '')} \n"
+                f"   - 증시 영향 평가: {item.get('macro_impacts', '')} \n"
+            )
+
+    report_str = ""
+    if not report_items:
+        report_str = "최근 24시간 동안 발표된 증권사 분석 리포트가 없습니다."
+    else:
+        for idx, item in enumerate(report_items[:10]):  # Limit to top 10 reports
+            report_str += (
+                f"{idx+1}. [{item.get('source', '리포트')}] {item.get('title', '')} (중요도: {item.get('relevance_score', 7)}/10) \n"
+                f"   - 투자 의견/감성: {item.get('sentiment', 'NEUTRAL')} (점수: {item.get('sentiment_score', 0.0):+.2f}) \n"
+                f"   - 리포트 요약 내용: {item.get('korean_summary', '')} \n"
                 f"   - 증시 영향 평가: {item.get('macro_impacts', '')} \n"
             )
 
@@ -1128,7 +1143,10 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
 [최근 24시간 실시간 경제 뉴스 분석 컨텍스트]
 {news_str}
 
-위 자산 상태, 거시 경제 지수, 실시간 기술 지표, 그리고 뉴스 분석 데이터를 정밀 종합 분석하여 최고의 의사결정을 내리고, 지정된 JSON 스키마에 따라 응답하세요.
+[최근 24시간 증권사 분석 및 기관 보고서 요약 컨텍스트]
+{report_str}
+
+위 자산 상태, 거시 경제 지수, 실시간 기술 지표, 실시간 뉴스 분석, 그리고 증권사 전문 보고서 요약 데이터를 정밀 종합 분석하여 최고의 의사결정을 내리고, 지정된 JSON 스키마에 따라 응답하세요.
 """
     # Load model name from config.json or default to gemini-3.5-flash (active 2026 model)
     model_name = "gemini-3.5-flash"
