@@ -65,14 +65,18 @@ class KISClient:
 
     def _resolve_base_url(self):
         """
-        Resolves the base URL. If App Key starts with 'PS', it is Real Trading.
-        If it starts with 'OPS', it is Mock Trading.
+        Resolves the base URL. If KIS_IS_SIMULATION is explicitly configured, respects it.
+        Otherwise, auto-detects based on App Key prefix.
         """
-        # Auto-detect real/mock based on App Key prefix
-        if self.app_key.startswith("OPS"):
-            self.is_simulation = True
-        elif self.app_key.startswith("PS"):
-            self.is_simulation = False
+        env_sim = os.getenv("KIS_IS_SIMULATION")
+        if env_sim is not None:
+            self.is_simulation = env_sim.lower() in ("true", "1", "yes")
+        else:
+            # Fall back to App Key prefix auto-detection
+            if self.app_key.startswith("OPS"):
+                self.is_simulation = True
+            elif self.app_key.startswith("PS"):
+                self.is_simulation = False
             
         if self.is_simulation:
             self.base_url = "https://openapivts.koreainvestment.com:29443"

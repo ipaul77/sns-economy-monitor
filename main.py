@@ -158,9 +158,16 @@ def generate_html_dashboard():
         change_sign = "+" if info["change"] > 0 else ""
         text_color = "text-emerald-400" if info["change"] >= 0 else "text-rose-400"
         bg_glow = "glow-green" if info["change"] >= 0 else "glow-red"
-        unit = "pt" if label == "KOSPI" else ("원" if label in ["SAMSUNG", "HYNIX"] else "원")
+        unit = "pt" if label in ["KOSPI", "SOXX"] else "원"
         
-        display_label = "코스피 지수" if label == "KOSPI" else ("원/달러 환율" if label == "USD_KRW" else ("삼성전자" if label == "SAMSUNG" else "SK하이닉스"))
+        display_label = (
+            "코스피 지수" if label == "KOSPI" 
+            else ("원/달러 환율" if label == "USD_KRW" 
+            else ("삼성전자" if label == "SAMSUNG" 
+            else ("SK하이닉스" if label == "HYNIX" 
+            else ("필라델피아 반도체 지수" if label == "SOXX" 
+            else label))))
+        )
         
         market_html += f"""
         <div class="glass-card rounded-2xl p-4 {bg_glow} border border-slate-800/80">

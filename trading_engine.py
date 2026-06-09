@@ -102,72 +102,60 @@ def warm_start_trading_cache():
         cursor.execute("CREATE TABLE IF NOT EXISTS transactions (id TEXT PRIMARY KEY, timestamp TEXT, ticker TEXT, action TEXT, quantity INTEGER, price REAL, reasoning TEXT, snapshot_context TEXT)")
         conn.commit()
         
-        # Check if cache is already initialized locally in SQLite (to bypass Firestore stream reads on restart)
-        cursor.execute("SELECT COUNT(*) FROM agent_state")
-        if cursor.fetchone()[0] > 0:
-            conn.close()
-            _trading_cache_warmed = True
-            print("[Trading Engine] Local SQLite cache already initialized. Bypassing Firestore sync.")
-            return
-
         if client is None:
             # Running in offline demo mode, no Firestore to sync from
             conn.close()
             _trading_cache_warmed = True
             return
-            
+
+        print("[Trading Engine] Synchronizing SQLite cache with Firestore...")
+        
         # 1. Warm start agent state
-        cursor.execute("SELECT COUNT(*) FROM agent_state")
-        if cursor.fetchone()[0] == 0:
-            print("[Trading Engine] Warm-starting SQLite agent_state from Firestore...")
-            state_ref = client.collection("agents").document("state")
-            doc = state_ref.get()
-            if doc.exists:
-                state_data = doc.to_dict()
-                for k, v in state_data.items():
-                    cursor.execute("INSERT OR REPLACE INTO agent_state (key, value) VALUES (?, ?)", (k, str(v)))
-                conn.commit()
+        cursor.execute("DELETE FROM agent_state")
+        state_ref = client.collection("agents").document("state")
+        doc = state_ref.get()
+        if doc.exists:
+            state_data = doc.to_dict()
+            for k, v in state_data.items():
+                cursor.execute("INSERT OR REPLACE INTO agent_state (key, value) VALUES (?, ?)", (k, str(v)))
+            conn.commit()
         
         # 2. Warm start portfolio
-        cursor.execute("SELECT COUNT(*) FROM portfolio")
-        if cursor.fetchone()[0] == 0:
-            print("[Trading Engine] Warm-starting SQLite portfolio from Firestore...")
-            portfolio_ref = client.collection("agents").document("state").collection("portfolio")
-            docs = portfolio_ref.stream()
-            for doc in docs:
-                data = doc.to_dict()
-                cursor.execute("""
-                    INSERT OR REPLACE INTO portfolio (ticker, quantity, average_price, highest_price_after_buy)
-                    VALUES (?, ?, ?, ?)
-                """, (
-                    doc.id,
-                    int(data.get("quantity", 0)),
-                    float(data.get("average_price", 0.0)),
-                    float(data.get("highest_price_after_buy", data.get("average_price", 0.0)))
-                ))
-            conn.commit()
+        cursor.execute("DELETE FROM portfolio")
+        portfolio_ref = client.collection("agents").document("state").collection("portfolio")
+        docs = portfolio_ref.stream()
+        for doc in docs:
+            data = doc.to_dict()
+            cursor.execute("""
+                INSERT OR REPLACE INTO portfolio (ticker, quantity, average_price, highest_price_after_buy)
+                VALUES (?, ?, ?, ?)
+            """, (
+                doc.id,
+                int(data.get("quantity", 0)),
+                float(data.get("average_price", 0.0)),
+                float(data.get("highest_price_after_buy", data.get("average_price", 0.0)))
+            ))
+        conn.commit()
             
         # 3. Warm start transactions (load latest 100)
-        cursor.execute("SELECT COUNT(*) FROM transactions")
-        if cursor.fetchone()[0] == 0:
-            print("[Trading Engine] Warm-starting SQLite transactions from Firestore...")
-            docs = client.collection("transactions").order_by("timestamp", direction=firestore.Query.DESCENDING).limit(100).stream()
-            for doc in docs:
-                data = doc.to_dict()
-                cursor.execute("""
-                    INSERT OR REPLACE INTO transactions (id, timestamp, ticker, action, quantity, price, reasoning, snapshot_context)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    doc.id,
-                    data.get("timestamp", ""),
-                    data.get("ticker", ""),
-                    data.get("action", ""),
-                    int(data.get("quantity", 0)),
-                    float(data.get("price", 0.0)),
-                    data.get("reasoning", ""),
-                    json.dumps(data.get("snapshot_context", {}))
-                ))
-            conn.commit()
+        cursor.execute("DELETE FROM transactions")
+        docs = client.collection("transactions").order_by("timestamp", direction=firestore.Query.DESCENDING).limit(100).stream()
+        for doc in docs:
+            data = doc.to_dict()
+            cursor.execute("""
+                INSERT OR REPLACE INTO transactions (id, timestamp, ticker, action, quantity, price, reasoning, snapshot_context)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                doc.id,
+                data.get("timestamp", ""),
+                data.get("ticker", ""),
+                data.get("action", ""),
+                int(data.get("quantity", 0)),
+                float(data.get("price", 0.0)),
+                data.get("reasoning", ""),
+                json.dumps(data.get("snapshot_context", {}))
+            ))
+        conn.commit()
             
         conn.close()
         _trading_cache_warmed = True
