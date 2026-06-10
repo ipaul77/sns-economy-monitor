@@ -59,43 +59,43 @@
         <h3 class="text-sm font-semibold text-slate-500 mt-6 mb-3">📈 실시간 금융 시장 지표 (Yahoo Finance 연동)</h3>
         <section class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             
-        <div class="glass-card rounded-2xl p-4 glow-green border border-slate-800/80">
+        <div class="glass-card rounded-2xl p-4 glow-red border border-slate-800/80">
             <p class="text-xs font-semibold text-slate-500">코스피 지수 (^KS11)</p>
             <div class="flex items-baseline justify-between mt-1">
-                <span class="text-lg font-bold text-slate-100">8,096.93pt</span>
-                <span class="text-xs font-bold text-emerald-400">+612.52 (+8.18%)</span>
+                <span class="text-lg font-bold text-slate-100">7,730.82pt</span>
+                <span class="text-xs font-bold text-rose-400">-366.11 (-4.52%)</span>
             </div>
         </div>
         
         <div class="glass-card rounded-2xl p-4 glow-red border border-slate-800/80">
             <p class="text-xs font-semibold text-slate-500">원/달러 환율 (USDKRW=X)</p>
             <div class="flex items-baseline justify-between mt-1">
-                <span class="text-lg font-bold text-slate-100">1,523.94원</span>
-                <span class="text-xs font-bold text-rose-400">-2.89 (-0.19%)</span>
+                <span class="text-lg font-bold text-slate-100">1,520.46원</span>
+                <span class="text-xs font-bold text-rose-400">-4.84 (-0.32%)</span>
             </div>
         </div>
         
-        <div class="glass-card rounded-2xl p-4 glow-green border border-slate-800/80">
+        <div class="glass-card rounded-2xl p-4 glow-red border border-slate-800/80">
             <p class="text-xs font-semibold text-slate-500">삼성전자 (005930.KS)</p>
             <div class="flex items-baseline justify-between mt-1">
-                <span class="text-lg font-bold text-slate-100">322,000원</span>
-                <span class="text-xs font-bold text-emerald-400">+26,500 (+8.97%)</span>
+                <span class="text-lg font-bold text-slate-100">302,500원</span>
+                <span class="text-xs font-bold text-rose-400">-19,500 (-6.06%)</span>
             </div>
         </div>
         
-        <div class="glass-card rounded-2xl p-4 glow-green border border-slate-800/80">
+        <div class="glass-card rounded-2xl p-4 glow-red border border-slate-800/80">
             <p class="text-xs font-semibold text-slate-500">SK하이닉스 (000660.KS)</p>
             <div class="flex items-baseline justify-between mt-1">
-                <span class="text-lg font-bold text-slate-100">2,215,000원</span>
-                <span class="text-xs font-bold text-emerald-400">+304,000 (+15.91%)</span>
+                <span class="text-lg font-bold text-slate-100">2,048,000원</span>
+                <span class="text-xs font-bold text-rose-400">-167,000 (-7.54%)</span>
             </div>
         </div>
         
-        <div class="glass-card rounded-2xl p-4 glow-green border border-slate-800/80">
+        <div class="glass-card rounded-2xl p-4 glow-red border border-slate-800/80">
             <p class="text-xs font-semibold text-slate-500">필라델피아 반도체 지수 (^SOX)</p>
             <div class="flex items-baseline justify-between mt-1">
-                <span class="text-lg font-bold text-slate-100">12,906.69pt</span>
-                <span class="text-xs font-bold text-emerald-400">+685.89 (+5.61%)</span>
+                <span class="text-lg font-bold text-slate-100">12,657.81pt</span>
+                <span class="text-xs font-bold text-rose-400">-248.88 (-1.93%)</span>
             </div>
         </div>
         
@@ -117,7 +117,7 @@
             </div>
             <div class="glass-card rounded-xl p-3 glow-blue">
                 <p class="text-xs font-semibold text-slate-400">평균 감성 지수</p>
-                <p class="mt-1 text-lg font-extrabold text-emerald-400">+0.42</p>
+                <p class="mt-1 text-lg font-extrabold text-emerald-400">+0.28</p>
             </div>
         </section>
 
@@ -269,52 +269,8 @@
             전체보기
         </button>
     
-        <button onclick="filterSector('Asset Management')" id="filter-AssetManagement" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            Asset Management
-        </button>
-        
-        <button onclick="filterSector('Automotive')" id="filter-Automotive" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            Automotive
-        </button>
-        
-        <button onclick="filterSector('Autonomous Driving')" id="filter-AutonomousDriving" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            Autonomous Driving
-        </button>
-        
-        <button onclick="filterSector('Banking')" id="filter-Banking" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            Banking
-        </button>
-        
-        <button onclick="filterSector('Biotechnology')" id="filter-Biotechnology" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            Biotechnology
-        </button>
-        
-        <button onclick="filterSector('Card/Credit Finance')" id="filter-CardCreditFinance" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            Card/Credit Finance
-        </button>
-        
-        <button onclick="filterSector('Consumer Finance')" id="filter-ConsumerFinance" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            Consumer Finance
-        </button>
-        
-        <button onclick="filterSector('Finance')" id="filter-Finance" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            Finance
-        </button>
-        
-        <button onclick="filterSector('Financials and Securities')" id="filter-FinancialsandSecurities" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            Financials and Securities
-        </button>
-        
-        <button onclick="filterSector('IT Materials, Components & Equipment')" id="filter-ITMaterialsComponentsEquipment" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            IT Materials, Components & Equipment
-        </button>
-        
-        <button onclick="filterSector('Secondary Batteries')" id="filter-SecondaryBatteries" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            Secondary Batteries
-        </button>
-        
-        <button onclick="filterSector('Semiconductors')" id="filter-Semiconductors" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            Semiconductors
+        <button onclick="filterSector('IT H/W')" id="filter-ITHW" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            IT H/W
         </button>
         
         <button onclick="filterSector('거시경제')" id="filter-거시경제" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
@@ -325,64 +281,34 @@
             금융
         </button>
         
+        <button onclick="filterSector('기업동향')" id="filter-기업동향" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            기업동향
+        </button>
+        
+        <button onclick="filterSector('반도체')" id="filter-반도체" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            반도체
+        </button>
+        
+        <button onclick="filterSector('일반경제')" id="filter-일반경제" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            일반경제
+        </button>
+        
+        <button onclick="filterSector('증시')" id="filter-증시" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            증시
+        </button>
+        
         </div>
         
         <div class="space-y-6">
     
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-slate-800 transition duration-300 hover:bg-slate-900/50" data-sectors='["Banking", "Finance"]' data-search-text='\'헌신에 보답\'…하나금융, 군 장병·유가족 지원에 매년 10억 쓴다  하나금융그룹이 군 장병과 순직 군인 유가족의 노고를 기리기 위해 매년 10억 원 규모의 사회공헌 기금을 지원하기로 결정했습니다. 이를 통해 군 자녀 장학 사업 및 장병 복지 증진을 도울 계획입니다. esg 경영 강화의 일환으로 기업 이미지 제고에 긍정적인 영향을 미칠 것으로 보입니다. banking, finance <span class=\"font-semibold text-slate-300\">hana financial group</span> hankyung economy'>
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["반도체", "IT H/W"]' data-search-text='\'엔비디아 핵심 파트너 뜬다\'…sk하이닉스, 美상장 초읽기  \'\'엔비디아 핵심 파트너 뜬다\'…sk하이닉스, 美상장 초읽기\' 뉴스는 글로벌 ai 및 반도체 공급망 리스크 호재에 따른 국내 주요 반도체 제조사(sk하이닉스)의 실적 성장 가능성을 시사합니다. 반도체, it h/w <span class=\"font-semibold text-slate-100\">sk하이닉스</span> <span class=\"text-xs text-rose-400 font-medium\">(2,048,000원 -7.54%)</span> hankyung economy'>
                     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
                         <div class="flex items-center space-x-3">
                             <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Hankyung Economy</span>
                             <span class="text-xs text-slate-400">
-                                <span class="text-indigo-400 font-medium">작성:</span> 2026-06-09 14:02:26
+                                <span class="text-indigo-400 font-medium">작성:</span> 2026-06-10 19:12:21
                                 <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-06-09 15:30:48
-                            </span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 (+0.3)</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-700 text-slate-300">경보: 낮음 (LOW)</span>
-                        </div>
-                    </div>
-                    
-                    <h3 class="text-lg font-bold text-slate-100 mb-2">'헌신에 보답'…하나금융, 군 장병·유가족 지원에 매년 10억 쓴다</h3>
-                    <p class="text-sm text-slate-400 line-clamp-3 mb-4"></p>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
-                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">Banking, Finance</span>
-                                <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-300">Hana Financial Group</span>
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">거시경제 및 환율, 물가에 미치는 직접적인 영향은 극히 제한적이나 금융업계 전반의 ESG 및 사회공헌 트렌드를 강화하는 요인입니다.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
-                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">하나금융그룹이 군 장병과 순직 군인 유가족의 노고를 기리기 위해 매년 10억 원 규모의 사회공헌 기금을 지원하기로 결정했습니다. 이를 통해 군 자녀 장학 사업 및 장병 복지 증진을 도울 계획입니다. ESG 경영 강화의 일환으로 기업 이미지 제고에 긍정적인 영향을 미칠 것으로 보입니다.</p>
-                    </div>
-                    
-                    <div class="flex justify-between items-center text-xs text-slate-500">
-                        <span>관련성 분류 이유: 하나금융그룹의 사회공헌 활동은 국내 금융 시장 및 기업의 사회적 책임 경영과 밀접한 관련이 있습니다.</span>
-                        <a href="https://www.hankyung.com/article/202606095777i" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
-                    </div>
-                    
-                </div>
-                
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["Automotive", "Autonomous Driving", "Asset Management"]' data-search-text='젠슨 황도 \"사랑해요 현대차그룹\"…퇴직연금에 가득 담으려면  엔비디아 젠슨 황 ceo가 현대차그룹의 기술력을 높이 평가하면서 자율주행 및 모빌리티 분야의 글로벌 협력 기대감이 고조되고 있습니다. 이에 따라 퇴직연금(dc/irp) 계좌를 활용해 현대차그룹 주식 및 관련 etf에 장기 투자하려는 개인 투자자들의 관심이 크게 증가하고 있습니다. automotive, autonomous driving, asset management <span class=\"font-semibold text-slate-300\">hyundai motor company</span>, <span class=\"font-semibold text-slate-300\">kia</span>, <span class=\"font-semibold text-slate-300\">hyundai mobis</span> hankyung finance'>
-                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
-                        <div class="flex items-center space-x-3">
-                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Hankyung Finance</span>
-                            <span class="text-xs text-slate-400">
-                                <span class="text-indigo-400 font-medium">작성:</span> 2026-06-09 13:00:06
-                                <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-06-09 15:20:57
+                                <span class="text-slate-500">수집:</span> 2026-06-10 22:01:52
                             </span>
                         </div>
                         <div class="flex items-center space-x-2">
@@ -391,90 +317,44 @@
                         </div>
                     </div>
                     
-                    <h3 class="text-lg font-bold text-slate-100 mb-2">젠슨 황도 "사랑해요 현대차그룹"…퇴직연금에 가득 담으려면</h3>
+                    <h3 class="text-lg font-bold text-slate-100 mb-2">'엔비디아 핵심 파트너 뜬다'…SK하이닉스, 美상장 초읽기</h3>
                     <p class="text-sm text-slate-400 line-clamp-3 mb-4"></p>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
                             <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">Automotive, Autonomous Driving, Asset Management</span>
+                                <span class="text-indigo-300">반도체, IT H/W</span>
                                 <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-300">Hyundai Motor Company</span>, <span class="font-semibold text-slate-300">Kia</span>, <span class="font-semibold text-slate-300">Hyundai Mobis</span>
+                                <span class="font-semibold text-slate-100">SK하이닉스</span> <span class="text-xs text-rose-400 font-medium">(2,048,000원 -7.54%)</span>
                             </p>
                         </div>
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">코스피 시가총액 상위권인 현대차그룹의 호재는 국내 증시 전반의 투자 심리를 개선하고, 퇴직연금 자금 유입을 촉진하여 자본시장 활성화에 긍정적인 영향을 미칠 것으로 전망됩니다.</p>
+                            <p class="text-sm text-slate-200">글로벌 반도체 및 AI 수요 강세 지속으로 국내 IT 하드웨어 수출 증가와 KOSPI 상방 모멘텀 지원.</p>
                         </div>
                     </div>
                     
                     <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
                         <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">엔비디아 젠슨 황 CEO가 현대차그룹의 기술력을 높이 평가하면서 자율주행 및 모빌리티 분야의 글로벌 협력 기대감이 고조되고 있습니다. 이에 따라 퇴직연금(DC/IRP) 계좌를 활용해 현대차그룹 주식 및 관련 ETF에 장기 투자하려는 개인 투자자들의 관심이 크게 증가하고 있습니다.</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">''엔비디아 핵심 파트너 뜬다'…SK하이닉스, 美상장 초읽기' 뉴스는 글로벌 AI 및 반도체 공급망 리스크 호재에 따른 국내 주요 반도체 제조사(SK하이닉스)의 실적 성장 가능성을 시사합니다.</p>
                     </div>
                     
                     <div class="flex justify-between items-center text-xs text-slate-500">
-                        <span>관련성 분류 이유: 엔비디아와 현대차그룹의 협력 및 국내 퇴직연금 투자 전략을 다루고 있어 한국 경제 및 금융 시장과 밀접한 관련이 있습니다.</span>
-                        <a href="https://www.hankyung.com/article/202606095598i" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
+                        <span>관련성 분류 이유: 글로벌 이슈 및 핵심 키워드 (SK하이닉스) 검색 매칭에 따른 한국 경제 관련성 판별 완료 (데모 모드).</span>
+                        <a href="https://www.hankyung.com/article/202606109197i" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
                     </div>
                     
                 </div>
                 
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-rose-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["Semiconductors", "Secondary Batteries", "Financials and Securities"]' data-search-text='[속보] 코스피, 장중 급등해 \'8천피\' 회복  코스피 지수가 장중 급등세를 보이며 역사적인 이정표인 8,000선을 돌파 및 회복하는 전례 없는 강세를 기록했습니다. 글로벌 경기 회복세와 더불어 국내 반도체 및 첨단 기술 기업들의 압도적인 실적 성장이 시장을 강력하게 견인한 것으로 분석됩니다. 이번 폭등은 한국 자본시장에 대한 국내외 투자자들의 신뢰가 극대화되었음을 보여주는 상징적인 사건입니다. semiconductors, secondary batteries, financials and securities <span class=\"font-semibold text-slate-300\">samsung electronics</span>, <span class=\"font-semibold text-slate-300\">sk hynix</span>, <span class=\"font-semibold text-slate-300\">lg energy solution</span> hankyung finance'>
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-rose-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["거시경제", "금융"]' data-search-text='일본은행, 연내 금리 두 차례 인상…연말 1.25% 전망  \'일본은행, 연내 금리 두 차례 인상…연말 1.25% 전망\' 분석 결과, 글로벌 통화 정책 불확실성 및 지정학적 리스크가 맞물려 국내 자본 시장 수급 및 외환 시장 변동성 확대 부담으로 작용할 가능성이 큽니다. 거시경제, 금융 <span class=\"font-semibold text-slate-300\">금융지주회사</span>, <span class=\"font-semibold text-slate-300\">한국은행</span> hankyung economy'>
                     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
                         <div class="flex items-center space-x-3">
-                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Hankyung Finance</span>
+                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Hankyung Economy</span>
                             <span class="text-xs text-slate-400">
-                                <span class="text-indigo-400 font-medium">작성:</span> 2026-06-09 13:29:45
+                                <span class="text-indigo-400 font-medium">작성:</span> 2026-06-10 20:48:10
                                 <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-06-09 15:19:47
-                            </span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 (+0.9)</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-600 text-white shadow-lg shadow-rose-900/40">경보: 높음 (HIGH)</span>
-                        </div>
-                    </div>
-                    
-                    <h3 class="text-lg font-bold text-slate-100 mb-2">[속보] 코스피, 장중 급등해 '8천피' 회복</h3>
-                    <p class="text-sm text-slate-400 line-clamp-3 mb-4"></p>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
-                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">Semiconductors, Secondary Batteries, Financials and Securities</span>
-                                <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-300">Samsung Electronics</span>, <span class="font-semibold text-slate-300">SK Hynix</span>, <span class="font-semibold text-slate-300">LG Energy Solution</span>
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">코스피 8,000선 돌파는 대규모 외국인 자금 유입을 촉진하여 원/달러 환율의 급격한 하락(원화 가치 강세)을 유발할 것입니다. 주식시장 과열에 따른 자산 효과로 민간 소비가 진작될 수 있으나, 단기 급등에 따른 인플레이션 자극 우려와 시장 변동성 확대 가능성에 대비해야 합니다.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
-                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">코스피 지수가 장중 급등세를 보이며 역사적인 이정표인 8,000선을 돌파 및 회복하는 전례 없는 강세를 기록했습니다. 글로벌 경기 회복세와 더불어 국내 반도체 및 첨단 기술 기업들의 압도적인 실적 성장이 시장을 강력하게 견인한 것으로 분석됩니다. 이번 폭등은 한국 자본시장에 대한 국내외 투자자들의 신뢰가 극대화되었음을 보여주는 상징적인 사건입니다.</p>
-                    </div>
-                    
-                    <div class="flex justify-between items-center text-xs text-slate-500">
-                        <span>관련성 분류 이유: 코스피 지수는 대한민국 주식 시장의 핵심 지표로 한국 경제 상황을 직접적으로 나타내기 때문에 관련성이 매우 높습니다.</span>
-                        <a href="https://www.hankyung.com/article/2026060957237" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
-                    </div>
-                    
-                </div>
-                
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-rose-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["거시경제", "금융"]' data-search-text='해외 쇼핑몰 먹튀에 카드환불도 수개월…피해 막으려면 안심설정 필수 고금리 리볼빙 사용도 주의해야30대 a씨는 해외 쇼핑몰에서 물건을 주문했지만, 사이트가 갑자기 폐쇄되면서 상품을 받지 못했다. a씨는 카드사에 결제 취소와 환불을 요청했지만, 처리.. \'해외 쇼핑몰 먹튀에 카드환불도 수개월…피해 막으려면 안심설정 필수\' 분석 결과, 글로벌 통화 정책 불확실성 및 지정학적 리스크가 맞물려 국내 자본 시장 수급 및 외환 시장 변동성 확대 부담으로 작용할 가능성이 큽니다. 거시경제, 금융 <span class=\"font-semibold text-slate-300\">금융지주회사</span>, <span class=\"font-semibold text-slate-300\">한국은행</span> maeil business economy'>
-                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
-                        <div class="flex items-center space-x-3">
-                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Maeil Business Economy</span>
-                            <span class="text-xs text-slate-400">
-                                <span class="text-indigo-400 font-medium">작성:</span> 2026-06-09 23:14:41
-                                <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-06-09 15:19:11
+                                <span class="text-slate-500">수집:</span> 2026-06-10 22:01:49
                             </span>
                         </div>
                         <div class="flex items-center space-x-2">
@@ -483,8 +363,8 @@
                         </div>
                     </div>
                     
-                    <h3 class="text-lg font-bold text-slate-100 mb-2">해외 쇼핑몰 먹튀에 카드환불도 수개월…피해 막으려면 안심설정 필수</h3>
-                    <p class="text-sm text-slate-400 line-clamp-3 mb-4">고금리 리볼빙 사용도 주의해야30대 A씨는 해외 쇼핑몰에서 물건을 주문했지만, 사이트가 갑자기 폐쇄되면서 상품을 받지 못했다. A씨는 카드사에 결제 취소와 환불을 요청했지만, 처리..</p>
+                    <h3 class="text-lg font-bold text-slate-100 mb-2">일본은행, 연내 금리 두 차례 인상…연말 1.25% 전망</h3>
+                    <p class="text-sm text-slate-400 line-clamp-3 mb-4"></p>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
                         <div>
@@ -503,104 +383,196 @@
                     
                     <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
                         <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">'해외 쇼핑몰 먹튀에 카드환불도 수개월…피해 막으려면 안심설정 필수' 분석 결과, 글로벌 통화 정책 불확실성 및 지정학적 리스크가 맞물려 국내 자본 시장 수급 및 외환 시장 변동성 확대 부담으로 작용할 가능성이 큽니다.</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">'일본은행, 연내 금리 두 차례 인상…연말 1.25% 전망' 분석 결과, 글로벌 통화 정책 불확실성 및 지정학적 리스크가 맞물려 국내 자본 시장 수급 및 외환 시장 변동성 확대 부담으로 작용할 가능성이 큽니다.</p>
                     </div>
                     
                     <div class="flex justify-between items-center text-xs text-slate-500">
-                        <span>관련성 분류 이유: 해외 직구 사기 피해 및 신용카드 환불 절차와 같은 소비자 금융 보호 문제는 한국 경제 내 가계 소비와 카드사 서비스 운영에 직접적인 연관이 있습니다.</span>
-                        <a href="https://www.mk.co.kr/news/economy/12069414" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
+                        <span>관련성 분류 이유: 글로벌 이슈 및 핵심 키워드 (금리) 검색 매칭에 따른 한국 경제 관련성 판별 완료 (데모 모드).</span>
+                        <a href="https://www.hankyung.com/article/202606109210i" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
                     </div>
                     
                 </div>
                 
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-slate-800 transition duration-300 hover:bg-slate-900/50" data-sectors='["Semiconductors", "IT Materials, Components & Equipment", "Biotechnology"]' data-search-text='삼전닉스 급등에 \'팔천피\' 회복…코스닥은 소부장·바이오 \'쌍끌이\'  삼성전자와 sk하이닉스 등 대형 반도체주의 급등으로 코스피가 반등 흐름을 보였습니다. 코스닥 시장 또한 소재·부품·장비(소부장) 및 바이오 업종의 동반 상승에 힘입어 지수가 동반 강세를 나타냈습니다. semiconductors, it materials, components & equipment, biotechnology <span class=\"font-semibold text-slate-300\">samsung electronics</span>, <span class=\"font-semibold text-slate-300\">sk hynix</span> hankyung finance'>
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-slate-800 transition duration-300 hover:bg-slate-900/50" data-sectors='["일반경제", "기업동향"]' data-search-text='[속보] 美 5월 소비자물가, 연 4.2% 상승…37개월 만에 최대  \'[속보] 美 5월 소비자물가, 연 4.2% 상승…37개월 만에 최대\' 뉴스는 특정 기업 또는 경제 섹터의 개별 이슈를 반영하며, 중장기적인 거시경제 영향보다는 단기 업종별 흐름 모니터링이 권장됩니다. 일반경제, 기업동향 <span class=\"font-semibold text-slate-300\">기타 국내 기업</span> hankyung economy'>
                     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
                         <div class="flex items-center space-x-3">
-                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Hankyung Finance</span>
+                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Hankyung Economy</span>
                             <span class="text-xs text-slate-400">
-                                <span class="text-indigo-400 font-medium">작성:</span> 2026-06-09 13:57:27
+                                <span class="text-indigo-400 font-medium">작성:</span> 2026-06-10 21:32:09
                                 <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-06-09 15:18:07
+                                <span class="text-slate-500">수집:</span> 2026-06-10 22:01:49
                             </span>
                         </div>
                         <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 (+0.8)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">중립 (+0.1)</span>
                             <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-700 text-slate-300">경보: 낮음 (LOW)</span>
                         </div>
                     </div>
                     
-                    <h3 class="text-lg font-bold text-slate-100 mb-2">삼전닉스 급등에 '팔천피' 회복…코스닥은 소부장·바이오 '쌍끌이'</h3>
+                    <h3 class="text-lg font-bold text-slate-100 mb-2">[속보] 美 5월 소비자물가, 연 4.2% 상승…37개월 만에 최대</h3>
                     <p class="text-sm text-slate-400 line-clamp-3 mb-4"></p>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
                             <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">Semiconductors, IT Materials, Components & Equipment, Biotechnology</span>
+                                <span class="text-indigo-300">일반경제, 기업동향</span>
                                 <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-300">Samsung Electronics</span>, <span class="font-semibold text-slate-300">SK Hynix</span>
+                                <span class="font-semibold text-slate-300">기타 국내 기업</span>
                             </p>
                         </div>
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">반도체 대형주 중심의 강세는 외국인 투자자들의 매수세를 유입시켜 KOSPI 지수 상승을 견인하고 원/달러 환율 안정에 긍정적인 영향을 미칠 것으로 예상됩니다.</p>
+                            <p class="text-sm text-slate-200">특정 섹터의 개별 기업 재무/경영 활동으로 거시경제 전반에 대한 영향은 다소 제한적임.</p>
                         </div>
                     </div>
                     
                     <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
                         <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">삼성전자와 SK하이닉스 등 대형 반도체주의 급등으로 코스피가 반등 흐름을 보였습니다. 코스닥 시장 또한 소재·부품·장비(소부장) 및 바이오 업종의 동반 상승에 힘입어 지수가 동반 강세를 나타냈습니다.</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">'[속보] 美 5월 소비자물가, 연 4.2% 상승…37개월 만에 최대' 뉴스는 특정 기업 또는 경제 섹터의 개별 이슈를 반영하며, 중장기적인 거시경제 영향보다는 단기 업종별 흐름 모니터링이 권장됩니다.</p>
                     </div>
                     
                     <div class="flex justify-between items-center text-xs text-slate-500">
-                        <span>관련성 분류 이유: 삼성전자와 SK하이닉스의 주가 상승으로 인한 코스피 지수 회복 및 코스닥 시장 내 주요 산업군의 동향을 다루고 있어 한국 경제 및 금융 시장과 직접적인 관련이 있습니다.</span>
-                        <a href="https://www.hankyung.com/article/2026060957886" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
+                        <span>관련성 분류 이유: 글로벌 이슈 및 핵심 키워드 (소비자물가, 물가) 검색 매칭에 따른 한국 경제 관련성 판별 완료 (데모 모드).</span>
+                        <a href="https://www.hankyung.com/article/202606109284i" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
                     </div>
                     
                 </div>
                 
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["Card/Credit Finance", "Consumer Finance"]' data-search-text='“해외서 긁은 결제액과 청구액이 달라요”…카드 피해 민원 속출, 뭐길래 # 해외 쇼핑몰에서 원화로 카드 결제(krw) 한 a씨는 당초 결제한 승인금액 보다 더 많은 금액이 청구된 사실을 뒤늦게 알게됐다. 이에 해당 카드사에 문의하니 “해외 가맹점에서 .. 해외 직구 및 여행 중 원화결제서비스(dcc) 이용으로 인한 추가 수수료 청구 피해와 소비자 민원이 급증하고 있습니다. 카드사들은 이중 환전 수수료 발생을 막기 위해 현지 통화 결제 안내를 강화하고 있으나 관련 분쟁은 지속되는 추세입니다. card/credit finance, consumer finance <span class=\"font-semibold text-slate-300\">samsung card</span>, <span class=\"font-semibold text-slate-300\">shinhan financial group</span>, <span class=\"font-semibold text-slate-300\">kb financial group</span> maeil business economy'>
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-slate-800 transition duration-300 hover:bg-slate-900/50" data-sectors='["증시", "금융"]' data-search-text='vip자산운용, 8개월간 롯데관광개발 주식 167만주 추가 취득  \'vip자산운용, 8개월간 롯데관광개발 주식 167만주 추가 취득\' 뉴스는 국내 자본시장 개미 투자자들의 투자 열기와 증시 거래대금 변화를 보여주며, 시장 유동성 및 증권가 전반의 수수료 수익 구조에 단기적 영향을 미칠 수 있습니다. 증시, 금융 <span class=\"font-semibold text-slate-300\">증권사</span>, <span class=\"font-semibold text-slate-300\">자산운용사</span> hankyung finance'>
                     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
                         <div class="flex items-center space-x-3">
-                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Maeil Business Economy</span>
+                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Hankyung Finance</span>
                             <span class="text-xs text-slate-400">
-                                <span class="text-indigo-400 font-medium">작성:</span> 2026-06-09 22:15:24
+                                <span class="text-indigo-400 font-medium">작성:</span> 2026-06-10 17:23:49
                                 <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-06-09 15:16:00
+                                <span class="text-slate-500">수집:</span> 2026-06-10 22:01:48
                             </span>
                         </div>
                         <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">부정 (-0.3)</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">중립 (+0.0)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-700 text-slate-300">경보: 낮음 (LOW)</span>
                         </div>
                     </div>
                     
-                    <h3 class="text-lg font-bold text-slate-100 mb-2">“해외서 긁은 결제액과 청구액이 달라요”…카드 피해 민원 속출, 뭐길래</h3>
-                    <p class="text-sm text-slate-400 line-clamp-3 mb-4"># 해외 쇼핑몰에서 원화로 카드 결제(KRW) 한 A씨는 당초 결제한 승인금액 보다 더 많은 금액이 청구된 사실을 뒤늦게 알게됐다. 이에 해당 카드사에 문의하니 “해외 가맹점에서 ..</p>
+                    <h3 class="text-lg font-bold text-slate-100 mb-2">VIP자산운용, 8개월간 롯데관광개발 주식 167만주 추가 취득</h3>
+                    <p class="text-sm text-slate-400 line-clamp-3 mb-4"></p>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
                             <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">Card/Credit Finance, Consumer Finance</span>
+                                <span class="text-indigo-300">증시, 금융</span>
                                 <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-300">Samsung Card</span>, <span class="font-semibold text-slate-300">Shinhan Financial Group</span>, <span class="font-semibold text-slate-300">KB Financial Group</span>
+                                <span class="font-semibold text-slate-300">증권사</span>, <span class="font-semibold text-slate-300">자산운용사</span>
                             </p>
                         </div>
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">환율이나 전체 KOSPI 지수에 미치는 직접적인 매크로 영향은 미미하나, 소비자 신용 거래 부문의 불필요한 외화 유출과 수수료 부담으로 가계 소비 지출의 미세한 비효율을 초래할 수 있습니다.</p>
+                            <p class="text-sm text-slate-200">개인 투자자 자금 흐름 다변화 및 국내 주식 거래 대금 변동에 따른 증권업종 센티먼트 영향.</p>
                         </div>
                     </div>
                     
                     <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
                         <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">해외 직구 및 여행 중 원화결제서비스(DCC) 이용으로 인한 추가 수수료 청구 피해와 소비자 민원이 급증하고 있습니다. 카드사들은 이중 환전 수수료 발생을 막기 위해 현지 통화 결제 안내를 강화하고 있으나 관련 분쟁은 지속되는 추세입니다.</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">'VIP자산운용, 8개월간 롯데관광개발 주식 167만주 추가 취득' 뉴스는 국내 자본시장 개미 투자자들의 투자 열기와 증시 거래대금 변화를 보여주며, 시장 유동성 및 증권가 전반의 수수료 수익 구조에 단기적 영향을 미칠 수 있습니다.</p>
                     </div>
                     
                     <div class="flex justify-between items-center text-xs text-slate-500">
-                        <span>관련성 분류 이유: 한국 소비자의 해외 카드 결제 과정에서 발생하는 환전 수수료 및 원화 결제 관련 피해 사례를 다루고 있어 국내 금융 소비자 보호 및 경제 활동과 직접적인 관련이 있습니다.</span>
-                        <a href="https://www.mk.co.kr/news/economy/12069363" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
+                        <span>관련성 분류 이유: 글로벌 이슈 및 핵심 키워드 (주식) 검색 매칭에 따른 한국 경제 관련성 판별 완료 (데모 모드).</span>
+                        <a href="https://www.hankyung.com/article/2026061089476" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
+                    </div>
+                    
+                </div>
+                
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["반도체", "IT H/W"]' data-search-text='시험에 든 투자자들의 인내심…심상치 않은 반도체주  \'시험에 든 투자자들의 인내심…심상치 않은 반도체주\' 뉴스는 글로벌 ai 및 반도체 공급망 리스크 호재에 따른 국내 주요 반도체 제조사(삼성전자, sk하이닉스)의 실적 성장 가능성을 시사합니다. 반도체, it h/w <span class=\"font-semibold text-slate-100\">삼성전자</span> <span class=\"text-xs text-rose-400 font-medium\">(302,500원 -6.06%)</span>, <span class=\"font-semibold text-slate-100\">sk하이닉스</span> <span class=\"text-xs text-rose-400 font-medium\">(2,048,000원 -7.54%)</span> hankyung finance'>
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
+                        <div class="flex items-center space-x-3">
+                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Hankyung Finance</span>
+                            <span class="text-xs text-slate-400">
+                                <span class="text-indigo-400 font-medium">작성:</span> 2026-06-10 17:41:00
+                                <span class="mx-1 text-slate-600">|</span>
+                                <span class="text-slate-500">수집:</span> 2026-06-10 22:01:48
+                            </span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 (+0.8)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-lg font-bold text-slate-100 mb-2">시험에 든 투자자들의 인내심…심상치 않은 반도체주</h3>
+                    <p class="text-sm text-slate-400 line-clamp-3 mb-4"></p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
+                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
+                                <span class="text-indigo-300">반도체, IT H/W</span>
+                                <span class="text-slate-500">|</span>
+                                <span class="font-semibold text-slate-100">삼성전자</span> <span class="text-xs text-rose-400 font-medium">(302,500원 -6.06%)</span>, <span class="font-semibold text-slate-100">SK하이닉스</span> <span class="text-xs text-rose-400 font-medium">(2,048,000원 -7.54%)</span>
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
+                            <p class="text-sm text-slate-200">글로벌 반도체 및 AI 수요 강세 지속으로 국내 IT 하드웨어 수출 증가와 KOSPI 상방 모멘텀 지원.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
+                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">'시험에 든 투자자들의 인내심…심상치 않은 반도체주' 뉴스는 글로벌 AI 및 반도체 공급망 리스크 호재에 따른 국내 주요 반도체 제조사(삼성전자, SK하이닉스)의 실적 성장 가능성을 시사합니다.</p>
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-xs text-slate-500">
+                        <span>관련성 분류 이유: 글로벌 이슈 및 핵심 키워드 (반도체) 검색 매칭에 따른 한국 경제 관련성 판별 완료 (데모 모드).</span>
+                        <a href="https://www.hankyung.com/article/202606108276i" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
+                    </div>
+                    
+                </div>
+                
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-rose-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["거시경제", "금융"]' data-search-text='정부 \'환율 방어\' 총력 … 국정원도 단속 나서 달러당 원화값이 1500원대로 추락한 뒤 반등할 조짐을 보이지 않자, 정부가 \'환 방어\' 총력전에 나섰다. 재정경제부는 10일 국가정보원, 국세청, 관세청, 금융감독원, 한국은행 .. \'정부 \'환율 방어\' 총력 … 국정원도 단속 나서\' 분석 결과, 글로벌 통화 정책 불확실성 및 지정학적 리스크가 맞물려 국내 자본 시장 수급 및 외환 시장 변동성 확대 부담으로 작용할 가능성이 큽니다. 거시경제, 금융 <span class=\"font-semibold text-slate-300\">금융지주회사</span>, <span class=\"font-semibold text-slate-300\">한국은행</span> maeil business economy'>
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
+                        <div class="flex items-center space-x-3">
+                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Maeil Business Economy</span>
+                            <span class="text-xs text-slate-400">
+                                <span class="text-indigo-400 font-medium">작성:</span> 2026-06-10 17:50:50
+                                <span class="mx-1 text-slate-600">|</span>
+                                <span class="text-slate-500">수집:</span> 2026-06-10 22:01:44
+                            </span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">중립 (+0.0)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-600 text-white shadow-lg shadow-rose-900/40">경보: 높음 (HIGH)</span>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-lg font-bold text-slate-100 mb-2">정부 '환율 방어' 총력 … 국정원도 단속 나서</h3>
+                    <p class="text-sm text-slate-400 line-clamp-3 mb-4">달러당 원화값이 1500원대로 추락한 뒤 반등할 조짐을 보이지 않자, 정부가 '환 방어' 총력전에 나섰다. 재정경제부는 10일 국가정보원, 국세청, 관세청, 금융감독원, 한국은행 ..</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
+                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
+                                <span class="text-indigo-300">거시경제, 금융</span>
+                                <span class="text-slate-500">|</span>
+                                <span class="font-semibold text-slate-300">금융지주회사</span>, <span class="font-semibold text-slate-300">한국은행</span>
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
+                            <p class="text-sm text-slate-200">고금리/고환율 기조 장기화 및 대외 리스크 지속에 따른 원화 가치 변동성 가중 및 KOSPI 시장의 외국인 자금 이탈 경계.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
+                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">'정부 '환율 방어' 총력 … 국정원도 단속 나서' 분석 결과, 글로벌 통화 정책 불확실성 및 지정학적 리스크가 맞물려 국내 자본 시장 수급 및 외환 시장 변동성 확대 부담으로 작용할 가능성이 큽니다.</p>
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-xs text-slate-500">
+                        <span>관련성 분류 이유: 글로벌 이슈 및 핵심 키워드 (관세, 환율) 검색 매칭에 따른 한국 경제 관련성 판별 완료 (데모 모드).</span>
+                        <a href="https://www.mk.co.kr/news/economy/12070812" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
                     </div>
                     
                 </div>

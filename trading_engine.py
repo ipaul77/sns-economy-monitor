@@ -76,30 +76,36 @@ def get_firestore_client():
 # ---------------------------------------------------------------------------
 # LOCAL SQLITE TRADING CACHE AND WARM START
 # ---------------------------------------------------------------------------
+def _ensure_trading_tables(cursor):
+    cursor.execute("CREATE TABLE IF NOT EXISTS agent_state (key TEXT PRIMARY KEY, value TEXT)")
+    cursor.execute("CREATE TABLE IF NOT EXISTS portfolio (ticker TEXT PRIMARY KEY, quantity INTEGER, average_price REAL, highest_price_after_buy REAL, mode TEXT DEFAULT 'VALUE', last_scale_out_date TEXT)")
+    cursor.execute("CREATE TABLE IF NOT EXISTS transactions (id TEXT PRIMARY KEY, timestamp TEXT, ticker TEXT, action TEXT, quantity INTEGER, price REAL, reasoning TEXT, snapshot_context TEXT)")
+    try:
+        cursor.execute("ALTER TABLE portfolio ADD COLUMN mode TEXT DEFAULT 'VALUE'")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE portfolio ADD COLUMN last_scale_out_date TEXT")
+    except sqlite3.OperationalError:
+        pass
+
 _trading_cache_warmed = False
 
 def warm_start_trading_cache():
     """
     Synchronizes agent state, portfolio holdings, and transaction history
-    from Firestore to local SQLite once on startup to enable 100% offline/local read caching.
+    from Firestore into the local SQLite database at startup.
     """
     global _trading_cache_warmed
     if _trading_cache_warmed:
         return
         
-    client = get_firestore_client()
-    # Ensure local directory for DB exists
-    if not os.path.exists(db.DB_DIR):
-        os.makedirs(db.DB_DIR)
-        
     try:
         conn = sqlite3.connect(db.DB_PATH)
         cursor = conn.cursor()
         
-        # Create trading cache tables if they don't exist
-        cursor.execute("CREATE TABLE IF NOT EXISTS agent_state (key TEXT PRIMARY KEY, value TEXT)")
-        cursor.execute("CREATE TABLE IF NOT EXISTS portfolio (ticker TEXT PRIMARY KEY, quantity INTEGER, average_price REAL, highest_price_after_buy REAL)")
-        cursor.execute("CREATE TABLE IF NOT EXISTS transactions (id TEXT PRIMARY KEY, timestamp TEXT, ticker TEXT, action TEXT, quantity INTEGER, price REAL, reasoning TEXT, snapshot_context TEXT)")
+        # Create trading cache tables and run migrations
+        _ensure_trading_tables(cursor)
         conn.commit()
         
         if client is None:
@@ -107,7 +113,7 @@ def warm_start_trading_cache():
             conn.close()
             _trading_cache_warmed = True
             return
-
+ 
         print("[Trading Engine] Synchronizing SQLite cache with Firestore...")
         
         # 1. Warm start agent state
@@ -127,13 +133,15 @@ def warm_start_trading_cache():
         for doc in docs:
             data = doc.to_dict()
             cursor.execute("""
-                INSERT OR REPLACE INTO portfolio (ticker, quantity, average_price, highest_price_after_buy)
-                VALUES (?, ?, ?, ?)
+                INSERT OR REPLACE INTO portfolio (ticker, quantity, average_price, highest_price_after_buy, mode, last_scale_out_date)
+                VALUES (?, ?, ?, ?, ?, ?)
             """, (
                 doc.id,
                 int(data.get("quantity", 0)),
                 float(data.get("average_price", 0.0)),
-                float(data.get("highest_price_after_buy", data.get("average_price", 0.0)))
+                float(data.get("highest_price_after_buy", data.get("average_price", 0.0))),
+                data.get("mode", "VALUE"),
+                data.get("last_scale_out_date")
             ))
         conn.commit()
             
@@ -304,8 +312,8 @@ def get_portfolio_holdings() -> Dict[str, Dict[str, Any]]:
         conn = sqlite3.connect(db.DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        cursor.execute("CREATE TABLE IF NOT EXISTS portfolio (ticker TEXT PRIMARY KEY, quantity INTEGER, average_price REAL, highest_price_after_buy REAL)")
-        cursor.execute("SELECT ticker, quantity, average_price, highest_price_after_buy FROM portfolio")
+        _ensure_trading_tables(cursor)
+        cursor.execute("SELECT ticker, quantity, average_price, highest_price_after_buy, mode, last_scale_out_date FROM portfolio")
         rows = cursor.fetchall()
         conn.close()
         
@@ -316,14 +324,16 @@ def get_portfolio_holdings() -> Dict[str, Dict[str, Any]]:
                 holdings[r["ticker"]] = {
                     "quantity": qty,
                     "average_price": float(r["average_price"]),
-                    "highest_price_after_buy": float(r["highest_price_after_buy"])
+                    "highest_price_after_buy": float(r["highest_price_after_buy"]),
+                    "mode": r["mode"] if r["mode"] else "VALUE",
+                    "last_scale_out_date": r["last_scale_out_date"]
                 }
         return holdings
     except Exception as e:
         print(f"[Trading Engine] [Warning] Failed to fetch portfolio holdings from SQLite cache: {e}")
         return {}
 
-def update_portfolio_holding_in_db(ticker: str, quantity: int, average_price: float, highest_price_after_buy: Optional[float] = None) -> bool:
+def update_portfolio_holding_in_db(ticker: str, quantity: int, average_price: float, highest_price_after_buy: Optional[float] = None, mode: Optional[str] = None, last_scale_out_date: Optional[str] = None) -> bool:
     """
     Updates or deletes a specific stock holding in both Firestore and SQLite cache.
     """
@@ -331,7 +341,7 @@ def update_portfolio_holding_in_db(ticker: str, quantity: int, average_price: fl
     try:
         conn = sqlite3.connect(db.DB_PATH)
         cursor = conn.cursor()
-        cursor.execute("CREATE TABLE IF NOT EXISTS portfolio (ticker TEXT PRIMARY KEY, quantity INTEGER, average_price REAL, highest_price_after_buy REAL)")
+        _ensure_trading_tables(cursor)
         
         if quantity <= 0:
             cursor.execute("DELETE FROM portfolio WHERE ticker = ?", (ticker,))
@@ -340,23 +350,34 @@ def update_portfolio_holding_in_db(ticker: str, quantity: int, average_price: fl
             print(f"[Trading Engine] [SQLite] Deleted holding for ticker {ticker}.")
             sqlite_success = True
         else:
-            # Get existing highest_price_after_buy if not provided
-            cursor.execute("SELECT highest_price_after_buy FROM portfolio WHERE ticker = ?", (ticker,))
+            # Get existing values if not provided
+            cursor.execute("SELECT highest_price_after_buy, mode, last_scale_out_date FROM portfolio WHERE ticker = ?", (ticker,))
             row = cursor.fetchone()
+            
             h_price = highest_price_after_buy
-            if h_price is None:
-                if row:
-                    h_price = float(row[0])
-                else:
+            p_mode = mode
+            p_scale_out = last_scale_out_date
+            
+            if row:
+                if h_price is None:
+                    h_price = float(row[0]) if row[0] is not None else average_price
+                if p_mode is None:
+                    p_mode = row[1]
+                if p_scale_out is None:
+                    p_scale_out = row[2]
+            else:
+                if h_price is None:
                     h_price = average_price
+                if p_mode is None:
+                    p_mode = "VALUE"
             
             cursor.execute("""
-                INSERT OR REPLACE INTO portfolio (ticker, quantity, average_price, highest_price_after_buy)
-                VALUES (?, ?, ?, ?)
-            """, (ticker, int(quantity), float(average_price), float(h_price)))
+                INSERT OR REPLACE INTO portfolio (ticker, quantity, average_price, highest_price_after_buy, mode, last_scale_out_date)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (ticker, int(quantity), float(average_price), float(h_price), p_mode, p_scale_out))
             conn.commit()
             conn.close()
-            print(f"[Trading Engine] [SQLite] Updated holding for ticker {ticker}: Quantity={quantity}, AvgPrice={average_price:.1f}, Highest={h_price:.1f}")
+            print(f"[Trading Engine] [SQLite] Updated holding for ticker {ticker}: Quantity={quantity}, AvgPrice={average_price:.1f}, Highest={h_price:.1f}, Mode={p_mode}, ScaleOut={p_scale_out}")
             sqlite_success = True
     except Exception as e:
         print(f"[Trading Engine] [Warning] Failed to update portfolio holding in SQLite cache: {e}")
@@ -372,24 +393,48 @@ def update_portfolio_holding_in_db(ticker: str, quantity: int, average_price: fl
             holding_ref.delete()
             print(f"[Trading Engine] [Firestore] Deleted holding for ticker {ticker}.")
         else:
+            # Get existing values if not provided (re-read if SQLite write failed, but usually we just use computed values)
             payload = {
                 "quantity": int(quantity),
-                "average_price": float(average_price)
+                "average_price": float(average_price),
+                "mode": p_mode if p_mode else "VALUE"
             }
-            if highest_price_after_buy is not None:
-                payload["highest_price_after_buy"] = float(highest_price_after_buy)
+            if h_price is not None:
+                payload["highest_price_after_buy"] = float(h_price)
+            if p_scale_out is not None:
+                payload["last_scale_out_date"] = p_scale_out
             else:
-                doc = holding_ref.get()
-                if doc.exists:
-                    payload["highest_price_after_buy"] = float(doc.to_dict().get("highest_price_after_buy", average_price))
-                else:
-                    payload["highest_price_after_buy"] = float(average_price)
+                payload["last_scale_out_date"] = None
+                
             holding_ref.set(payload)
-            print(f"[Trading Engine] [Firestore] Updated holding for ticker {ticker}: Quantity={quantity}")
+            print(f"[Trading Engine] [Firestore] Updated holding for ticker {ticker}: Quantity={quantity}, Mode={p_mode}")
         return True
     except Exception as e:
         print(f"[Trading Engine] [Error] Failed to update portfolio holding in Firestore: {e}")
         return False
+
+def get_last_sell_transaction(ticker: str) -> Optional[Dict[str, Any]]:
+    """
+    Queries the database for the last sell-related transaction of a ticker
+    to evaluate cooldown and whipsaw prevention rules.
+    """
+    warm_start_trading_cache()
+    try:
+        conn = sqlite3.connect(db.DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        _ensure_trading_tables(cursor)
+        cursor.execute("""
+            SELECT timestamp, price, action FROM transactions 
+            WHERE ticker = ? AND action IN ('SELL', 'STOP_LOSS_EXIT', 'TRAILING_STOP_EXIT')
+            ORDER BY timestamp DESC LIMIT 1
+        """, (ticker.strip(),))
+        row = cursor.fetchone()
+        conn.close()
+        return dict(row) if row else None
+    except Exception as e:
+        print(f"[Trading Engine] [Warning] Failed to query last sell transaction for {ticker}: {e}")
+        return None
 
 def save_transaction_to_db(ticker: str, action: str, quantity: int, price: float, reasoning: str, snapshot_context: Dict[str, Any]) -> bool:
     """
@@ -750,6 +795,7 @@ def get_stock_indicators(ticker: str) -> Dict[str, Any]:
         "avg_volume_5d": 0.0,
         "volume_ratio": 1.0,
         "volume_breakout": False,
+        "daily_change_pct": 0.0,
         "market": "KOSPI",  # Default to KOSPI
         "roe": None,
         "pe_ratio": None,
@@ -802,6 +848,8 @@ def get_stock_indicators(ticker: str) -> Dict[str, Any]:
 
         current_price = kis_price if kis_price is not None else float(hist["Close"].iloc[-1])
         result["current_price"] = current_price
+        prev_close = float(hist["Close"].iloc[-2]) if len(hist) >= 2 else current_price
+        result["daily_change_pct"] = round(((current_price - prev_close) / prev_close) * 100, 2)
 
         # 2. 20-day Moving Average (20 MA)
         ma_length = min(len(hist), 20)
@@ -840,6 +888,7 @@ def get_stock_indicators(ticker: str) -> Dict[str, Any]:
         result["current_price"] = price
         result["ma_20"] = price
         result["disparity"] = 100.0
+        result["daily_change_pct"] = 0.0
 
     # Fetch investor (sugeup) indicators
     try:
@@ -1071,9 +1120,10 @@ class TradingDecision(BaseModel):
     ticker: str = Field(description="A 6-digit stock ticker code to trade (e.g. '005930' for Samsung Electronics, '000660' for SK Hynix).")
     allocation_pct: float = Field(description="Percentage of available cash to allocate to this BUY trade (from 0.0 to 100.0). For SELL, represent the percentage of owned shares to sell (from 0.0 to 100.0). For HOLD, this must be 0.0.")
     reasoning: str = Field(description="Specific, detailed investment logic in Korean justifying the decision based on provided news sentiment and price analysis.")
+    mode: Literal["VALUE", "TECHNICAL"] = Field(description="The investment mode chosen: 'VALUE' (fundamental, long-term margin of safety, wide stop limits) or 'TECHNICAL' (short-term technical momentum, sugeup, volume breakouts, tight stop limits).")
 
 
-def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: float, market_prices: Dict[str, float], news_context: List[Dict[str, Any]], market_indicators: Optional[Dict[str, Dict[str, Any]]] = None, index_changes: Optional[Dict[str, float]] = None, api_key: Optional[str] = None) -> TradingDecision:
+def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: float, market_prices: Dict[str, float], news_context: List[Dict[str, Any]], market_indicators: Optional[Dict[str, Dict[str, Any]]] = None, index_changes: Optional[Dict[str, float]] = None, api_key: Optional[str] = None, blocked_buy_reasons: Optional[Dict[str, str]] = None) -> TradingDecision:
     """
     Calls the Gemini API to formulate a trading decision using strict Pydantic response schema.
     Injects system guardrails to avoid hallucinations and enforce capital constraints.
@@ -1224,11 +1274,59 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
 
     # Define system instructions (Guardrails)
     system_instruction = (
-        "   - **가치투자 원칙(Warren Buffett's Margin of Safety)**: 기업의 펀더멘털을 항상 최우선으로 검토하라. "
-        "ROE(자기자본이익률)가 높고 부채비율이 낮으며, 현재 주가가 애널리스트 목표주가 대비 충분히 할인되어 안전마진(Margin of Safety > 15% 이상)이 확보된 저평가 우량주 위주로 매수를 지향하라. "
-        "단기 기술적 반등이 있더라도 재무 건전성이 훼손되거나 밸류에이션(PER/PBR)이 역사적 고평가 영역에 속해 있고 안전마진이 전혀 없는 종목은 추격 매수를 매우 금지하라.\n"
-        "   - **이익 보존 모드(Capital Preservation)**: 이미 목표 수익률을 초과 달성했거나 목표 페이스를 안정적으로 상회하고 있는 경우, 새로운 추격 매수를 매우 자제하고 이익을 실현하여 얻은 수익을 안전하게 지키는 관망(HOLD) 위주로 조심스럽게 방어하라."
+        "당신은 대한민국 대표 대형주를 운용하는 AI 투자 에이전트입니다. 당신은 반드시 투자 철학에 따라 'VALUE' 모드와 'TECHNICAL' 모드 중 하나를 명확히 선택하여 거래를 수행해야 합니다.\n"
+        "1. 가치투자 모드 (mode: 'VALUE'):\n"
+        "   - 기업의 장기 펀더멘털을 최우선으로 검토합니다.\n"
+        "   - 매수 근거는 ROE, 낮은 부채비율, PER/PBR 밸류에이션, 그리고 무엇보다 목표가 대비 넉넉한 안전마진(Margin of Safety > 15% 이상)이어야 합니다.\n"
+        "   - 단기 주가 흐름이나 이격도, 수급 등 기술적 노이즈를 배제하고 기업의 본질적 가치와 가격 괴리에 집중합니다.\n"
+        "2. 단기 트레이딩 모드 (mode: 'TECHNICAL'):\n"
+        "   - 초단기 기술적 분석과 모멘텀에 집중합니다.\n"
+        "   - 매수 근거에서 가치투자 지표(안전마진, PER 등)를 철저히 배제하고, 수급(외인/기관 동시 매수 등), 20일선 이격도(낙폭 과대 혹은 돌파), 거래량 급증(volume breakout > 2.0) 등의 기술적 시그널에만 집중하여 진입합니다.\n"
+        "3. 매수(BUY) 시에는 반드시 mode를 적합하게 설정하십시오. 만약 매입이 금지되거나 제한된 종목이 있다면 지시사항을 반드시 준수하여 매수를 금지해야 합니다."
     )
+
+    blocked_str = ""
+    if blocked_buy_reasons:
+        blocked_str = "\n[⚠️ 리스크 가드레일에 따른 종목별 매수 제한 사항 - 절대로 이 종목들을 BUY하지 마십시오]\n"
+        for tick, reason in blocked_buy_reasons.items():
+            comp_name = tick
+            for c, t in COMPANY_TO_TICKER.items():
+                if t == tick:
+                    comp_name = c
+                    break
+            blocked_str += f"- {comp_name} ({tick}): 매수 불가 사유 - {reason} (이 종목은 오직 SELL 또는 HOLD만 결정할 수 있습니다.)\n"
+
+    try:
+        portfolio_value = sum(
+            portfolio.get(t, {}).get("quantity", 0) * market_prices.get(t, 0.0) 
+            for t in portfolio
+        )
+        total_asset = balance + portfolio_value
+        
+        sector_values = {}
+        for t, holding in portfolio.items():
+            qty = holding.get("quantity", 0)
+            if qty > 0:
+                price = market_prices.get(t, 0.0)
+                val = qty * price
+                sect = TICKER_TO_SECTOR.get(t, "기타")
+                sector_values[sect] = sector_values.get(sect, 0.0) + val
+
+        sector_weights = {}
+        for sect, val in sector_values.items():
+            sector_weights[sect] = (val / total_asset) if total_asset > 0 else 0.0
+
+        sector_warnings = ""
+        for sect, w in sector_weights.items():
+            if w >= 0.50:
+                sector_warnings += f"\n[🚨 포트폴리오 섹터 편중 경고 - {sect} 섹터 비중 {w*100:.1f}%]\n"
+                sector_warnings += f"- 현재 포트폴리오 내 {sect} 섹터 비중이 {w*100:.1f}%로 자산 한계치(50%)를 초과하였습니다.\n"
+                sector_warnings += f"- 지시사항: {sect} 섹터의 모든 종목에 대한 신규 BUY 결정을 전면 금지하며, 포트폴리오 다각화를 위해 금융, 방산, 소비재 등 타 섹터의 저평가 종목을 적극 탐색하여 진입하십시오.\n"
+        
+        if sector_warnings:
+            blocked_str += sector_warnings
+    except Exception as e:
+        print(f"[Trading Engine] [Warning] Failed to calculate sector weights in generate_trading_decision: {e}")
 
     prompt = f"""
 현재 시각: {get_kst_now().strftime("%Y-%m-%d %H:%M:%S")} (KST)
@@ -1247,7 +1345,7 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
 
 [현재 보유 주식 현황 (Portfolio)]
 {portfolio_str}
-
+{blocked_str}
 [거래 대상 종목 실시간 기술적/거래량 지표]
 {indicators_str}
 
@@ -1364,6 +1462,33 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             break
 
     monitored_tickers = get_active_tickers(portfolio, news_context)
+    
+    # Pre-filter monitored tickers to minimize yfinance API overhead (24h cooldown time-based check)
+    filtered_tickers = []
+    pre_blocked_reasons = {}
+    for ticker in monitored_tickers:
+        # If we own it, we must keep it (to check mechanical stops and decide to hold/sell)
+        if ticker in portfolio:
+            filtered_tickers.append(ticker)
+            continue
+            
+        # If we don't own it, check 24h cooldown (time-based)
+        last_sell = get_last_sell_transaction(ticker)
+        if last_sell:
+            try:
+                last_time = datetime.fromisoformat(last_sell["timestamp"])
+                time_diff = now - last_time
+                if time_diff < timedelta(hours=24):
+                    pre_blocked_reasons[ticker] = f"직전 매도 후 24시간 재진입 제한(쿨타임)이 진행 중입니다. (남은 시간: {24 - time_diff.total_seconds() / 3600:.1f}시간)"
+                    print(f"[Trading Engine] Pre-flight filter: Ticker {ticker} is blocked by time-based 24h cooldown.")
+                    continue
+            except Exception as e:
+                print(f"[Trading Engine] [Warning] Failed to parse last sell timestamp for {ticker}: {e}")
+                
+        filtered_tickers.append(ticker)
+        
+    monitored_tickers = filtered_tickers
+
     market_indicators = {}
     market_prices = {}
     
@@ -1446,7 +1571,10 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             print(f"[Trading Engine] Idempotency Lock: Already processed and acted upon the latest news URL: {latest_news_url}")
             return {"status": "skipped", "message": "Idempotency Lock: Latest news context has already been acted upon."}
 
-    # 6.5. Mechanical Stop-Loss (-4.5%) & Trailing-Stop (-3.0%) Evaluation
+    # 6.5. Mechanical Stop-Loss & Trailing-Stop Evaluation
+    today_str = get_kst_now().strftime("%Y-%m-%d")
+    kospi_change = index_changes.get("KOSPI", 0.0)
+
     for ticker, holding in portfolio.items():
         current_price = market_prices.get(ticker, 0.0)
         if current_price <= 0:
@@ -1454,24 +1582,47 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             
         avg_price = holding["average_price"]
         prev_highest = holding["highest_price_after_buy"]
+        mode = holding.get("mode", "VALUE")
+        last_scale_out = holding.get("last_scale_out_date")
+        is_scale_out_today = (last_scale_out == today_str)
         
+        # Determine sector average daily change for Decoupling Filter
+        ticker_sector = TICKER_TO_SECTOR.get(ticker, "기타")
+        sector_changes = [
+            ind.get("daily_change_pct", 0.0)
+            for t, ind in market_indicators.items()
+            if TICKER_TO_SECTOR.get(t, "기타") == ticker_sector
+        ]
+        sector_avg_change = sum(sector_changes) / len(sector_changes) if sector_changes else 0.0
+        
+        # relaxation: KOSPI up >= 1.0% AND Sector Average up > 0%
+        is_relaxed = (kospi_change >= 1.0) and (sector_avg_change > 0.0)
+        
+        # Configure stop rates based on Mode
+        if mode == "VALUE":
+            stop_loss_rate = 0.15
+            trailing_stop_rate = 0.20 if is_relaxed else 0.15
+        else: # TECHNICAL
+            stop_loss_rate = 0.045
+            trailing_stop_rate = 0.05 if is_relaxed else 0.03
+            
         # 1. Update highest price since buy
         new_highest = max(current_price, prev_highest)
         if new_highest > prev_highest:
-            update_portfolio_holding_in_db(ticker, holding["quantity"], avg_price, new_highest)
+            update_portfolio_holding_in_db(ticker, holding["quantity"], avg_price, new_highest, mode=mode, last_scale_out_date=last_scale_out)
             holding["highest_price_after_buy"] = new_highest
             
-        # 2. Stop-Loss Trigger Check (-4.5%)
-        stop_loss_limit = avg_price * (1 - 0.045)
+        # 2. Stop-Loss Trigger Check (Catastrophic Risk Shield)
+        stop_loss_limit = avg_price * (1 - stop_loss_rate)
         if current_price <= stop_loss_limit:
-            print(f"[Trading Engine] [EX-SL] Stop-Loss triggered for {ticker}! Price {current_price:,.0f} <= Limit {stop_loss_limit:,.0f} KRW.")
+            print(f"[Trading Engine] [EX-SL] Stop-Loss triggered for {ticker}! Mode={mode}, Price {current_price:,.0f} <= Limit {stop_loss_limit:,.0f} KRW.")
             qty = holding["quantity"]
             total_sell_val = qty * current_price
             fee_rate = 0.001
             tx_fee = total_sell_val * fee_rate
             new_balance = balance + (total_sell_val - tx_fee)
             
-            # DB Reset
+            # DB Reset (Full Liquidate)
             update_portfolio_holding_in_db(ticker, 0, avg_price)
             new_total_asset = new_balance + sum(
                 p_info["quantity"] * market_prices.get(p_tick, 0.0)
@@ -1479,7 +1630,7 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             )
             update_agent_state_in_db(new_balance, new_total_asset, system_lock=False)
             
-            reasoning = f"[기계적 손절매 청산] 주가가 매수가({avg_price:,.0f}원) 대비 -4.5% 손실 한계선({stop_loss_limit:,.0f}원)에 도달하여 추가 손실 차단을 위해 전량 시장가 매도 처리하였습니다. (현재가: {current_price:,.0f}원)"
+            reasoning = f"[기계적 손절매 청산] 주가가 매수가({avg_price:,.0f}원) 대비 -{stop_loss_rate*100:.1f}% 손실 한계선({stop_loss_limit:,.0f}원)에 도달하여 추가 손실 차단을 위해 전량 시장가 매도 처리하였습니다. [투자모드: {mode}] (현재가: {current_price:,.0f}원)"
             
             snapshot = {
                 "prev_balance": balance,
@@ -1489,7 +1640,8 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
                 "transaction_fee": tx_fee,
                 "latest_news_url": news_context[0].get("url", "") if news_context else "",
                 "market_prices": market_prices,
-                "highest_price_after_buy": new_highest
+                "highest_price_after_buy": new_highest,
+                "mode": mode
             }
             
             save_transaction_to_db(ticker, "STOP_LOSS_EXIT", qty, current_price, reasoning, snapshot)
@@ -1513,25 +1665,38 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
                 "total_asset": new_total_asset
             }
             
-        # 3. Trailing-Stop Trigger Check (-3.0% from peak)
-        trailing_stop_limit = new_highest * (1 - 0.03)
+        # 3. Trailing-Stop Trigger Check (Profit Preservation)
+        if is_scale_out_today:
+            print(f"[Trading Engine] [EX-TS] Trailing-Stop check skipped for {ticker} (Scale-out occurred today, T+0 protection active).")
+            continue
+            
+        trailing_stop_limit = new_highest * (1 - trailing_stop_rate)
         if current_price <= trailing_stop_limit:
-            print(f"[Trading Engine] [EX-TS] Trailing-Stop triggered for {ticker}! Price {current_price:,.0f} <= Limit {trailing_stop_limit:,.0f} KRW (Highest: {new_highest:,.0f}).")
             qty = holding["quantity"]
-            total_sell_val = qty * current_price
+            # 50% scale-out, sell at least 1 share
+            sell_qty = max(int(qty * 0.5), 1)
+            remaining_qty = qty - sell_qty
+            
+            print(f"[Trading Engine] [EX-TS] Trailing-Stop triggered for {ticker}! Mode={mode}, Price {current_price:,.0f} <= Limit {trailing_stop_limit:,.0f} KRW (Highest: {new_highest:,.0f}). Selling 50% ({sell_qty}/{qty} shares).")
+            
+            total_sell_val = sell_qty * current_price
             fee_rate = 0.001
             tx_fee = total_sell_val * fee_rate
             new_balance = balance + (total_sell_val - tx_fee)
             
-            # DB Reset
-            update_portfolio_holding_in_db(ticker, 0, avg_price)
+            # DB Update: If remaining shares, update quantity, reset highest_price_after_buy, and mark scale-out date
+            if remaining_qty > 0:
+                update_portfolio_holding_in_db(ticker, remaining_qty, avg_price, highest_price_after_buy=current_price, mode=mode, last_scale_out_date=today_str)
+                reasoning = f"[기계적 추적손절매 익절 (50% 분할 매도)] 주가가 매수 후 최고점({new_highest:,.0f}원) 대비 트레일링 스탑 한계선({trailing_stop_limit:,.0f}원) 이하로 하락하여, 이익 보존을 위해 보유 수량의 50%({sell_qty}주)를 분할 매도 처리하였습니다. 남은 물량({remaining_qty}주)에 대해서는 당일(T+0) 트레일링 스탑 평가가 정지되며 현재가({current_price:,.0f}원) 기준으로 다시 고점을 추적합니다. [투자모드: {mode}, 완화여부: {is_relaxed}]"
+            else:
+                update_portfolio_holding_in_db(ticker, 0, avg_price)
+                reasoning = f"[기계적 추적손절매 익절 (전량 청산)] 주가가 매수 후 최고점({new_highest:,.0f}원) 대비 트레일링 스탑 한계선({trailing_stop_limit:,.0f}원) 이하로 하락하여, 보유 수량이 1주 이하이므로 전량 시장가 매도 처리하였습니다. [투자모드: {mode}, 완화여부: {is_relaxed}] (현재가: {current_price:,.0f}원)"
+                
             new_total_asset = new_balance + sum(
-                p_info["quantity"] * market_prices.get(p_tick, 0.0)
-                for p_tick, p_info in portfolio.items() if p_tick != ticker
+                (p_info["quantity"] if p_tick != ticker else remaining_qty) * market_prices.get(p_tick, 0.0)
+                for p_tick, p_info in portfolio.items()
             )
             update_agent_state_in_db(new_balance, new_total_asset, system_lock=False)
-            
-            reasoning = f"[기계적 추적손절매 익절] 주가가 매수 후 최고점({new_highest:,.0f}원) 대비 -3.0% 수익보존 한계선({trailing_stop_limit:,.0f}원) 이하로 하락하여, 이익 보존을 위해 전량 시장가 매도 처리하였습니다. (현재가: {current_price:,.0f}원)"
             
             snapshot = {
                 "prev_balance": balance,
@@ -1541,14 +1706,19 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
                 "transaction_fee": tx_fee,
                 "latest_news_url": news_context[0].get("url", "") if news_context else "",
                 "market_prices": market_prices,
-                "highest_price_after_buy": new_highest
+                "highest_price_after_buy": new_highest,
+                "mode": mode,
+                "is_relaxed": is_relaxed,
+                "sector_avg_change": sector_avg_change,
+                "scale_out_qty": sell_qty,
+                "remaining_qty": remaining_qty
             }
             
-            save_transaction_to_db(ticker, "TRAILING_STOP_EXIT", qty, current_price, reasoning, snapshot)
+            save_transaction_to_db(ticker, "TRAILING_STOP_EXIT", sell_qty, current_price, reasoning, snapshot)
             trigger_telegram_trade_alert(
                 ticker=ticker,
                 action="TRAILING_STOP_EXIT",
-                quantity=qty,
+                quantity=sell_qty,
                 price=current_price,
                 reasoning=reasoning,
                 balance=new_balance,
@@ -1558,7 +1728,7 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
                 "status": "success",
                 "action": "SELL",
                 "ticker": ticker,
-                "quantity": qty,
+                "quantity": sell_qty,
                 "price": current_price,
                 "reasoning": reasoning,
                 "balance": new_balance,
@@ -1572,15 +1742,88 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
     )
     expected_prev_total_asset_at_current_prices = balance + prev_portfolio_value_at_current_prices
 
-    # 7. Gemini Decision Formulation
-    decision = generate_trading_decision(
-        portfolio=portfolio,
-        balance=balance,
-        market_prices=market_prices,
-        news_context=news_context,
-        market_indicators=market_indicators,
-        index_changes=index_changes
-    )
+    # Compute sector values, weights and total asset
+    portfolio_value = prev_portfolio_value_at_current_prices
+    total_asset = balance + portfolio_value
+    
+    sector_values = {}
+    for t, holding in portfolio.items():
+        qty = holding.get("quantity", 0)
+        if qty > 0:
+            price = market_prices.get(t, 0.0)
+            val = qty * price
+            sect = TICKER_TO_SECTOR.get(t, "기타")
+            sector_values[sect] = sector_values.get(sect, 0.0) + val
+
+    sector_weights = {}
+    for sect, val in sector_values.items():
+        sector_weights[sect] = (val / total_asset) if total_asset > 0 else 0.0
+
+    # Determine blocked buy reasons (incorporating time-based cooldowns, price-based whipsaw, sector caps)
+    blocked_buy_reasons = {}
+    blocked_buy_reasons.update(pre_blocked_reasons)
+    
+    for ticker in monitored_tickers:
+        if ticker in blocked_buy_reasons:
+            continue
+            
+        curr_price = market_prices.get(ticker, 0.0)
+        if curr_price <= 0:
+            blocked_buy_reasons[ticker] = "실시간 시세 조회가 불가능합니다."
+            continue
+
+        # 1. Sector cap check (50% sector limit)
+        ticker_sector = TICKER_TO_SECTOR.get(ticker, "기타")
+        if sector_weights.get(ticker_sector, 0.0) >= 0.50:
+            blocked_buy_reasons[ticker] = f"해당 섹터({ticker_sector})의 포트폴리오 비중({sector_weights[ticker_sector]*100:.1f}%)이 한계치(50%)를 초과하였습니다."
+            continue
+
+        # 2. Single stock cap check (30% single stock limit)
+        owned_qty = portfolio.get(ticker, {}).get("quantity", 0)
+        if owned_qty > 0:
+            owned_val = owned_qty * curr_price
+            stock_weight = owned_val / total_asset
+            if stock_weight >= 0.30:
+                blocked_buy_reasons[ticker] = f"해당 종목의 포트폴리오 비중({stock_weight*100:.1f}%)이 개별 종목 한계치(30%)를 초과하였습니다."
+                continue
+
+        # 3. Re-entry price-based whipsaw check (applies only if NOT currently owned)
+        if owned_qty <= 0:
+            last_sell = get_last_sell_transaction(ticker)
+            if last_sell:
+                try:
+                    last_price = float(last_sell["price"])
+                    min_whipsaw = last_price * 0.90
+                    max_whipsaw = last_price * 1.05
+                    if min_whipsaw <= curr_price <= max_whipsaw:
+                        blocked_buy_reasons[ticker] = f"직전 매도 가격({last_price:,.0f}원) 대비 휩쏘 방지 범위 [-10%, +5%] ({min_whipsaw:,.0f}원 ~ {max_whipsaw:,.0f}원) 내에서 주가가 횡보 중이므로 재진입이 차단됩니다. (현재가: {curr_price:,.0f}원)"
+                except Exception as ex:
+                    print(f"[Trading Engine] Failed to evaluate whipsaw cooldown for {ticker}: {ex}")
+
+    # OPTIMIZATION: If portfolio is empty and ALL monitored tickers are blocked from BUY, skip Gemini call completely!
+    has_active_holdings = any(h.get("quantity", 0) > 0 for h in portfolio.values())
+    all_monitored_blocked = all(ticker in blocked_buy_reasons for ticker in monitored_tickers)
+    
+    if not has_active_holdings and all_monitored_blocked:
+        print("[Trading Engine] OPTIMIZATION: Portfolio is empty and all candidate tickers are blocked from BUY. Skipping Gemini API call.")
+        decision = TradingDecision(
+            action="HOLD",
+            ticker=monitored_tickers[0] if monitored_tickers else "005930",
+            allocation_pct=0.0,
+            reasoning="[API 호출 최적화] 현재 포트폴리오가 비어 있고 모든 거래 후보 종목이 리스크 가드레일(24시간 쿨타임, 휩쏘 가격 범위 제한, 비중 초과 등)에 의해 매입 제한 상태이므로, 불필요한 Gemini API 호출을 스킵하고 대기(HOLD) 결정을 기계적으로 실행합니다.",
+            mode="VALUE"
+        )
+    else:
+        # 7. Gemini Decision Formulation
+        decision = generate_trading_decision(
+            portfolio=portfolio,
+            balance=balance,
+            market_prices=market_prices,
+            news_context=news_context,
+            market_indicators=market_indicators,
+            index_changes=index_changes,
+            blocked_buy_reasons=blocked_buy_reasons
+        )
 
     action = decision.action
     ticker = decision.ticker
@@ -1632,7 +1875,12 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             if combined_net_sell > (avg_vol_5d * 0.5):
                 is_sugeup_dump = True
 
-        if is_ticker_market_shock:
+        # Check if the ticker is blocked in pre-flight
+        if ticker in blocked_buy_reasons:
+            print(f"[Trading Engine] BUY Order Overridden by risk guardrail: {blocked_buy_reasons[ticker]}")
+            action = "HOLD"
+            reasoning = f"[백엔드 규칙 기각: 리스크 가드레일] Gemini AI가 매수를 결정했으나 해당 종목은 매수 제한 상태입니다: {blocked_buy_reasons[ticker]}"
+        elif is_ticker_market_shock:
             print(f"[Trading Engine] BUY Order Overridden by Market Shock: {shock_reason}")
             action = "HOLD"
             reasoning = f"[백엔드 규칙 기각: 시장 쇼크] Gemini AI가 매수를 결정했으나 해당 주식의 소속 거래소({ticker_market}) 지수가 -1.5% 이상 패닉 급락 중이므로 추가 대방어 기각 규칙이 작동하여 HOLD 처리했습니다. ({shock_reason})"
@@ -1652,17 +1900,19 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             # Sizing & Guardrails cash calculation
             allocated_cash = balance * (allocation_pct / 100.0)
             
+            # Guardrail 0: 10% Single Order Limit of Total Asset
+            max_order_cash = total_asset * 0.10
+            
             # Guardrail 1: 30% Sizing Limit of Total Asset
-            portfolio_value = sum(portfolio.get(t, {}).get("quantity", 0) * market_prices.get(t, 0.0) for t in portfolio)
-            total_asset = balance + portfolio_value
-            max_allowed_cash = total_asset * 0.3
+            max_allowed_cash = total_asset * 0.30
             
             # Already owned value check
             owned_value = portfolio.get(ticker, {}).get("quantity", 0) * current_price
             max_new_cash = max(max_allowed_cash - owned_value, 0.0)
             
-            spend_cash = min(allocated_cash, max_new_cash)
+            spend_cash = min(allocated_cash, max_order_cash, max_new_cash)
             sizing_triggered = allocated_cash > max_new_cash
+            order_limit_triggered = allocated_cash > max_order_cash
             
             # Guardrail 2: KOSPI 5일선 연동 약세장 방어
             bear_triggered = False
@@ -1676,14 +1926,14 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
                 spend_cash *= 0.5
                 disparity_50_triggered = True
 
-            # Guardrail 4: Sector Allocation Limit (45%)
+            # Guardrail 4: Sector Allocation Limit (50%)
             target_sector = TICKER_TO_SECTOR.get(ticker, "기타")
             current_sector_value = sum(
                 info.get("quantity", 0) * market_prices.get(t, 0.0)
                 for t, info in portfolio.items()
                 if TICKER_TO_SECTOR.get(t, "기타") == target_sector
             )
-            max_sector_allowed_value = total_asset * 0.45
+            max_sector_allowed_value = total_asset * 0.50
             max_additional_sector_cash = max(max_sector_allowed_value - current_sector_value, 0.0)
             
             sector_cap_triggered = False
@@ -1696,6 +1946,8 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             
             # Reasoning logging
             gate_reasons = []
+            if order_limit_triggered:
+                gate_reasons.append("1회 주문 10% 제한")
             if sizing_triggered:
                 gate_reasons.append("30% 보유 한도 제한")
             if bear_triggered:
@@ -1703,7 +1955,7 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             if disparity_50_triggered:
                 gate_reasons.append("이격 과열 50% 감폭")
             if sector_cap_triggered:
-                gate_reasons.append("섹터 비중 45% 제한")
+                gate_reasons.append("섹터 비중 50% 제한")
                 
             if gate_reasons:
                 reasoning += f" [가드레일 작동: {', '.join(gate_reasons)}]"
@@ -1711,7 +1963,7 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             if quantity <= 0:
                 action = "HOLD"
                 if sector_cap_triggered:
-                    reasoning += " (섹터 비중 45% 초과로 인해 HOLD 처리됨)"
+                    reasoning += " (섹터 비중 50% 초과로 인해 HOLD 처리됨)"
                 else:
                     reasoning += " (매수 가용 자금 또는 수량 부족으로 HOLD 처리됨)"
 
@@ -1767,11 +2019,13 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
         new_portfolio[ticker] = {
             "quantity": new_qty,
             "average_price": new_avg,
-            "highest_price_after_buy": max(current_price, current_holding.get("highest_price_after_buy", current_price))
+            "highest_price_after_buy": max(current_price, current_holding.get("highest_price_after_buy", current_price)),
+            "mode": decision.mode,
+            "last_scale_out_date": current_holding.get("last_scale_out_date")
         }
         
         # Save to DB
-        update_portfolio_holding_in_db(ticker, new_qty, new_avg, new_portfolio[ticker]["highest_price_after_buy"])
+        update_portfolio_holding_in_db(ticker, new_qty, new_avg, new_portfolio[ticker]["highest_price_after_buy"], mode=decision.mode, last_scale_out_date=new_portfolio[ticker]["last_scale_out_date"])
 
     elif action == "SELL" and quantity > 0:
         total_sell_val = quantity * current_price
@@ -1792,11 +2046,13 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             new_portfolio[ticker] = {
                 "quantity": new_qty,
                 "average_price": prev_avg,
-                "highest_price_after_buy": current_holding.get("highest_price_after_buy", current_price)
+                "highest_price_after_buy": current_holding.get("highest_price_after_buy", current_price),
+                "mode": current_holding.get("mode", "VALUE"),
+                "last_scale_out_date": current_holding.get("last_scale_out_date")
             }
             
         # Save to DB
-        update_portfolio_holding_in_db(ticker, new_qty, prev_avg, current_holding.get("highest_price_after_buy", current_price))
+        update_portfolio_holding_in_db(ticker, new_qty, prev_avg, current_holding.get("highest_price_after_buy", current_price), mode=current_holding.get("mode", "VALUE"), last_scale_out_date=current_holding.get("last_scale_out_date"))
 
     # Calculate new total asset based on current prices
     new_portfolio_value_at_current_prices = sum(
@@ -1843,7 +2099,8 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
         "new_total_asset": new_total_asset,
         "transaction_fee": transaction_fee,
         "latest_news_url": news_context[0].get("url", "") if news_context else "",
-        "market_prices": market_prices
+        "market_prices": market_prices,
+        "mode": decision.mode if action == "BUY" else (portfolio.get(ticker, {}).get("mode", "VALUE") if ticker in portfolio else "VALUE")
     }
     
     save_transaction_to_db(
