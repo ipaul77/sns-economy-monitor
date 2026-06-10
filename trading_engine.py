@@ -108,6 +108,7 @@ def warm_start_trading_cache():
         _ensure_trading_tables(cursor)
         conn.commit()
         
+        client = get_firestore_client()
         if client is None:
             # Running in offline demo mode, no Firestore to sync from
             conn.close()
