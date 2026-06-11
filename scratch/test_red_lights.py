@@ -60,6 +60,10 @@ def run_red_light_tests():
          patch('trading_engine.get_market_index_change', return_value=mock_index_changes), \
          patch('market.get_market_indicators', return_value=mock_market_indicators_global), \
          patch('trading_engine.get_stock_indicators', return_value=mock_indicators["005930"]), \
+         patch('trading_engine.update_agent_state_in_db', return_value=True), \
+         patch('trading_engine.save_transaction_to_db', return_value=True), \
+         patch('trading_engine.update_portfolio_holding_in_db', return_value=True), \
+         patch('trading_engine.trigger_telegram_trade_alert', return_value=None), \
          patch('yfinance.Ticker') as mock_ticker_class:
         
         # Setup yfinance mocks
@@ -92,6 +96,10 @@ def run_red_light_tests():
          patch('trading_engine.get_market_index_change', return_value=mock_index_changes), \
          patch('market.get_market_indicators', return_value=mock_market_indicators_global), \
          patch('trading_engine.get_stock_indicators', return_value=mock_indicators["005930"]), \
+         patch('trading_engine.update_agent_state_in_db', return_value=True), \
+         patch('trading_engine.save_transaction_to_db', return_value=True), \
+         patch('trading_engine.update_portfolio_holding_in_db', return_value=True), \
+         patch('trading_engine.trigger_telegram_trade_alert', return_value=None), \
          patch('yfinance.Ticker') as mock_ticker_class:
         
         mock_ticker_inst = MagicMock()
@@ -119,6 +127,10 @@ def run_red_light_tests():
          patch('trading_engine.get_market_index_change', return_value=mock_index_changes), \
          patch('market.get_market_indicators', return_value=mock_market_indicators_global), \
          patch('trading_engine.get_stock_indicators', return_value=mock_indicators["005930"]), \
+         patch('trading_engine.update_agent_state_in_db', return_value=True), \
+         patch('trading_engine.save_transaction_to_db', return_value=True), \
+         patch('trading_engine.update_portfolio_holding_in_db', return_value=True), \
+         patch('trading_engine.trigger_telegram_trade_alert', return_value=None), \
          patch('yfinance.Ticker') as mock_ticker_class:
         
         mock_ticker_inst = MagicMock()
