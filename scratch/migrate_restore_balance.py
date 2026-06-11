@@ -13,8 +13,18 @@ def restore_balance():
     db.init_db()
     
     # Correct values based on cashflow reconstruction before corruption
-    correct_balance = 10367036.25
-    correct_total_asset = 13058036.25  # Cash + 9 shares of Samsung Electronics at 299,000 KRW
+    correct_balance = 7581520.0  # Cash balance after afternoon buys on June 10
+    
+    # Get current stock price for 삼성전자 (005930) to compute exact total asset
+    samsung_price = trading_engine.get_stock_price("005930")
+    if samsung_price <= 0:
+        samsung_price = 299000.0  # Fallback to June 11 close price
+        
+    portfolio = trading_engine.get_portfolio_holdings()
+    samsung_qty = portfolio.get("005930", {}).get("quantity", 9)
+    
+    portfolio_value = samsung_qty * samsung_price
+    correct_total_asset = correct_balance + portfolio_value
     
     print("=== STARTING DATABASE RESTORATION ===")
     print(f"Target Correct Balance: {correct_balance:,.2f} KRW")
