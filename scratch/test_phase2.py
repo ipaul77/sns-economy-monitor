@@ -68,8 +68,9 @@ def run_phase2_test():
     print("\n--- Decision Formulation Result ---")
     print(f"Action   : {decision.action}")
     print(f"Ticker   : {decision.ticker}")
-    print(f"Quantity : {decision.quantity} shares")
+    print(f"Allocation Pct : {decision.allocation_pct}%")
     print(f"Reasoning: {decision.reasoning}")
+    print(f"Mode     : {decision.mode}")
     print("-----------------------------------")
 
     # Validate output schema fields
@@ -83,10 +84,15 @@ def run_phase2_test():
     else:
         print("[ERROR] 'ticker' field is invalid.")
 
-    if isinstance(decision.quantity, int) and decision.quantity >= 0:
-        print("[SUCCESS] 'quantity' field is a valid non-negative integer.")
+    if isinstance(decision.allocation_pct, (int, float)) and 0.0 <= decision.allocation_pct <= 100.0:
+        print("[SUCCESS] 'allocation_pct' field is a valid percentage.")
     else:
-        print("[ERROR] 'quantity' field is invalid.")
+        print("[ERROR] 'allocation_pct' field is invalid.")
+
+    if decision.mode in ["VALUE", "TECHNICAL"]:
+        print("[SUCCESS] 'mode' field contains a valid Literal value.")
+    else:
+        print("[ERROR] 'mode' field is invalid.")
 
     if decision.reasoning and len(decision.reasoning.strip()) > 0:
         print("[SUCCESS] 'reasoning' contains a logical Korean explanation.")

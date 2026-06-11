@@ -1208,42 +1208,43 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
 
     # Format indicators (Populated to give Gemini AI the actual technical and fundamental signals!)
     indicators_str = ""
-    for tick, ind in market_indicators.items():
-        comp_name = tick
-        for c, t in COMPANY_TO_TICKER.items():
-            if t == tick:
-                comp_name = c
-                break
-                
-        # Fundamental value string formatting
-        roe_val = ind.get("roe")
-        roe_str = f"{roe_val:.1f}%" if roe_val is not None else "N/A"
-        
-        debt_val = ind.get("debt_to_equity")
-        debt_str = f"{debt_val:.1f}%" if debt_val is not None else "N/A"
-        
-        pe_val = ind.get("pe_ratio")
-        pe_str = f"{pe_val:.1f}x" if pe_val is not None else "N/A"
-        
-        pb_val = ind.get("pb_ratio")
-        pb_str = f"{pb_val:.1f}x" if pb_val is not None else "N/A"
-        
-        target_val = ind.get("target_price")
-        target_str = f"{target_val:,.0f}원" if target_val is not None else "N/A"
-        
-        safety_val = ind.get("margin_of_safety")
-        safety_str = f"{safety_val:+.1f}%" if safety_val is not None else "N/A"
+    if market_indicators:
+        for tick, ind in market_indicators.items():
+            comp_name = tick
+            for c, t in COMPANY_TO_TICKER.items():
+                if t == tick:
+                    comp_name = c
+                    break
+                    
+            # Fundamental value string formatting
+            roe_val = ind.get("roe")
+            roe_str = f"{roe_val:.1f}%" if roe_val is not None else "N/A"
+            
+            debt_val = ind.get("debt_to_equity")
+            debt_str = f"{debt_val:.1f}%" if debt_val is not None else "N/A"
+            
+            pe_val = ind.get("pe_ratio")
+            pe_str = f"{pe_val:.1f}x" if pe_val is not None else "N/A"
+            
+            pb_val = ind.get("pb_ratio")
+            pb_str = f"{pb_val:.1f}x" if pb_val is not None else "N/A"
+            
+            target_val = ind.get("target_price")
+            target_str = f"{target_val:,.0f}원" if target_val is not None else "N/A"
+            
+            safety_val = ind.get("margin_of_safety")
+            safety_str = f"{safety_val:+.1f}%" if safety_val is not None else "N/A"
 
-        indicators_str += (
-            f"- 종목명: {comp_name} ({tick}) | "
-            f"현재가: {ind.get('current_price', 0.0):,.0f}원 | "
-            f"20일선 MA: {ind.get('ma_20', 0.0):,.0f}원 | "
-            f"이격도: {ind.get('disparity', 100.0):.1f}% | "
-            f"당일거래량: {ind.get('daily_volume', 0):,}주 | "
-            f"외인5일누적: {ind.get('frgn_net_5d', 0):+d}주 | "
-            f"기관5일누적: {ind.get('inst_net_5d', 0):+d}주 | "
-            f"ROE: {roe_str} | 부채비율: {debt_str} | PER: {pe_str} | PBR: {pb_str} | 안전마진: {safety_str} (목표주가: {target_str})\n"
-        )
+            indicators_str += (
+                f"- 종목명: {comp_name} ({tick}) | "
+                f"현재가: {ind.get('current_price', 0.0):,.0f}원 | "
+                f"20일선 MA: {ind.get('ma_20', 0.0):,.0f}원 | "
+                f"이격도: {ind.get('disparity', 100.0):.1f}% | "
+                f"당일거래량: {ind.get('daily_volume', 0):,}주 | "
+                f"외인5일누적: {ind.get('frgn_net_5d', 0):+d}주 | "
+                f"기관5일누적: {ind.get('inst_net_5d', 0):+d}주 | "
+                f"ROE: {roe_str} | 부채비율: {debt_str} | PER: {pe_str} | PBR: {pb_str} | 안전마진: {safety_str} (목표주가: {target_str})\n"
+            )
 
     # Format news analysis context
     news_items = [item for item in news_context if item.get("source") != "Naver Research"]
@@ -1251,27 +1252,33 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
 
     news_str = ""
     if not news_items:
-        news_str = "최근 24시간 동안 수집된 한국 경제 관련 신규 뉴스가 없습니다. 뉴스 호재가 없더라도 이격도, 거래량 돌파 비율 등 기술적 지표가 뚜렷하면 모멘텀 거래를 고려할 수 있습니다."
+        news_str = "최근 24시간 동안 수집된 한국 경제 관련 신규 뉴스가 없습니다."
     else:
+        total_news = len(news_items)
+        pos_news = sum(1 for item in news_items if item.get('sentiment') == 'POSITIVE')
+        neg_news = sum(1 for item in news_items if item.get('sentiment') == 'NEGATIVE')
+        neu_news = sum(1 for item in news_items if item.get('sentiment') == 'NEUTRAL')
+        avg_sentiment = sum(item.get('sentiment_score', 0.0) for item in news_items) / total_news if total_news > 0 else 0.0
+        
+        news_str = f"시장 전체 뉴스 감성 통계: 총 {total_news}건 (긍정 {pos_news}건, 부정 {neg_news}건, 중립 {neu_news}건) | 평균 감성 점수: {avg_sentiment:+.2f}\n"
+        news_str += "최근 핵심 뉴스 헤드라인:\n"
         for idx, item in enumerate(news_items[:10]):  # Limit to top 10 relevant stories
-            news_str += (
-                f"{idx+1}. [{item.get('source', '뉴스')}] {item.get('title', '')} (중요도: {item.get('relevance_score', 5)}/10) \n"
-                f"   - 감성수준: {item.get('sentiment', 'NEUTRAL')} (점수: {item.get('sentiment_score', 0.0):+.2f}) \n"
-                f"   - AI 분석 요약: {item.get('korean_summary', '')} \n"
-                f"   - 증시 영향 평가: {item.get('macro_impacts', '')} \n"
-            )
+            news_str += f"- {idx+1}. [{item.get('source', '뉴스')}] {item.get('title', '')} (중요도: {item.get('relevance_score', 5)}/10 | 감성: {item.get('sentiment', 'NEUTRAL')}({item.get('sentiment_score', 0.0):+.2f}))\n"
 
     report_str = ""
     if not report_items:
         report_str = "최근 24시간 동안 발표된 증권사 분석 리포트가 없습니다."
     else:
+        total_reports = len(report_items)
+        pos_rep = sum(1 for item in report_items if item.get('sentiment') == 'POSITIVE')
+        neg_rep = sum(1 for item in report_items if item.get('sentiment') == 'NEGATIVE')
+        neu_rep = sum(1 for item in report_items if item.get('sentiment') == 'NEUTRAL')
+        avg_rep_sentiment = sum(item.get('sentiment_score', 0.0) for item in report_items) / total_reports if total_reports > 0 else 0.0
+        
+        report_str = f"증권사 리포트 감성 통계: 총 {total_reports}건 (긍정 {pos_rep}건, 부정 {neg_rep}건, 중립 {neu_rep}건) | 평균 리포트 점수: {avg_rep_sentiment:+.2f}\n"
+        report_str += "최근 핵심 리포트 헤드라인:\n"
         for idx, item in enumerate(report_items[:10]):  # Limit to top 10 reports
-            report_str += (
-                f"{idx+1}. [{item.get('source', '리포트')}] {item.get('title', '')} (중요도: {item.get('relevance_score', 7)}/10) \n"
-                f"   - 투자 의견/감성: {item.get('sentiment', 'NEUTRAL')} (점수: {item.get('sentiment_score', 0.0):+.2f}) \n"
-                f"   - 리포트 요약 내용: {item.get('korean_summary', '')} \n"
-                f"   - 증시 영향 평가: {item.get('macro_impacts', '')} \n"
-            )
+            report_str += f"- {idx+1}. [{item.get('source', '리포트')}] {item.get('title', '')} (중요도: {item.get('relevance_score', 7)}/10 | 감성: {item.get('sentiment', 'NEUTRAL')}({item.get('sentiment_score', 0.0):+.2f}))\n"
 
     # Define system instructions (Guardrails)
     system_instruction = (
@@ -1405,7 +1412,8 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
             action="HOLD",
             ticker="005930",
             allocation_pct=0.0,
-            reasoning=f"Gemini API 호출 및 스키마 검증 과정에서 예외가 발생하여 자산 안전을 위해 HOLD 처리했습니다. (에러: {str(e)})"
+            reasoning=f"Gemini API 호출 및 스키마 검증 과정에서 예외가 발생하여 자산 안전을 위해 HOLD 처리했습니다. (에러: {str(e)})",
+            mode="VALUE"
         )
 
 
@@ -1468,6 +1476,48 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
     index_changes = get_market_index_change()
     print(f"[Trading Engine] Market Indices changes: {index_changes}")
     
+    # Fetch USD/KRW exchange rate
+    usdkrw_price = 1350.0
+    usdkrw_change_pct = 0.0
+    try:
+        import market
+        m_data = market.get_market_indicators()
+        if m_data and "USD_KRW" in m_data:
+            usdkrw_price = m_data["USD_KRW"].get("price", 1350.0)
+            usdkrw_change_pct = m_data["USD_KRW"].get("percent", 0.0)
+    except Exception as e:
+        print(f"[Trading Engine] [Warning] Failed to fetch USD_KRW details: {e}")
+    print(f"[Trading Engine] USD_KRW exchange rate: {usdkrw_price:,.2f} KRW (당일 등락률: {usdkrw_change_pct:+.2f}%)")
+
+    # Calculate flexible thresholds (20MA disparities)
+    usdkrw_disparity = 100.0
+    try:
+        yt_krw = yf.Ticker("USDKRW=X")
+        hist_krw = yt_krw.history(period="1mo")
+        if not hist_krw.empty:
+            usdkrw_ma20 = hist_krw["Close"].mean()
+            usdkrw_disparity = (usdkrw_price / usdkrw_ma20) * 100
+    except Exception as e:
+        print(f"[Trading Engine] [Warning] Failed to calculate USD_KRW disparity: {e}")
+
+    kospi_disparity = 100.0
+    kosdaq_disparity = 100.0
+    try:
+        hist_kospi = yf.Ticker("^KS11").history(period="1mo")
+        if not hist_kospi.empty:
+            kospi_ma20 = hist_kospi["Close"].mean()
+            kospi_curr = hist_kospi["Close"].iloc[-1]
+            kospi_disparity = (kospi_curr / kospi_ma20) * 100
+            
+        hist_kosdaq = yf.Ticker("^KQ11").history(period="1mo")
+        if not hist_kosdaq.empty:
+            kosdaq_ma20 = hist_kosdaq["Close"].mean()
+            kosdaq_curr = hist_kosdaq["Close"].iloc[-1]
+            kosdaq_disparity = (kosdaq_curr / kosdaq_ma20) * 100
+    except Exception as e:
+        print(f"[Trading Engine] [Warning] Failed to calculate index disparities: {e}")
+    print(f"[Trading Engine] 20MA Disparities -> USD_KRW: {usdkrw_disparity:.2f}%, KOSPI: {kospi_disparity:.2f}%, KOSDAQ: {kosdaq_disparity:.2f}%")
+
     # KOSPI or KOSDAQ 급락 쇼크 경보 (-1.5% 이하)
     is_market_shock = False
     shock_reason = ""
@@ -1788,22 +1838,72 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             blocked_buy_reasons[ticker] = "실시간 시세 조회가 불가능합니다."
             continue
 
-        # 1. Sector cap check (50% sector limit)
-        ticker_sector = TICKER_TO_SECTOR.get(ticker, "기타")
-        if sector_weights.get(ticker_sector, 0.0) >= 0.50:
-            blocked_buy_reasons[ticker] = f"해당 섹터({ticker_sector})의 포트폴리오 비중({sector_weights[ticker_sector]*100:.1f}%)이 한계치(50%)를 초과하였습니다."
+        # [Python 1차 검증: Red Light Pre-filtering]
+        # 1. 글로벌 매크로 Red Light 검사 (Threshold Flexibility 적용)
+        # 1a. 환율 급등 검사 (환율 >= 1400원 이면서 전일 대비 +1.0% 이상 급등했거나 20MA 대비 이격도 >= 102.0% 인 경우만 차단)
+        is_usdkrw_surge = (usdkrw_price >= 1400.0) and (usdkrw_change_pct >= 1.0 or usdkrw_disparity >= 102.0)
+        if is_usdkrw_surge:
+            blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 매크로 불안] USD/KRW 환율({usdkrw_price:,.2f}원)이 1,400원을 돌파하고 급등(전일대비: {usdkrw_change_pct:+.2f}%, 이격도: {usdkrw_disparity:.1f}%) 중이므로 신규 매수가 차단됩니다."
             continue
 
-        # 2. Single stock cap check (30% single stock limit)
+        # 1b. 지수 폭락 검사 (해당 지수 당일 등락률 <= -1.5% 이거나 20MA 대비 이격도 <= 97.0% 인 경우 차단)
+        ticker_market = market_indicators.get(ticker, {}).get("market", "KOSPI")
+        market_change = index_changes.get(ticker_market, 0.0)
+        market_disp = kospi_disparity if ticker_market == "KOSPI" else kosdaq_disparity
+        is_market_crash = (market_change <= -1.5) or (market_disp <= 97.0)
+        if is_market_crash:
+            blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 매크로 불안] 해당 시장({ticker_market}) 지수가 급락하거나 약세장 침체(당일 등락률: {market_change:+.2f}%, 20MA 이격도: {market_disp:.1f}%) 상태이므로 신규 매수가 차단됩니다."
+            continue
+
+        # 1c. 종목 뉴스 감성 Red Light 검사 (평균 뉴스 감성 점수 <= -0.3)
+        ticker_news = []
+        for n in news_context:
+            try:
+                tickers_list = json.loads(n.get("impacted_tickers") or "[]")
+                if ticker in tickers_list:
+                    ticker_news.append(n)
+            except:
+                pass
+        if ticker_news:
+            avg_sent = sum(n.get("sentiment_score", 0.0) for n in ticker_news) / len(ticker_news)
+            if avg_sent <= -0.3:
+                blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 시장 투심 악화] 종목 관련 최신 뉴스 감성 평균 점수가 {avg_sent:+.2f}로 악재 편향되어 있어 신규 매수가 차단됩니다."
+                continue
+
+        # 2. 수급 및 모멘텀 Red Light 검사
+        # 2a. 외인/기관 동시 수급 이탈 검사 (Sugeup Dump)
+        frgn_net_5d = market_indicators.get(ticker, {}).get("frgn_net_5d", 0)
+        inst_net_5d = market_indicators.get(ticker, {}).get("inst_net_5d", 0)
+        avg_vol_5d = market_indicators.get(ticker, {}).get("avg_volume_5d", 0)
+        if frgn_net_5d < 0 and inst_net_5d < 0:
+            combined_net_sell = abs(frgn_net_5d + inst_net_5d)
+            if combined_net_sell > (avg_vol_5d * 0.5):
+                blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 수급 폭락] 최근 5일간 외인({frgn_net_5d:+,}주)과 기관({inst_net_5d:+,}주)의 동시 대규모 순매도 합산량({combined_net_sell:,}주)이 5일 평균 거래량의 50%를 초과하는 수급 이탈 상태이므로 신규 매수가 차단됩니다."
+                continue
+
+        # 2b. 가격 모멘텀 검사 (20MA 하회하며 거래량 없이 흘러내림)
+        ma_20 = market_indicators.get(ticker, {}).get("ma_20", 0.0)
+        volume_ratio = market_indicators.get(ticker, {}).get("volume_ratio", 1.0)
+        if ma_20 > 0 and curr_price < ma_20 and volume_ratio < 1.0:
+            blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 모멘텀 붕괴] 주가가 20일 이동평균선({ma_20:,.0f}원) 아래에서 거래량 없이 흘러내리는(거래량 비율: {volume_ratio:.2f}x) 떨어지는 칼날 상태이므로 신규 매수가 차단됩니다. (현재가: {curr_price:,.0f}원)"
+            continue
+
+        # 3. Sector cap check (50% sector limit)
+        ticker_sector = TICKER_TO_SECTOR.get(ticker, "기타")
+        if sector_weights.get(ticker_sector, 0.0) >= 0.50:
+            blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 포트폴리오 비중 초과] 해당 섹터({ticker_sector})의 포트폴리오 비중({sector_weights[ticker_sector]*100:.1f}%)이 한계치(50%)를 초과하였습니다."
+            continue
+
+        # 4. Single stock cap check (30% single stock limit)
         owned_qty = portfolio.get(ticker, {}).get("quantity", 0)
         if owned_qty > 0:
             owned_val = owned_qty * curr_price
             stock_weight = owned_val / total_asset
             if stock_weight >= 0.30:
-                blocked_buy_reasons[ticker] = f"해당 종목의 포트폴리오 비중({stock_weight*100:.1f}%)이 개별 종목 한계치(30%)를 초과하였습니다."
+                blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 포트폴리오 비중 초과] 해당 종목의 포트폴리오 비중({stock_weight*100:.1f}%)이 개별 종목 한계치(30%)를 초과하였습니다."
                 continue
 
-        # 3. Re-entry price-based whipsaw check (applies only if NOT currently owned)
+        # 5. Re-entry price-based whipsaw check (applies only if NOT currently owned)
         if owned_qty <= 0:
             last_sell = get_last_sell_transaction(ticker)
             if last_sell:
@@ -1812,7 +1912,7 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
                     min_whipsaw = last_price * 0.90
                     max_whipsaw = last_price * 1.05
                     if min_whipsaw <= curr_price <= max_whipsaw:
-                        blocked_buy_reasons[ticker] = f"직전 매도 가격({last_price:,.0f}원) 대비 휩쏘 방지 범위 [-10%, +5%] ({min_whipsaw:,.0f}원 ~ {max_whipsaw:,.0f}원) 내에서 주가가 횡보 중이므로 재진입이 차단됩니다. (현재가: {curr_price:,.0f}원)"
+                        blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 휩쏘 방지] 직전 매도 가격({last_price:,.0f}원) 대비 휩쏘 방지 범위 [-10%, +5%] ({min_whipsaw:,.0f}원 ~ {max_whipsaw:,.0f}원) 내에서 주가가 횡보 중이므로 재진입이 차단됩니다. (현재가: {curr_price:,.0f}원)"
                 except Exception as ex:
                     print(f"[Trading Engine] Failed to evaluate whipsaw cooldown for {ticker}: {ex}")
 
@@ -1822,11 +1922,13 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
     
     if not has_active_holdings and all_monitored_blocked:
         print("[Trading Engine] OPTIMIZATION: Portfolio is empty and all candidate tickers are blocked from BUY. Skipping Gemini API call.")
+        first_blocked_ticker = monitored_tickers[0] if monitored_tickers else "005930"
+        first_reason = blocked_buy_reasons.get(first_blocked_ticker, "매수 제한")
         decision = TradingDecision(
             action="HOLD",
-            ticker=monitored_tickers[0] if monitored_tickers else "005930",
+            ticker=first_blocked_ticker,
             allocation_pct=0.0,
-            reasoning="[API 호출 최적화] 현재 포트폴리오가 비어 있고 모든 거래 후보 종목이 리스크 가드레일(24시간 쿨타임, 휩쏘 가격 범위 제한, 비중 초과 등)에 의해 매입 제한 상태이므로, 불필요한 Gemini API 호출을 스킵하고 대기(HOLD) 결정을 기계적으로 실행합니다.",
+            reasoning=f"[Python 시스템 차단] 현재 포트폴리오가 비어 있고 모든 거래 후보 종목이 매수 제한 상태이므로 Gemini API 호출을 스킵하고 기계적으로 관망(HOLD) 결정을 실행합니다. (대표 사유: {first_reason})",
             mode="VALUE"
         )
     else:
@@ -1845,6 +1947,10 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
     ticker = decision.ticker
     allocation_pct = decision.allocation_pct
     reasoning = decision.reasoning
+    
+    if action == "HOLD" and not reasoning.startswith("["):
+        reasoning = f"[Gemini AI 자체 관망] {reasoning}"
+        
     current_price = market_prices.get(ticker, 0.0)
     
     quantity = 0
