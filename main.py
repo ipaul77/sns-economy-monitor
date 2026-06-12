@@ -1445,6 +1445,10 @@ def handle_manual_refresh():
         from briefing import clear_briefing_cache
         clear_briefing_cache()
         
+        # Clear paper trading state cache
+        global _trading_state_cache
+        _trading_state_cache = None
+        
         # Run pipeline in a background thread to prevent Gunicorn/WSGI timeout crashes!
         t = threading.Thread(target=run_pipeline, args=(global_config, global_analyzer))
         t.start()
@@ -1503,6 +1507,10 @@ def trigger_trading_simulation():
             result = trading_engine.run_simulation_cycle(bypass_hours=bypass_hours)
             print("[API] Synchronous trading cycle finished successfully!")
             
+            # Clear paper trading state cache to reflect transactions and updated balance immediately
+            global _trading_state_cache
+            _trading_state_cache = None
+            
             if result.get("status") == "skipped":
                 msg = result.get("message", "매매 조건이 충족되지 않아 건너뛰었습니다.")
                 log_trigger_status("/api/trade", "skipped", msg)
@@ -1542,7 +1550,7 @@ def trigger_trading_simulation():
 # API State Caching Globals to prevent Firestore read limits exhaustion
 _trading_state_cache = None
 _trading_state_cache_time = 0
-_trading_state_cache_duration = 300  # 300 seconds (5 minutes) cache lifetime
+_trading_state_cache_duration = 15  # 15 seconds cache lifetime for real-time responsiveness
 
 @app.route('/api/trading/state')
 def get_trading_state():

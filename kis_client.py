@@ -12,7 +12,6 @@ class KISClient:
         self.app_secret = ""
         self.is_simulation = False
         self.base_url = "https://openapi.koreainvestment.com:9443"
-        self.local_token_path = os.path.join("data", "kis_token.json")
         
         # Memory caching to avoid repeating Firestore queries in the same process
         self._memory_token = ""
@@ -20,6 +19,11 @@ class KISClient:
         
         self._load_config()
         self._resolve_base_url()
+        
+        # Use separate caches for simulation and real environments
+        suffix = "sim" if self.is_simulation else "real"
+        self.local_token_path = os.path.join("data", f"kis_token_{suffix}.json")
+        self.db_doc_name = f"kis_auth_{suffix}"
 
     def _load_config(self):
         """
@@ -97,7 +101,7 @@ class KISClient:
         # 1. Try Firestore cache
         if db.USE_FIREBASE and db.db_client is not None:
             try:
-                doc_ref = db.db_client.collection("system").document("kis_auth")
+                doc_ref = db.db_client.collection("system").document(self.db_doc_name)
                 doc = doc_ref.get()
                 if doc.exists:
                     data = doc.to_dict()
@@ -142,7 +146,7 @@ class KISClient:
         # 1. Save to Firestore
         if db.USE_FIREBASE and db.db_client is not None:
             try:
-                doc_ref = db.db_client.collection("system").document("kis_auth")
+                doc_ref = db.db_client.collection("system").document(self.db_doc_name)
                 doc_ref.set(payload)
                 print("[KIS Client] Access token cached successfully in Firestore.")
             except Exception as e:
