@@ -171,11 +171,11 @@ def generate_html_dashboard():
         )
         
         market_html += f"""
-        <div class="glass-card rounded-2xl p-4 {bg_glow} border border-slate-800/80">
+        <div class="glass-card rounded-2xl p-4 {bg_glow} border border-slate-800/80" id="market-card-{label}">
             <p class="text-xs font-semibold text-slate-500">{display_label} ({info['symbol']})</p>
             <div class="flex items-baseline justify-between mt-1">
-                <span class="text-lg font-bold text-slate-100">{info['price']:,}{unit}</span>
-                <span class="text-xs font-bold {text_color}">{change_sign}{info['change']:,} ({change_sign}{info['percent']}%)</span>
+                <span class="text-lg font-bold text-slate-100" id="market-price-{label}">{info['price']:,}{unit}</span>
+                <span class="text-xs font-bold {text_color}" id="market-change-{label}">{change_sign}{info['change']:,} ({change_sign}{info['percent']}%)</span>
             </div>
         </div>
         """
@@ -248,19 +248,19 @@ def generate_html_dashboard():
         <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 my-4">
             <div class="glass-card rounded-xl p-3 glow-orange">
                 <p class="text-xs font-semibold text-slate-400">수집 및 검사 피드</p>
-                <p class="mt-1 text-lg font-extrabold text-slate-100">{total_processed} 건</p>
+                <p class="mt-1 text-lg font-extrabold text-slate-100" id="stat-processed">{total_processed} 건</p>
             </div>
             <div class="glass-card rounded-xl p-3 glow-green">
                 <p class="text-xs font-semibold text-slate-400">연관 기사</p>
-                <p class="mt-1 text-lg font-extrabold text-emerald-400">{total_relevant} 건</p>
+                <p class="mt-1 text-lg font-extrabold text-emerald-400" id="stat-relevant">{total_relevant} 건</p>
             </div>
             <div class="glass-card rounded-xl p-3 glow-red">
                 <p class="text-xs font-semibold text-slate-400">고위험 경보 (HIGH)</p>
-                <p class="mt-1 text-lg font-extrabold text-rose-500">{high_alerts} 건</p>
+                <p class="mt-1 text-lg font-extrabold text-rose-500" id="stat-high-alerts">{high_alerts} 건</p>
             </div>
             <div class="glass-card rounded-xl p-3 glow-blue">
                 <p class="text-xs font-semibold text-slate-400">평균 감성 지수</p>
-                <p class="mt-1 text-lg font-extrabold {sentiment_class}">{avg_sentiment:+.2f}</p>
+                <p class="mt-1 text-lg font-extrabold {sentiment_class}" id="stat-avg-sentiment">{avg_sentiment:+.2f}</p>
             </div>
         </section>
 
@@ -410,7 +410,7 @@ def generate_html_dashboard():
             {sector_buttons_html}
         </div>
         
-        <div class="space-y-6">
+        <div class="space-y-6" id="timelineContainer">
     """
     
     if not rows:
@@ -891,6 +891,243 @@ def generate_html_dashboard():
                         </tr>
                     `;
                 }}
+
+                // Update stats dynamically
+                if (data.stats) {{
+                    document.getElementById("stat-processed").textContent = data.stats.total_processed + " 건";
+                    document.getElementById("stat-relevant").textContent = data.stats.total_relevant + " 건";
+                    document.getElementById("stat-high-alerts").textContent = data.stats.high_alerts + " 건";
+                    
+                    const avgSentEl = document.getElementById("stat-avg-sentiment");
+                    const avgSent = data.stats.avg_sentiment;
+                    avgSentEl.textContent = (avgSent >= 0 ? "+" : "") + avgSent.toFixed(2);
+                    if (avgSent > 0.2) {{
+                        avgSentEl.className = "mt-1 text-lg font-extrabold text-emerald-400";
+                    }} else if (avgSent < -0.2) {{
+                        avgSentEl.className = "mt-1 text-lg font-extrabold text-rose-400";
+                    }} else {{
+                        avgSentEl.className = "mt-1 text-lg font-extrabold text-slate-400";
+                    }}
+                }}
+
+                // Update market indicators dynamically
+                if (data.top_market_data) {{
+                    for (const label in data.top_market_data) {{
+                        const info = data.top_market_data[label];
+                        const priceEl = document.getElementById("market-price-" + label);
+                        const changeEl = document.getElementById("market-change-" + label);
+                        const cardEl = document.getElementById("market-card-" + label);
+                        if (priceEl && changeEl) {{
+                            const unit = (label === "KOSPI" || label === "SOXX") ? "pt" : "원";
+                            priceEl.textContent = info.price.toLocaleString() + unit;
+                            
+                            const changeSign = info.change > 0 ? "+" : "";
+                            changeEl.textContent = changeSign + info.change.toLocaleString() + " (" + changeSign + info.percent + "%)";
+                            
+                            if (info.change >= 0) {{
+                                changeEl.className = "text-xs font-bold text-emerald-400";
+                                if (cardEl) {{
+                                    cardEl.className = "glass-card rounded-2xl p-4 glow-green border border-slate-800/80";
+                                }}
+                            }} else {{
+                                changeEl.className = "text-xs font-bold text-rose-400";
+                                if (cardEl) {{
+                                    cardEl.className = "glass-card rounded-2xl p-4 glow-red border border-slate-800/80";
+                                }}
+                            }}
+                        }}
+                    }}
+                }}
+
+                // Update latest news timeline cards dynamically
+                const timelineContainer = document.getElementById("timelineContainer");
+                if (timelineContainer && data.news) {{
+                    // Update lastCount to keep sync
+                    if (data.stats && data.stats.total_processed) {{
+                        lastCount = data.stats.total_processed;
+                    }}
+                    
+                    timelineContainer.innerHTML = "";
+                    data.news.forEach(r => {{
+                        const isRel = r.is_relevant === 1;
+                        const processedAt = r.processed_at.replace('T', ' ').substring(0, 19);
+                        const publishedAt = r.published_at ? r.published_at.replace('T', ' ').substring(0, 19) : "알 수 없음";
+                        
+                        let cardHtml = "";
+                        let glowClass = "border-slate-800";
+                        
+                        if (isRel) {{
+                            // Sentiment Badge
+                            const sent = r.sentiment;
+                            const score = r.sentiment_score || 0.0;
+                            const scoreSign = score >= 0 ? "+" : "";
+                            let sentBadge = "";
+                            if (sent === 'POSITIVE') {{
+                                sentBadge = `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 (${{scoreSign}}${{score.toFixed(1)}})</span>`;
+                            }} else if (sent === 'NEGATIVE') {{
+                                sentBadge = `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">부정 (${{scoreSign}}${{score.toFixed(1)}})</span>`;
+                            }} else {{
+                                sentBadge = `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">중립 (${{scoreSign}}${{score.toFixed(1)}})</span>`;
+                            }}
+                            
+                            // Alert Badge
+                            const alertVal = r.alert_level;
+                            let alertBadge = "";
+                            if (alertVal === 'HIGH') {{
+                                alertBadge = '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-600 text-white shadow-lg shadow-rose-900/40">경보: 높음 (HIGH)</span>';
+                                glowClass = 'border-rose-500/30';
+                            }} else if (alertVal === 'MEDIUM') {{
+                                alertBadge = '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>';
+                                glowClass = 'border-amber-500/30';
+                            }} else {{
+                                alertBadge = '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-700 text-slate-300">경보: 낮음 (LOW)</span>';
+                                glowClass = 'border-slate-800';
+                            }}
+                            
+                            // Sectors
+                            let sectors = [];
+                            try {{
+                                sectors = typeof r.impacted_sectors === 'string' ? JSON.parse(r.impacted_sectors) : r.impacted_sectors;
+                            }} catch(e) {{
+                                sectors = r.impacted_sectors ? r.impacted_sectors.split(',') : ["기타"];
+                            }}
+                            const sectorsStr = sectors.join(", ");
+                            
+                            // Companies
+                            let companies = [];
+                            try {{
+                                companies = typeof r.impacted_companies === 'string' ? JSON.parse(r.impacted_companies) : r.impacted_companies;
+                            }} catch(e) {{
+                                companies = r.impacted_companies ? r.impacted_companies.split(',') : [];
+                            }}
+                            
+                            let enrichedCompanies = [];
+                            companies.forEach(comp => {{
+                                if (comp === "삼성전자" && data.top_market_data && data.top_market_data.SAMSUNG) {{
+                                    const sInfo = data.top_market_data.SAMSUNG;
+                                    const sign = sInfo.change >= 0 ? "+" : "";
+                                    const color = sInfo.change >= 0 ? "text-emerald-400" : "text-rose-400";
+                                    enrichedCompanies.push(`<span class="font-semibold text-slate-100">${{comp}}</span> <span class="text-xs ${{color}} font-medium">(${{sInfo.price.toLocaleString()}}원 ${{sign}}${{sInfo.percent}}%)</span>`);
+                                }} else if (comp === "SK하이닉스" && data.top_market_data && data.top_market_data.HYNIX) {{
+                                    const hInfo = data.top_market_data.HYNIX;
+                                    const sign = hInfo.change >= 0 ? "+" : "";
+                                    const color = hInfo.change >= 0 ? "text-emerald-400" : "text-rose-400";
+                                    enrichedCompanies.push(`<span class="font-semibold text-slate-100">${{comp}}</span> <span class="text-xs ${{color}} font-medium">(${{hInfo.price.toLocaleString()}}원 ${{sign}}${{hInfo.percent}}%)</span>`);
+                                }} else {{
+                                    enrichedCompanies.push(`<span class="font-semibold text-slate-300">${{comp}}</span>`);
+                                }}
+                            }});
+                            const companiesStr = enrichedCompanies.length > 0 ? enrichedCompanies.join(", ") : "없음";
+                            
+                            const linkBtn = r.url ? `<a href="${{r.url}}" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>` : '';
+                            
+                            // Other sources
+                            let otherSourcesHtml = "";
+                            if (r.other_sources) {{
+                                try {{
+                                    const otherList = typeof r.other_sources === 'string' ? JSON.parse(r.other_sources) : r.other_sources;
+                                    if (otherList && otherList.length > 0) {{
+                                        const badges = otherList.map(src => `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-800/80 text-slate-400 border border-slate-700/80 mr-1.5">${{src}}</span>`).join("");
+                                        otherSourcesHtml = `
+                                            <div class="mt-3 pt-3 border-t border-slate-800/50 flex flex-wrap items-center text-xs text-slate-500">
+                                                <span class="mr-2">동일 보도 매체:</span>
+                                                ${{badges}}
+                                            </div>
+                                        `;
+                                    }}
+                                }} catch(e) {{}}
+                            }}
+                            
+                            // Sectors JSON list
+                            const sectorsJson = JSON.stringify(sectors);
+                            
+                            // Combine search tokens
+                            const searchText = `${{r.title}} ${{r.content}} ${{r.korean_summary}} ${{sectorsStr}} ${{companies.join(", ")}} ${{r.source}}`.toLowerCase().replace(/"/g, '\\"').replace(/'/g, "\\'");
+                            
+                            cardHtml = `
+                                <div class="timeline-card glass-card rounded-2xl p-6 border ${{glowClass}} transition duration-300 hover:bg-slate-900/50" data-sectors='${{sectorsJson}}' data-search-text="${{searchText}}">
+                                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
+                                        <div class="flex items-center space-x-3">
+                                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">${{r.source}}</span>
+                                            <span class="text-xs text-slate-400">
+                                                <span class="text-indigo-400 font-medium">작성:</span> ${{publishedAt}}
+                                                <span class="mx-1 text-slate-600">|</span>
+                                                <span class="text-slate-500">수집:</span> ${{processedAt}}
+                                            </span>
+                                        </div>
+                                        <div class="flex items-center space-x-2">
+                                            ${{sentBadge}}
+                                            ${{alertBadge}}
+                                        </div>
+                                    </div>
+                                    
+                                    <h3 class="text-lg font-bold text-slate-100 mb-2">${{r.title}}</h3>
+                                    <p class="text-sm text-slate-400 line-clamp-3 mb-4">${{r.content}}</p>
+                                    
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
+                                        <div>
+                                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
+                                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
+                                                <span class="text-indigo-300">${{sectorsStr}}</span>
+                                                <span class="text-slate-500">|</span>
+                                                ${{companiesStr}}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
+                                            <p class="text-sm text-slate-200">${{r.macro_impacts}}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
+                                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
+                                        <p class="text-sm text-slate-300 leading-relaxed">${{r.korean_summary}}</p>
+                                    </div>
+                                    
+                                    <div class="flex justify-between items-center text-xs">
+                                        <span class="text-slate-500">신뢰도: ${{r.relevance_score}}/10</span>
+                                        ${{linkBtn}}
+                                    </div>
+                                    ${{otherSourcesHtml}}
+                                </div>
+                            `;
+                        }} else {{
+                            // Non-relevant item
+                            const searchText = `${{r.title}} ${{r.content}} ${{r.source}}`.toLowerCase().replace(/"/g, '\\"').replace(/'/g, "\\'");
+                            cardHtml = `
+                                <div class="timeline-card glass-card rounded-2xl p-6 border border-slate-800 transition duration-300 hover:bg-slate-900/50" data-sectors='["기타"]' data-search-text="${{searchText}}">
+                                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
+                                        <div class="flex items-center space-x-3">
+                                            <span class="px-2 py-0.5 rounded text-xs bg-slate-800 text-slate-400 border border-slate-700">${{r.source}}</span>
+                                            <span class="text-xs text-slate-400">
+                                                <span class="text-indigo-400 font-medium">작성:</span> ${{publishedAt}}
+                                                <span class="mx-1 text-slate-600">|</span>
+                                                <span class="text-slate-500">수집:</span> ${{processedAt}}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-500 border border-slate-700">미연관 단독 기사</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <h3 class="text-lg font-bold text-slate-100 mb-2">${{r.title}}</h3>
+                                    <p class="text-sm text-slate-400 line-clamp-2 mb-3">${{r.content}}</p>
+                                    <div class="flex justify-between items-center text-xs">
+                                        <span class="text-slate-600">${{r.relevance_reason || '한국 경제 연관 키워드 미검출로 필터링됨'}}</span>
+                                        ${{r.url ? `<a href="${{r.url}}" target="_blank" class="text-xs text-slate-500 hover:text-slate-400 hover:underline">원본보기 ↗</a>` : ''}}
+                                    </div>
+                                </div>
+                            `;
+                        }}
+                        
+                        const wrapper = document.createElement("div");
+                        wrapper.innerHTML = cardHtml;
+                        timelineContainer.appendChild(wrapper.firstElementChild);
+                    }});
+                    
+                    // Re-apply filters
+                    filterTimeline();
+                }}
             }})
             .catch(err => {{
                 console.error("Failed to load trading state:", err);
@@ -1135,8 +1372,21 @@ def generate_html_dashboard():
             fetch('/api/refresh', {{ method: 'POST' }})
             .then(res => res.json())
             .then(data => {{
-                // Reload page to reflect new DB values
-                window.location.reload();
+                // Check every 2s for count increase, then load trading state dynamically
+                let checkAttempts = 0;
+                const checkInterval = setInterval(() => {{
+                    fetch('/api/count')
+                    .then(res => res.json())
+                    .then(countData => {{
+                        checkAttempts++;
+                        if (countData.count > lastCount || checkAttempts > 15) {{
+                            clearInterval(checkInterval);
+                            loadTradingState();
+                            btn.disabled = false;
+                            btn.innerHTML = "🔄 실시간 수동 갱신";
+                        }}
+                    }});
+                }}, 2000);
             }})
             .catch(err => {{
                 alert("수동 갱신 오류가 발생했습니다.");
@@ -1212,8 +1462,8 @@ def generate_html_dashboard():
                         return;
                     }}
                     
-                    console.log("[Pipeline] New news processed! Reloading dashboard page dynamically.");
-                    window.location.reload();
+                    console.log("[Pipeline] New news processed! Updating dashboard dynamically.");
+                    loadTradingState();
                 }}
             }})
             .catch(err => {{}});
@@ -1627,6 +1877,22 @@ def get_trading_state():
         except Exception as ex:
             print(f"[main.py] Failed to calculate Leading Flow Score: {ex}")
 
+        # Get dynamic news timeline and stats from SQLite
+        news_rows = db._sqlite_fetch_history(limit=25)
+        total_processed = len(news_rows)
+        relevant_rows = [r for r in news_rows if r['is_relevant'] == 1]
+        total_relevant = len(relevant_rows)
+        high_alerts = len([r for r in relevant_rows if r['alert_level'] == 'HIGH'])
+        sent_scores = [r['sentiment_score'] for r in relevant_rows if r['sentiment_score'] is not None]
+        avg_sentiment = sum(sent_scores) / len(sent_scores) if sent_scores else 0.0
+
+        # Get top market indicators
+        top_market_data = {}
+        try:
+            top_market_data = get_market_indicators()
+        except Exception as ex:
+            print(f"[main.py] Failed to fetch top market indicators: {ex}")
+
         response_data = {
             "status": "success",
             "state": state,
@@ -1637,7 +1903,15 @@ def get_trading_state():
             "watchlist": watchlist_indicators,
             "leading_flow_score": leading_flow_score,
             "soxx_change": soxx_change,
-            "usdkrw_change": usdkrw_change
+            "usdkrw_change": usdkrw_change,
+            "news": news_rows,
+            "stats": {
+                "total_processed": total_processed,
+                "total_relevant": total_relevant,
+                "high_alerts": high_alerts,
+                "avg_sentiment": avg_sentiment
+            },
+            "top_market_data": top_market_data
         }
         
         # Save cache

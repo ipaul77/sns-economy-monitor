@@ -1928,7 +1928,7 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             action="HOLD",
             ticker=first_blocked_ticker,
             allocation_pct=0.0,
-            reasoning=f"[Python 시스템 차단] 현재 포트폴리오가 비어 있고 모든 거래 후보 종목이 매수 제한 상태이므로 Gemini API 호출을 스킵하고 기계적으로 관망(HOLD) 결정을 실행합니다. (대표 사유: {first_reason})",
+            reasoning=f"[Python 시스템 차단: API 호출 최적화] 현재 포트폴리오가 비어 있고 모든 거래 후보 종목이 매수 제한 상태이므로 Gemini API 호출을 스킵하고 기계적으로 관망(HOLD) 결정을 실행합니다. (대표 사유: {first_reason})",
             mode="VALUE"
         )
     else:

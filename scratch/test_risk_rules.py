@@ -27,10 +27,12 @@ def run_tests():
     orig_telegram = trading_engine.trigger_telegram_trade_alert
     orig_bear = trading_engine.is_kospi_bear_market
     orig_get_last_sell = trading_engine.get_last_sell_transaction
+    orig_get_active_tickers = trading_engine.get_active_tickers
 
     try:
         # Stub global/common rules to return predictable states
         trading_engine.is_kospi_bear_market = lambda *args, **kwargs: False
+        trading_engine.get_active_tickers = lambda portfolio, news_context: list(set(list(portfolio.keys()) + ["005930", "000660"]))
 
         # ----------------------------------------------------
         # TEST CASE 1: Stop-Loss and Trailing-Stop per Mode
@@ -256,7 +258,7 @@ def run_tests():
             "timestamp": last_sell_time_mock,
             "price": 82000.0,
             "action": "SELL"
-        }
+        } if ticker == "005930" else None
         
         # We pass blocked_buy_reasons to generate_decision, check if block triggers in simulation cycle
         decision_called = False
@@ -282,7 +284,7 @@ def run_tests():
             "timestamp": last_sell_time_mock,
             "price": 81000.0, # current price 80000 is 98.7% of last price (within whipsaw range)
             "action": "SELL"
-        }
+        } if ticker == "005930" else None
         def mock_generate_decision_whipsaw(*args, **kwargs):
             blocked = kwargs.get("blocked_buy_reasons", {})
             print(f"Decision call blocked reasons: {blocked}")
@@ -310,7 +312,7 @@ def run_tests():
             "timestamp": last_sell_time_mock,
             "price": 85000.0,
             "action": "TRAILING_STOP_EXIT"
-        }
+        } if ticker == "005930" else None
         
         def mock_generate_decision_scaling(*args, **kwargs):
             blocked = kwargs.get("blocked_buy_reasons", {})
@@ -449,6 +451,7 @@ def run_tests():
         trading_engine.trigger_telegram_trade_alert = orig_telegram
         trading_engine.is_kospi_bear_market = orig_bear
         trading_engine.get_last_sell_transaction = orig_get_last_sell
+        trading_engine.get_active_tickers = orig_get_active_tickers
 
     print("\n==================================================")
     print("ALL TEST CASES PASSED SUCCESSFULLY!")

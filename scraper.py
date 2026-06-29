@@ -45,7 +45,7 @@ def fetch_rss_feeds(feed_list):
                 # Fallback if channel/item structure is explicit
                 items = root.findall("channel/item")
             
-            for item in items[:10]:  # Limit to top 10 per feed to keep it focused
+            for item in items[:5]:  # Limit to top 5 per feed to minimize API token usage
                 title_elem = item.find("title")
                 title = title_elem.text if title_elem is not None else "No Title"
                 
