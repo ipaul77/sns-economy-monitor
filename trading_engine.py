@@ -1394,11 +1394,17 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
             model_name=model_name,
             system_instruction=system_instruction
         )
+        
+        # Explicitly build schema dict and restore required list to fix SDK popping bug
+        from google.generativeai.types import content_types
+        schema = content_types._schema_for_class(TradingDecision)
+        schema["required"] = ["action", "ticker", "allocation_pct", "reasoning", "mode"]
+
         response = model.generate_content(
             prompt,
             generation_config=genai.GenerationConfig(
                 response_mime_type="application/json",
-                response_schema=TradingDecision,
+                response_schema=schema,
                 temperature=0.2
             )
         )

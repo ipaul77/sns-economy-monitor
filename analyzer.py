@@ -110,11 +110,16 @@ class GeminiEconomyAnalyzer:
                 system_instruction=system_instruction
             )
             
+            # Explicitly build schema dict and restore required list to fix SDK popping bug
+            from google.generativeai.types import content_types
+            schema = content_types._schema_for_class(RelevanceCheck)
+            schema["required"] = ["relevant", "reason"]
+            
             response = model.generate_content(
                 prompt,
                 generation_config=genai.GenerationConfig(
                     response_mime_type="application/json",
-                    response_schema=RelevanceCheck
+                    response_schema=schema
                 )
             )
             
@@ -146,11 +151,20 @@ class GeminiEconomyAnalyzer:
                 system_instruction=system_instruction
             )
             
+            # Explicitly build schema dict and restore required list to fix SDK popping bug
+            from google.generativeai.types import content_types
+            schema = content_types._schema_for_class(DeepAnalysis)
+            schema["required"] = [
+                "sentiment", "sentiment_score", "relevance_score", 
+                "impacted_sectors", "impacted_companies", "impacted_tickers", 
+                "macro_impacts", "korean_summary", "alert_level"
+            ]
+            
             response = model.generate_content(
                 prompt,
                 generation_config=genai.GenerationConfig(
                     response_mime_type="application/json",
-                    response_schema=DeepAnalysis
+                    response_schema=schema
                 )
             )
             
