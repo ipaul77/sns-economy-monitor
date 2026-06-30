@@ -437,6 +437,30 @@ def get_last_sell_transaction(ticker: str) -> Optional[Dict[str, Any]]:
         print(f"[Trading Engine] [Warning] Failed to query last sell transaction for {ticker}: {e}")
         return None
 
+def get_last_transaction_of_ticker(ticker: str) -> Optional[Dict[str, Any]]:
+    """
+    Queries the database for the last transaction of any action for a ticker
+    to evaluate split-buy and cooldown rules.
+    """
+    warm_start_trading_cache()
+    try:
+        conn = sqlite3.connect(db.DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        _ensure_trading_tables(cursor)
+        cursor.execute("""
+            SELECT timestamp, price, action FROM transactions 
+            WHERE ticker = ? 
+            ORDER BY timestamp DESC LIMIT 1
+        """, (ticker.strip(),))
+        row = cursor.fetchone()
+        conn.close()
+        return dict(row) if row else None
+    except Exception as e:
+        print(f"[Trading Engine] [Warning] Failed to query last transaction for {ticker}: {e}")
+        return None
+
+
 def save_transaction_to_db(ticker: str, action: str, quantity: int, price: float, reasoning: str, snapshot_context: Dict[str, Any]) -> bool:
     """
     Saves a trading transaction record to both Firestore and SQLite cache.
@@ -1468,8 +1492,8 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
     if last_txs:
         last_tx = last_txs[0]
         try:
-            last_time = datetime.fromisoformat(last_tx["timestamp"])
-            time_diff = now - last_time
+            last_time = datetime.fromisoformat(last_tx["timestamp"]).replace(tzinfo=None)
+            time_diff = now.replace(tzinfo=None) - last_time
             # Cooldown duration: 15 minutes (Safe limit to avoid yfinance rate limiting)
             cooldown = timedelta(minutes=15)
             if time_diff < cooldown and not bypass_hours:
@@ -1544,18 +1568,30 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             filtered_tickers.append(ticker)
             continue
             
-        # If we don't own it, check 24h cooldown (time-based)
+        # If we don't own it, check cooldown (time-based)
         last_sell = get_last_sell_transaction(ticker)
         if last_sell:
             try:
-                last_time = datetime.fromisoformat(last_sell["timestamp"])
-                time_diff = now - last_time
-                if time_diff < timedelta(hours=24):
-                    pre_blocked_reasons[ticker] = f"직전 매도 후 24시간 재진입 제한(쿨타임)이 진행 중입니다. (남은 시간: {24 - time_diff.total_seconds() / 3600:.1f}시간)"
-                    print(f"[Trading Engine] Pre-flight filter: Ticker {ticker} is blocked by time-based 24h cooldown.")
+                last_time = datetime.fromisoformat(last_sell["timestamp"]).replace(tzinfo=None)
+                time_diff = now.replace(tzinfo=None) - last_time
+                action = last_sell.get("action", "SELL")
+                
+                if action in ["STOP_LOSS_EXIT", "TRAILING_STOP_EXIT"]:
+                    cooldown_limit = timedelta(minutes=120)
+                    cooldown_desc = "120분(2시간) 재진입 제한(쿨타임)"
+                    cooldown_hours = 2.0
+                else: # Standard SELL
+                    cooldown_limit = timedelta(hours=24)
+                    cooldown_desc = "24시간 재진입 제한(쿨타임)"
+                    cooldown_hours = 24.0
+                    
+                if time_diff < cooldown_limit:
+                    pre_blocked_reasons[ticker] = f"직전 매도({action}) 후 {cooldown_desc}이 진행 중입니다. (남은 시간: {cooldown_hours - time_diff.total_seconds() / 3600:.1f}시간)"
+                    print(f"[Trading Engine] Pre-flight filter: Ticker {ticker} is blocked by time-based cooldown ({action}).")
                     continue
             except Exception as e:
                 print(f"[Trading Engine] [Warning] Failed to parse last sell timestamp for {ticker}: {e}")
+
                 
         filtered_tickers.append(ticker)
         
@@ -1676,7 +1712,7 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             trailing_stop_rate = 0.20 if is_relaxed else 0.15
         else: # TECHNICAL
             stop_loss_rate = 0.045
-            trailing_stop_rate = 0.05 if is_relaxed else 0.03
+            trailing_stop_rate = 0.05 if is_relaxed else 0.045
             
         # 1. Update highest price since buy
         new_highest = max(current_price, prev_highest)
@@ -1756,13 +1792,22 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             tx_fee = total_sell_val * fee_rate
             new_balance = balance + (total_sell_val - tx_fee)
             
+            # Determine prefix: 익절, 손절(TS), 본전 청산
+            if current_price > avg_price:
+                prefix = "기계적 추적손절매 익절"
+            elif current_price < avg_price:
+                prefix = "기계적 손절(TS)"
+            else:
+                prefix = "본전 청산"
+
             # DB Update: If remaining shares, update quantity, reset highest_price_after_buy, and mark scale-out date
             if remaining_qty > 0:
                 update_portfolio_holding_in_db(ticker, remaining_qty, avg_price, highest_price_after_buy=current_price, mode=mode, last_scale_out_date=today_str)
-                reasoning = f"[기계적 추적손절매 익절 (50% 분할 매도)] 주가가 매수 후 최고점({new_highest:,.0f}원) 대비 트레일링 스탑 한계선({trailing_stop_limit:,.0f}원) 이하로 하락하여, 이익 보존을 위해 보유 수량의 50%({sell_qty}주)를 분할 매도 처리하였습니다. 남은 물량({remaining_qty}주)에 대해서는 당일(T+0) 트레일링 스탑 평가가 정지되며 현재가({current_price:,.0f}원) 기준으로 다시 고점을 추적합니다. [투자모드: {mode}, 완화여부: {is_relaxed}]"
+                reasoning = f"[{prefix} (50% 분할 매도)] 주가가 매수 후 최고점({new_highest:,.0f}원) 대비 트레일링 스탑 한계선({trailing_stop_limit:,.0f}원) 이하로 하락하여, 보유 수량의 50%({sell_qty}주)를 분할 매도 처리하였습니다. 남은 물량({remaining_qty}주)에 대해서는 당일(T+0) 트레일링 스탑 평가가 정지되며 현재가({current_price:,.0f}원) 기준으로 다시 고점을 추적합니다. [투자모드: {mode}, 완화여부: {is_relaxed}]"
             else:
                 update_portfolio_holding_in_db(ticker, 0, avg_price)
-                reasoning = f"[기계적 추적손절매 익절 (전량 청산)] 주가가 매수 후 최고점({new_highest:,.0f}원) 대비 트레일링 스탑 한계선({trailing_stop_limit:,.0f}원) 이하로 하락하여, 보유 수량이 1주 이하이므로 전량 시장가 매도 처리하였습니다. [투자모드: {mode}, 완화여부: {is_relaxed}] (현재가: {current_price:,.0f}원)"
+                reasoning = f"[{prefix} (전량 청산)] 주가가 매수 후 최고점({new_highest:,.0f}원) 대비 트레일링 스탑 한계선({trailing_stop_limit:,.0f}원) 이하로 하락하여, 보유 수량이 1주 이하이므로 전량 시장가 매도 처리하였습니다. [투자모드: {mode}, 완화여부: {is_relaxed}] (현재가: {current_price:,.0f}원)"
+
                 
             new_total_asset = new_balance + sum(
                 (p_info["quantity"] if p_tick != ticker else remaining_qty) * market_prices.get(p_tick, 0.0)
@@ -1843,6 +1888,48 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
         if curr_price <= 0:
             blocked_buy_reasons[ticker] = "실시간 시세 조회가 불가능합니다."
             continue
+
+        # 120분(2시간) 재매수 쿨다운 검사 (손절 혹은 트레일링 스탑 청산 후)
+        last_exit = get_last_sell_transaction(ticker)
+        if last_exit and last_exit.get("action") in ["STOP_LOSS_EXIT", "TRAILING_STOP_EXIT"]:
+            try:
+                last_time = datetime.fromisoformat(last_exit["timestamp"]).replace(tzinfo=None)
+                time_diff = now.replace(tzinfo=None) - last_time
+                if time_diff < timedelta(minutes=120):
+                    blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 청산 후 쿨다운] 직전 손절/트레일링스탑 청산({last_exit['action']}) 후 120분 재매수 제한(쿨타임)이 진행 중입니다. (남은 시간: {120 - time_diff.total_seconds() / 60:.1f}분)"
+                    continue
+            except Exception as e:
+                print(f"[Trading Engine] [Warning] Failed to evaluate 120m cooldown for {ticker}: {e}")
+
+        # 동일 종목 연속 매수(BUY) 제한 가드레일 (Time-delay & Price-gap)
+        last_tx = get_last_transaction_of_ticker(ticker)
+        if last_tx and last_tx.get("action") == "BUY":
+            try:
+                last_price = float(last_tx.get("price", 0.0))
+                last_time = datetime.fromisoformat(last_tx["timestamp"]).replace(tzinfo=None)
+                time_diff = now.replace(tzinfo=None) - last_time
+                
+                # 시간 간격 (직전 매수 후 최소 90분 경과)
+                time_ok = time_diff >= timedelta(minutes=90)
+                
+                # 가격 조건 (하락 시 직전 매수가 대비 최소 -2.0% 이하로 하락했을 것)
+                price_ok = True
+                is_downside = curr_price < last_price
+                if is_downside:
+                    price_ok = curr_price <= last_price * 0.98
+                
+                if not (time_ok and price_ok):
+                    reasons = []
+                    if not time_ok:
+                        reasons.append(f"시간 대기 미달: {time_diff.total_seconds() / 60:.1f}분 경과 (최소 90분 필요)")
+                    if not price_ok:
+                        reasons.append(f"가격 낙폭 부족: 직전 매수가 {last_price:,.0f}원 대비 현재가 {curr_price:,.0f}원 (등락률: {((curr_price - last_price)/last_price)*100:+.2f}%, 최소 -2.0% 필요)")
+                    
+                    blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 분할매수 가드레일] 동일 종목 연속 매수 조건 미충족 ({', '.join(reasons)})"
+                    continue
+            except Exception as e:
+                print(f"[Trading Engine] [Warning] Failed to evaluate split-buy guardrail for {ticker}: {e}")
+
 
         # [Python 1차 검증: Red Light Pre-filtering]
         # 1. 글로벌 매크로 Red Light 검사 (Threshold Flexibility 적용)
