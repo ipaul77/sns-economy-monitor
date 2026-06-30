@@ -2076,7 +2076,8 @@ def debug_run_trading_engine():
 
 def scheduler_thread():
     """
-    Background daemon thread that continuously crawls, analyzes, and saves news on an interval.
+    Background daemon thread that continuously crawls, analyzes, and saves news,
+    and runs the trading simulation cycle on an interval.
     """
     interval = global_config.get("scraping_interval_seconds", 60)
     print(Fore.BLUE + f"[Scheduler] Background crawler thread active. (Interval: {interval} seconds)...")
@@ -2084,6 +2085,12 @@ def scheduler_thread():
     # Run once immediately on startup
     try:
         run_pipeline(global_config, global_analyzer)
+        try:
+            import trading_engine
+            print("[Scheduler] Running initial trading simulation cycle...")
+            trading_engine.run_simulation_cycle(bypass_hours=False)
+        except Exception as e:
+            print(f"[Scheduler] [Error] Initial trading simulation failed: {str(e)}")
     except Exception as e:
         print(f"[Error] Initial startup pipeline failed: {str(e)}")
         
@@ -2091,6 +2098,12 @@ def scheduler_thread():
         time.sleep(interval)
         try:
             run_pipeline(global_config, global_analyzer)
+            try:
+                import trading_engine
+                print("[Scheduler] Running periodic trading simulation cycle...")
+                trading_engine.run_simulation_cycle(bypass_hours=False)
+            except Exception as e:
+                print(f"[Scheduler] [Error] Periodic trading simulation failed: {str(e)}")
         except Exception as e:
             print(f"[Error] Periodic background pipeline failed: {str(e)}")
 
@@ -2108,7 +2121,7 @@ global_analyzer = GeminiEconomyAnalyzer()
 generate_html_dashboard()
 
 # Start background crawler thread immediately on import ONLY if enabled in config
-if global_config.get("realtime_monitoring_enabled", False):
+if global_config.get("realtime_monitoring_enabled", False) and "--once" not in sys.argv:
     t = threading.Thread(target=scheduler_thread, daemon=True)
     t.start()
 
@@ -2121,6 +2134,12 @@ def main():
     if args.once:
         print(Fore.BLUE + "\n[Mode] Running once (Cron triggered)...")
         run_pipeline(global_config, global_analyzer)
+        try:
+            import trading_engine
+            print("[Cron] Running trading simulation cycle...")
+            trading_engine.run_simulation_cycle(bypass_hours=False)
+        except Exception as e:
+            print(f"[Cron] [Error] Trading simulation failed: {str(e)}")
         sys.exit(0)
         
     # Check if analyzer is running in Mock/Demo mode and inform the user
