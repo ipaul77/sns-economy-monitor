@@ -206,6 +206,23 @@ class GeminiEconomyAnalyzer:
                     return True
         return False
 
+    def get_embedding(self, text: str) -> Optional[List[float]]:
+        """
+        Generates a vector embedding for the given text using models/text-embedding-004.
+        """
+        if not self.api_configured:
+            return None
+        try:
+            result = genai.embed_content(
+                model="models/text-embedding-004",
+                content=text,
+                task_type="semantic_similarity"
+            )
+            return result.get("embedding")
+        except Exception as e:
+            print(f"[Analyzer] [Error] Embedding generation failed: {e}")
+            return None
+
     def process_item(self, item: dict) -> tuple:
         """
         Runs the 3-Stage processing:

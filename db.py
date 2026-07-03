@@ -78,6 +78,51 @@ def get_similarity(a: str, b: str) -> float:
     import difflib
     return difflib.SequenceMatcher(None, a.lower(), b.lower()).ratio()
 
+def save_embedding(url: str, embedding: list) -> bool:
+    """
+    Saves or updates a vector embedding list in SQLite.
+    """
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        emb_json = json.dumps(embedding)
+        cursor.execute("INSERT OR REPLACE INTO news_embeddings (url, embedding) VALUES (?, ?)", (url, emb_json))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"[DB] [Error] Failed to save embedding for {url}: {e}")
+        return False
+
+def get_embedding(url: str) -> Optional[list]:
+    """
+    Retrieves a cached vector embedding from SQLite.
+    """
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT embedding FROM news_embeddings WHERE url = ?", (url,))
+        row = cursor.fetchone()
+        conn.close()
+        if row:
+            return json.loads(row[0])
+    except Exception as e:
+        print(f"[DB] [Error] Failed to get embedding for {url}: {e}")
+    return None
+
+def cosine_similarity(v1: list, v2: list) -> float:
+    """
+    Calculates the cosine similarity between two float vectors.
+    """
+    if not v1 or not v2 or len(v1) != len(v2):
+        return 0.0
+    dot_product = sum(x * y for x, y in zip(v1, v2))
+    norm_v1 = sum(x * x for x in v1) ** 0.5
+    norm_v2 = sum(x * x for x in v2) ** 0.5
+    if norm_v1 * norm_v2 == 0:
+        return 0.0
+    return dot_product / (norm_v1 * norm_v2)
+
 # --- PUBLIC DATABASE INTERFACE METHOD ADAPTERS ---
 
 def setup_db():
@@ -109,6 +154,14 @@ def setup_db():
             alert_level TEXT,
             other_sources TEXT,
             impacted_tickers TEXT
+        )
+    """)
+    conn.commit()
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS news_embeddings (
+            url TEXT PRIMARY KEY,
+            embedding TEXT
         )
     """)
     conn.commit()
@@ -260,20 +313,19 @@ def _sqlite_is_already_processed(url: str) -> bool:
     conn.close()
     return exists
 
-def find_similar(title: str) -> dict:
+def find_similar(title: str, analyzer = None) -> Optional[dict]:
     """
-    Searches the database for a story with a highly similar title (>0.75 similarity)
-    processed within the last 3 days to prevent duplicate processing.
-    
-    Optimized: Queries only the local SQLite database cache to avoid expensive Firestore read streams.
+    Checks if a similar news story is already processed in SQLite.
+    If analyzer is passed and API is active, performs vector embedding similarity search.
+    Otherwise falls back to character-level difflib sequence matching.
     """
-    local_similar = _sqlite_find_similar(title)
+    local_similar = _sqlite_find_similar(title, analyzer)
     if local_similar:
-        print(f"[DB] [Cache Hit] Found similar story locally: '{local_similar['title']}'")
+        print(f"[DB] [Cache Hit] Found similar story: '{local_similar['title']}'")
         return local_similar
     return None
 
-def _sqlite_find_similar(title: str) -> dict:
+def _sqlite_find_similar(title: str, analyzer = None) -> Optional[dict]:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
@@ -281,6 +333,44 @@ def _sqlite_find_similar(title: str) -> dict:
     rows = cursor.fetchall()
     conn.close()
     
+    if analyzer and hasattr(analyzer, "get_embedding") and analyzer.api_configured:
+        incoming_embedding = analyzer.get_embedding(title)
+        if incoming_embedding:
+            # Fetch all cached embeddings
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            cursor.execute("SELECT url, embedding FROM news_embeddings")
+            emb_rows = cursor.fetchall()
+            conn.close()
+            
+            emb_map = {}
+            for r in emb_rows:
+                try:
+                    emb_map[r[0]] = json.loads(r[1])
+                except:
+                    pass
+            
+            best_match = None
+            best_score = 0.0
+            
+            for row in rows:
+                row_dict = dict(row)
+                url = row_dict["url"]
+                cached_emb = emb_map.get(url)
+                if cached_emb:
+                    score = cosine_similarity(incoming_embedding, cached_emb)
+                    if score > best_score:
+                        best_score = score
+                        best_match = row_dict
+            
+            if best_score > 0.82 and best_match:
+                print(f"[DB] [Semantic Match] Similarity {best_score:.1%} between incoming and cached: '{best_match['title']}'")
+                return best_match
+            else:
+                if best_score > 0:
+                    print(f"[DB] [No Semantic Match] Closest match: {best_score:.1%} - '{best_match['title'] if best_match else 'None'}'")
+                
+    # Fallback to difflib character matching
     for r in rows:
         row_dict = dict(r)
         if get_similarity(title, row_dict['title']) > 0.75:
@@ -344,7 +434,7 @@ def _sqlite_update_other_sources(url: str, new_source: str):
         conn.commit()
     conn.close()
 
-def save_analysis_result(item: dict, rel_check, analysis, other_sources=None):
+def save_analysis_result(item: dict, rel_check, analysis, other_sources=None, analyzer=None):
     """
     Saves a newly processed article and its structured AI analysis results.
     """
@@ -375,6 +465,12 @@ def save_analysis_result(item: dict, rel_check, analysis, other_sources=None):
         
     other_sources_json = json.dumps(other_sources, ensure_ascii=False) if other_sources else "[]"
     
+    # Cache embedding if analyzer is active (0 additional Firestore reads/writes, saved locally)
+    if analyzer and hasattr(analyzer, "get_embedding") and analyzer.api_configured:
+        embedding = analyzer.get_embedding(item["title"])
+        if embedding:
+            save_embedding(item["url"], embedding)
+
     if USE_FIREBASE:
         try:
             doc_id = get_doc_id(item["url"])

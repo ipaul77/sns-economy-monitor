@@ -45,7 +45,8 @@ TICKER_TO_SECTOR = {
     "055550": "금융/지주",      # 신한지주
     "086790": "금융/지주",      # 하나금융지주
     "005490": "금융/지주",      # POSCO홀딩스
-    "028260": "금융/지주"       # 삼성물산
+    "028260": "금융/지주",      # 삼성물산
+    "252670": "인버스/헤지"     # KODEX 200 선물인버스2X
 }
 
 # ---------------------------------------------------------------------------
@@ -639,7 +640,10 @@ COMPANY_TO_TICKER = {
     "대한항공": "003490",
     "두산에너빌리티": "034020",
     "HD현대중공업": "329180",
-    "유한양행": "000100"
+    "유한양행": "000100",
+    "KODEX 200 선물인버스2X": "252670",
+    "인버스": "252670",
+    "인버스2X": "252670"
 }
 
 # Static mapping of KOSDAQ tickers to bypass slow yfinance network checks
@@ -712,6 +716,15 @@ def get_dynamic_top_7_stocks() -> List[str]:
     
     default_tickers = ["005930", "000660", "373220", "005380", "207940", "000270", "068270"]
     
+    # Force include Inverse ETF if KOSPI is in downtrend
+    try:
+        regime = get_market_trend_regime()
+        if regime.get("is_downtrend", False):
+            default_tickers.insert(0, "252670")
+            print("[Trading Engine] Market is in Downtrend. Forcing Inverse ETF (252670) into monitoring universe.")
+    except Exception as e:
+        pass
+
     dynamic_7 = []
     for t in sorted_tickers:
         if t not in dynamic_7 and len(dynamic_7) < 7:
@@ -1146,6 +1159,8 @@ class TradingDecision(BaseModel):
     allocation_pct: float = Field(description="Percentage of available cash to allocate to this BUY trade (from 0.0 to 100.0). For SELL, represent the percentage of owned shares to sell (from 0.0 to 100.0). For HOLD, this must be 0.0.")
     reasoning: str = Field(description="Specific, detailed investment logic in Korean justifying the decision based on provided news sentiment and price analysis.")
     mode: Literal["VALUE", "TECHNICAL"] = Field(description="The investment mode chosen: 'VALUE' (fundamental, long-term margin of safety, wide stop limits) or 'TECHNICAL' (short-term technical momentum, sugeup, volume breakouts, tight stop limits).")
+    win_probability: float = Field(default=0.5, description="Estimated probability of success (win rate) for this trade, ranging from 0.0 to 1.0. For HOLD, default to 0.5.")
+    reward_to_risk_ratio: float = Field(default=1.0, description="Estimated reward-to-risk ratio (expected upside divided by expected downside) for this trade. Must be >= 0.1. For HOLD, default to 1.0.")
 
 
 def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: float, market_prices: Dict[str, float], news_context: List[Dict[str, Any]], market_indicators: Optional[Dict[str, Dict[str, Any]]] = None, index_changes: Optional[Dict[str, float]] = None, api_key: Optional[str] = None, blocked_buy_reasons: Optional[Dict[str, str]] = None) -> TradingDecision:
@@ -1304,9 +1319,14 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
         for idx, item in enumerate(report_items[:10]):  # Limit to top 10 reports
             report_str += f"- {idx+1}. [{item.get('source', '리포트')}] {item.get('title', '')} (중요도: {item.get('relevance_score', 7)}/10 | 감성: {item.get('sentiment', 'NEUTRAL')}({item.get('sentiment_score', 0.0):+.2f}))\n"
 
-    # Define system instructions (Guardrails)
+    # Define system instructions (Guardrails & Multi-Agent debate prompting)
     system_instruction = (
-        "당신은 거시경제(Macro), 수급(Supply/Demand), 시장 심리(Sentiment)를 최우선으로 고려한 뒤 펀더멘털(Fundamental)을 분석하는 '탑다운(Top-Down) 전략 기반의 최고 수준 애널리스트 겸 트레이더'입니다. 단순한 맹목적 가치투자를 지양하고, 자산 보존(Capital Preservation)을 최우선 가치로 삼습니다.\n\n"
+        "당신은 거시경제(Macro), 수급(Supply/Demand), 시장 심리(Sentiment)를 최우선으로 고려한 뒤 펀더멘털(Fundamental)을 분석하는 '탑다운(Top-Down) 전략 기반의 최고 수준 애널리스트 겸 트레이더'입니다. 당신의 지능 내부에는 세 명의 금융 전문가 위원이 존재합니다.\n"
+        "1. 기술적 분석가 (Technical Analyst): 차트 이평선, 이격도, RSI, 스토캐스틱, 거래량 지표 등을 철저히 분석하고 단기 추세와 가격적 진입 지점을 제시합니다.\n"
+        "2. 거시/재료 분석가 (Macro/Sentiment Analyst): 뉴스 속보, 뉴스 감성(Sentiment) 정보, 미국 지수(SOXX), 원/달러 환율 등 거시적 유동성과 재료의 파급력을 분석합니다.\n"
+        "3. 리스크 관리자 (Risk Manager): 포트폴리오 비중, 섹터 편중 리스크, 약세장 도래 시 자산 배분 방침, 손절/추적손절매 발생 이력 등을 따져 원금 보존 가이드를 제시합니다.\n\n"
+        "의사결정을 내릴 때 이 세 명의 전문가 위원이 각자의 관점에서 열띤 토론을 벌여 합의(Consensus)를 이끌어내도록 시뮬레이션하십시오. 토론의 세부 내용은 판단 근거(`reasoning`) 필드에 기술해야 합니다.\n\n"
+        "또한 새로 제공되는 `win_probability`(성공 확률, 0.0~1.0)과 `reward_to_risk_ratio`(손익비, 예상 이익/예상 손실, >= 0.1) 필드를 지표 데이터와 분석을 바탕으로 합리적으로 추정하여 채워 넣으십시오. 만약 성공 확률이 낮거나 손익비가 좋지 않다면 합의는 `HOLD` 또는 `SELL`로 기울어야 합니다. 매수를 추천하려면 최종 세 위원의 합의 점수(Consensus Score)가 최소 70% 이상이어야 합니다.\n\n"
         "의사결정을 내릴 때 반드시 아래의 1단계부터 3단계까지 순차적으로 통과한 경우에만 매수(BUY)를 결정하십시오. 하나라도 붉은등(Red Light)이 켜지면 철저히 관망(HOLD)하거나 매도(SELL)하십시오.\n\n"
         "1단계: 매크로 및 시장 투심 (Macro & Sentiment)\n"
         "- 코스피/코스닥 지수의 급락(사이드카 등), 환율의 급등(예: 1,400원 이상 고공행진 등) 등 거시경제 불확실성이 큰가?\n"
@@ -1325,9 +1345,11 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
         "2. 휩쏘(Whipsaw) 방지: 직전 거래에서 '추적손절매'나 '손절'이 발생한 종목은, 명확한 수급의 상향 반전 신호나 뉴스 호재가 새로 발생하지 않는 한 당일 재매수하지 마십시오.\n\n"
         "[출력 포맷 (Output Format)]\n"
         "결정을 내릴 때 판단 근거(reasoning)는 반드시 아래 구조로 명확히 서술하십시오.\n"
-        "- 매크로/수급 상황 분석: (현재 시장 상황 및 외국인/기관 수급 상태 요약)\n"
-        "- 펀더멘털/가치 분석: (종목의 밸류에이션 매력도 요약)\n"
-        "- 최종 결론: (따라서 BUY / SELL / HOLD 결정. 만약 펀더멘털이 좋아도 수급/매크로가 나빠서 HOLD 했다면 그 이유를 명시)\n\n"
+        "- 위원회 토론 (Debate):\n"
+        "  * 기술적 분석가 의견:\n"
+        "  * 거시/재료 분석가 의견:\n"
+        "  * 리스크 관리자 의견:\n"
+        "- 합의 결론 및 점수 (Consensus Score: XX%): (최종 합의된 액션과 이유 서술. 성공 확률 및 손익비 평가 근거 요약)\n\n"
         "매수(BUY) 시 Pydantic 응답의 `mode` 필드는 펀더멘털 기반 매수 시 'VALUE', 수급/모멘텀 모멘텀 트레이딩 기반 매수 시 'TECHNICAL'로 설정하십시오. (HOLD나 SELL 시에는 기본값인 'VALUE' 또는 기존 보유 모드를 사용하십시오.)"
     )
 
@@ -1557,6 +1579,15 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             shock_reason = f"지수 급락 쇼크 경보 ({idx_name} 당일 등락률: {val:+.2f}%)"
             break
 
+    # Fetch Market Regime (Downtrend / Uptrend)
+    is_downtrend = False
+    try:
+        regime = get_market_trend_regime()
+        is_downtrend = regime.get("is_downtrend", False)
+        print(f"[Trading Engine] Market Regime check: {'Downtrend (Bear Market)' if is_downtrend else 'Uptrend (Bull Market)'} - {regime.get('message')}")
+    except Exception as e:
+        print(f"[Trading Engine] [Warning] Failed to resolve market trend regime: {e}")
+
     monitored_tickers = get_active_tickers(portfolio, news_context)
     
     # Pre-filter monitored tickers to minimize yfinance API overhead (24h cooldown time-based check)
@@ -1706,13 +1737,23 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
         # relaxation: KOSPI up >= 1.0% AND Sector Average up > 0%
         is_relaxed = (kospi_change >= 1.0) and (sector_avg_change > 0.0)
         
-        # Configure stop rates based on Mode
-        if mode == "VALUE":
-            stop_loss_rate = 0.15
-            trailing_stop_rate = 0.20 if is_relaxed else 0.15
-        else: # TECHNICAL
-            stop_loss_rate = 0.045
-            trailing_stop_rate = 0.05 if is_relaxed else 0.045
+        # Configure stop rates based on Mode and Market Regime
+        if is_downtrend:
+            # Tightened risk parameters in bear market
+            if mode == "VALUE":
+                stop_loss_rate = 0.08
+                trailing_stop_rate = 0.10 if is_relaxed else 0.08
+            else: # TECHNICAL
+                stop_loss_rate = 0.03
+                trailing_stop_rate = 0.035 if is_relaxed else 0.03
+        else:
+            # Standard bull/flat market parameters
+            if mode == "VALUE":
+                stop_loss_rate = 0.15
+                trailing_stop_rate = 0.20 if is_relaxed else 0.15
+            else: # TECHNICAL
+                stop_loss_rate = 0.045
+                trailing_stop_rate = 0.05 if is_relaxed else 0.045
             
         # 1. Update highest price since buy
         new_highest = max(current_price, prev_highest)
@@ -2113,74 +2154,114 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             reasoning = f"[백엔드 규칙 기각: 수급 폭락] Gemini AI가 매수를 결정했으나 최근 5일간 외국인({frgn_net_5d:+,}주)과 기관({inst_net_5d:+,}주)의 동시 순매도 합산량({combined_net_sell:,}주)이 5일 평균 거래량({avg_vol_5d:,.0f}주)의 50%를 초과하는 수급 폭락 상태이므로 대방어 기각 규칙이 작동하여 HOLD 처리했습니다."
         else:
             # Sizing & Guardrails cash calculation
-            allocated_cash = balance * (allocation_pct / 100.0)
+            win_p = getattr(decision, "win_probability", 0.5)
+            r_r = getattr(decision, "reward_to_risk_ratio", 1.0)
+            if r_r <= 0.0:
+                r_r = 0.1
+            expectation = win_p - (1.0 - win_p) / r_r
+            half_kelly = 0.5 * expectation
             
-            # Guardrail 0: 10% Single Order Limit of Total Asset
-            max_order_cash = total_asset * 0.10
-            
-            # Guardrail 1: 30% Sizing Limit of Total Asset
-            max_allowed_cash = total_asset * 0.30
-            
-            # Already owned value check
-            owned_value = portfolio.get(ticker, {}).get("quantity", 0) * current_price
-            max_new_cash = max(max_allowed_cash - owned_value, 0.0)
-            
-            spend_cash = min(allocated_cash, max_order_cash, max_new_cash)
-            sizing_triggered = allocated_cash > max_new_cash
-            order_limit_triggered = allocated_cash > max_order_cash
-            
-            # Guardrail 2: KOSPI 5일선 연동 약세장 방어
-            bear_triggered = False
-            if is_kospi_bear_market():
-                spend_cash *= 0.5
-                bear_triggered = True
-                
-            # Guardrail 3: 이격도 108%~115% 비례 매수 제한 (50% 감감)
-            disparity_50_triggered = False
-            if 108.0 <= disparity < 115.0:
-                spend_cash *= 0.5
-                disparity_50_triggered = True
-
-            # Guardrail 4: Sector Allocation Limit (50%)
-            target_sector = TICKER_TO_SECTOR.get(ticker, "기타")
-            current_sector_value = sum(
-                info.get("quantity", 0) * market_prices.get(t, 0.0)
-                for t, info in portfolio.items()
-                if TICKER_TO_SECTOR.get(t, "기타") == target_sector
-            )
-            max_sector_allowed_value = total_asset * 0.50
-            max_additional_sector_cash = max(max_sector_allowed_value - current_sector_value, 0.0)
-            
-            sector_cap_triggered = False
-            if spend_cash > max_additional_sector_cash:
-                spend_cash = max_additional_sector_cash
-                sector_cap_triggered = True
-                
-            # Final quantity calculation
-            quantity = int(spend_cash / (current_price * (1 + fee_rate)))
-            
-            # Reasoning logging
-            gate_reasons = []
-            if order_limit_triggered:
-                gate_reasons.append("1회 주문 10% 제한")
-            if sizing_triggered:
-                gate_reasons.append("30% 보유 한도 제한")
-            if bear_triggered:
-                gate_reasons.append("약세장 방어")
-            if disparity_50_triggered:
-                gate_reasons.append("이격 과열 50% 감폭")
-            if sector_cap_triggered:
-                gate_reasons.append("섹터 비중 50% 제한")
-                
-            if gate_reasons:
-                reasoning += f" [가드레일 작동: {', '.join(gate_reasons)}]"
-                
-            if quantity <= 0:
+            if expectation <= 0.0:
                 action = "HOLD"
+                reasoning = f"[Kelly 가드레일 기각: 기대치 음수] 기대치(기대 승률 {win_p:.1%}, 손익비 {r_r:.1f})가 음수여서 자산 보호를 위해 매수를 기각하고 HOLD 처리했습니다."
+                quantity = 0
+                spend_cash = 0.0
+            else:
+                allocated_cash = balance * (allocation_pct / 100.0)
+                # Apply Kelly Scaling to the allocated cash
+                allocated_cash *= half_kelly
+                
+                # Guardrail 0: 10% Single Order Limit of Total Asset
+                max_order_cash = total_asset * 0.10
+                
+                # Guardrail 1: Sizing Limit of Total Asset (30% in uptrend, 15% in downtrend)
+                max_allowed_cash_ratio = 0.15 if is_downtrend else 0.30
+                max_allowed_cash = total_asset * max_allowed_cash_ratio
+                
+                # Already owned value check
+                owned_value = portfolio.get(ticker, {}).get("quantity", 0) * current_price
+                max_new_cash = max(max_allowed_cash - owned_value, 0.0)
+                
+                spend_cash = min(allocated_cash, max_order_cash, max_new_cash)
+                sizing_triggered = allocated_cash > max_new_cash
+                order_limit_triggered = allocated_cash > max_order_cash
+                
+                # Guardrail 2: KOSPI 5일선 연동 약세장 방어
+                bear_triggered = False
+                if is_kospi_bear_market():
+                    spend_cash *= 0.5
+                    bear_triggered = True
+                    
+                # Guardrail 3: 이격도 108%~115% 비례 매수 제한 (50% 감폭)
+                disparity_50_triggered = False
+                if 108.0 <= disparity < 115.0:
+                    spend_cash *= 0.5
+                    disparity_50_triggered = True
+
+                # Guardrail 4: Sector Allocation Limit (50% in uptrend, 20% in downtrend)
+                target_sector = TICKER_TO_SECTOR.get(ticker, "기타")
+                current_sector_value = sum(
+                    info.get("quantity", 0) * market_prices.get(t, 0.0)
+                    for t, info in portfolio.items()
+                    if TICKER_TO_SECTOR.get(t, "기타") == target_sector
+                )
+                max_sector_ratio = 0.20 if is_downtrend else 0.50
+                max_sector_allowed_value = total_asset * max_sector_ratio
+                max_additional_sector_cash = max(max_sector_allowed_value - current_sector_value, 0.0)
+                
+                sector_cap_triggered = False
+                if spend_cash > max_additional_sector_cash:
+                    spend_cash = max_additional_sector_cash
+                    sector_cap_triggered = True
+                    
+                # Guardrail 5: Risk-Parity (Volatility-adjusted sizing, risking at most 1.25% of total asset)
+                vol_stop = get_stock_volatility_multiplier(ticker, fallback_vol=0.045)
+                risk_parity_cash = (total_asset * 0.0125) / vol_stop
+                risk_parity_triggered = False
+                if spend_cash > risk_parity_cash:
+                    spend_cash = risk_parity_cash
+                    risk_parity_triggered = True
+                    
+                # Guardrail 6: Cash Reserve Shield (enforce 40% cash in bear market, 10% in bull market)
+                min_cash_ratio = 0.40 if is_downtrend else 0.10
+                max_spend_due_to_cash_reserve = max(balance - (total_asset * min_cash_ratio), 0.0)
+                cash_reserve_triggered = False
+                if spend_cash > max_spend_due_to_cash_reserve:
+                    spend_cash = max_spend_due_to_cash_reserve
+                    cash_reserve_triggered = True
+
+                # Final quantity calculation
+                quantity = int(spend_cash / (current_price * (1 + fee_rate)))
+                
+                # Reasoning logging
+                gate_reasons = []
+                gate_reasons.append(f"하프-켈리 비율 조절 {half_kelly:.2f}배")
+                if order_limit_triggered:
+                    gate_reasons.append("1회 주문 10% 제한")
+                if sizing_triggered:
+                    gate_reasons.append(f"보유 한도 {max_allowed_cash_ratio*100:.0f}% 제한")
+                if bear_triggered:
+                    gate_reasons.append("약세장 방어")
+                if disparity_50_triggered:
+                    gate_reasons.append("이격 과열 50% 감폭")
                 if sector_cap_triggered:
-                    reasoning += " (섹터 비중 50% 초과로 인해 HOLD 처리됨)"
-                else:
-                    reasoning += " (매수 가용 자금 또는 수량 부족으로 HOLD 처리됨)"
+                    gate_reasons.append(f"섹터 비중 {max_sector_ratio*100:.0f}% 제한")
+                if risk_parity_triggered:
+                    gate_reasons.append(f"변동성 리스크 리미트(최대 손실 1.25% 제한)")
+                if cash_reserve_triggered:
+                    gate_reasons.append(f"예수금 {min_cash_ratio*100:.0f}% 의무 적립 적용")
+                    
+                if gate_reasons:
+                    reasoning += f" [가드레일 작동: {', '.join(gate_reasons)}]"
+                    
+                if quantity <= 0:
+                    action = "HOLD"
+                    if sector_cap_triggered:
+                        reasoning += f" (섹터 비중 {max_sector_ratio*100:.0f}% 초과로 인해 HOLD 처리됨)"
+                    elif cash_reserve_triggered:
+                        reasoning += f" (예수금 {min_cash_ratio*100:.0f}% 보존 규칙 충족을 위한 가용자금 부족으로 HOLD 처리됨)"
+                    else:
+                        reasoning += " (매수 가용 자금 또는 수량 부족으로 HOLD 처리됨)"
 
     elif action == "SELL":
         owned_quantity = portfolio.get(ticker, {}).get("quantity", 0)

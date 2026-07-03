@@ -46,8 +46,8 @@ def setup_database():
     except Exception as e:
         print(f"[Error] Failed to initialize investor database: {e}")
 
-def find_similar_in_db(title):
-    return db.find_similar(title)
+def find_similar_in_db(title, analyzer=None):
+    return db.find_similar(title, analyzer)
 
 def update_other_sources_in_db(url, new_source):
     db.update_other_sources(url, new_source)
@@ -1483,8 +1483,8 @@ def generate_html_dashboard():
 def is_already_processed(url):
     return db.is_already_processed(url)
 
-def save_analysis_result(item, rel_check, analysis, other_sources=None):
-    db.save_analysis_result(item, rel_check, analysis, other_sources)
+def save_analysis_result(item, rel_check, analysis, other_sources=None, analyzer=None):
+    db.save_analysis_result(item, rel_check, analysis, other_sources, analyzer)
 
 def append_to_logfile(item, rel_check, analysis, other_sources=None):
     """
@@ -1578,7 +1578,7 @@ def run_pipeline(config, analyzer):
             continue
             
         # Check if a similar story already exists in the database from a previous run
-        similar_record = find_similar_in_db(primary_item["title"])
+        similar_record = find_similar_in_db(primary_item["title"], analyzer)
         if similar_record:
             # We already have an analyzed version of this story!
             # We don't analyze again. We just append the primary source and all other batch sources to the existing story!
@@ -1600,7 +1600,7 @@ def run_pipeline(config, analyzer):
         rel_check, analysis = analyzer.process_item(primary_item)
         
         # Save to SQLite and log.txt
-        save_analysis_result(primary_item, rel_check, analysis, batch_other_sources)
+        save_analysis_result(primary_item, rel_check, analysis, batch_other_sources, analyzer)
         append_to_logfile(primary_item, rel_check, analysis, batch_other_sources)
         
         # Trigger Slack/Telegram instant notification if it is a high level warning
