@@ -98,7 +98,7 @@ def fetch_rss_feeds(feed_list):
             
     return articles
 
-def generate_mock_sns_posts(personalities):
+def generate_mock_sns_posts(personalities, retention_days=14):
     """
     Generates realistic economic & business posts from global personalities.
     Includes both general global posts and highly South Korea-relevant posts
@@ -176,10 +176,15 @@ def generate_mock_sns_posts(personalities):
         }
     ]
     
-    # Filter by user's target personalities in config
-    active_scenarios = [s for s in scenarios if s["author"] in personalities]
+    # Filter by user's target personalities and keep only posts newer than the retention limit.
+    # This prevents deleted historical posts (older than retention_days) from being re-scraped.
+    active_scenarios = [
+        s for s in scenarios 
+        if s["author"] in personalities and s.get("days_ago", 0) < retention_days
+    ]
     if not active_scenarios:
-        active_scenarios = scenarios
+        # Fallback to general scenarios that are within the retention limit
+        active_scenarios = [s for s in scenarios if s.get("days_ago", 0) < retention_days]
         
     # Pick a few random posts to return to simulate dynamic real-time posts
     selected = random.sample(active_scenarios, k=min(4, len(active_scenarios)))
@@ -212,12 +217,13 @@ def fetch_all_sources(config):
     """
     rss_feeds = config.get("rss_feeds", [])
     personalities = config.get("target_personalities", [])
+    retention_days = config.get("data_retention_days", 14)
     
     # Fetch live news from RSS
     news_articles = fetch_rss_feeds(rss_feeds)
     
     # Fetch mock celebrity posts
-    sns_posts = generate_mock_sns_posts(personalities)
+    sns_posts = generate_mock_sns_posts(personalities, retention_days)
     
     # Merge and return
     total_data = news_articles + sns_posts
