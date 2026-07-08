@@ -2090,8 +2090,10 @@ def scheduler_thread():
     interval = global_config.get("scraping_interval_seconds", 60)
     print(Fore.BLUE + f"[Scheduler] Background crawler thread active. (Interval: {interval} seconds)...")
     
-    # Run once immediately on startup
+    # Run once immediately on startup with a brief delay (15s) to allow Flask to return HTTP responses first
     try:
+        import time
+        time.sleep(15)
         run_pipeline(global_config, global_analyzer)
         try:
             import trading_engine
