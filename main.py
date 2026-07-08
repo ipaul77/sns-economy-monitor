@@ -2120,10 +2120,25 @@ global_analyzer = GeminiEconomyAnalyzer()
 # Pre-generate dashboard.html from cache on startup
 generate_html_dashboard()
 
-# Start background crawler thread immediately on import ONLY if enabled in config
-if global_config.get("realtime_monitoring_enabled", False) and "--once" not in sys.argv:
-    t = threading.Thread(target=scheduler_thread, daemon=True)
-    t.start()
+# --- LAZY SCHEDULER INITIALIZATION ---
+scheduler_started = False
+scheduler_lock = threading.Lock()
+
+def start_scheduler_safely():
+    global scheduler_started
+    if scheduler_started:
+        return
+    with scheduler_lock:
+        if not scheduler_started:
+            if global_config.get("realtime_monitoring_enabled", False) and "--once" not in sys.argv:
+                print("[System] Lazy Initializing background scheduler thread...")
+                t = threading.Thread(target=scheduler_thread, daemon=True)
+                t.start()
+            scheduler_started = True
+
+@app.before_request
+def init_scheduler_on_first_request():
+    start_scheduler_safely()
 
 def main():
     import argparse
