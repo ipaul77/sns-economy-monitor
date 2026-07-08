@@ -108,63 +108,71 @@ def generate_mock_sns_posts(personalities):
     kst = timezone(timedelta(hours=9))
     now = datetime.now(kst).replace(tzinfo=None)
     
-    # Pre-defined mock scenarios
+    # Pre-defined mock scenarios with realistic relative publication offsets (in days)
     scenarios = [
         {
             "author": "Elon Musk",
             "title": "Tesla Giga Factory expansion",
             "content": "Looking into next locations for Giga factories. Asia is highly competitive. Korea has incredibly advanced battery supply chains and amazing engineering talent. Under high consideration.",
             "url_slug": "musk-tesla-giga-korea",
-            "korean_relevant": True
+            "korean_relevant": True,
+            "days_ago": 15
         },
         {
             "author": "Elon Musk",
             "title": "Tesla Full Self-Driving progress",
             "content": "FSD Beta version 12 is mind-blowing. Truly end-to-end neural nets driving the car. Releases soon in North America, Europe and other regions later this year.",
             "url_slug": "musk-fsd-progress",
-            "korean_relevant": False
+            "korean_relevant": False,
+            "days_ago": 10
         },
         {
             "author": "Jensen Huang",
             "title": "NVIDIA Blackwell chips shipping",
             "content": "Blackwell production is in full swing. The demand for AI hardware is surging exponentially. We are working closely with our key HBM3e suppliers like Samsung Electronics and SK Hynix in South Korea to secure next-gen memory components.",
             "url_slug": "huang-nvidia-blackwell-hbm",
-            "korean_relevant": True
+            "korean_relevant": True,
+            "days_ago": 30  # 1 month ago (Jensen's old post)
         },
         {
             "author": "Jensen Huang",
             "title": "NVIDIA AI summits globally",
             "content": "Excited for the next set of AI summits in London and Tokyo. Generative AI is reshaping every business workflow and industry globally. The intelligence revolution is just starting.",
             "url_slug": "huang-nvidia-ai-summits",
-            "korean_relevant": False
+            "korean_relevant": False,
+            "days_ago": 25
         },
         {
             "author": "Sam Altman",
             "title": "OpenAI sovereign infrastructure",
             "content": "Met with global technology leaders to discuss GPU infrastructure and energy grids. South Korea's chip dominance makes it a core partner for the upcoming global AI infrastructure alliance.",
             "url_slug": "altman-ai-infrastructure",
-            "korean_relevant": True
+            "korean_relevant": True,
+            "days_ago": 5
         },
         {
             "author": "Sam Altman",
             "title": "GPT-5 release preparations",
             "content": "Our teams are focused on aligning and safety-testing our next frontier model. The leap in reasoning capabilities will surprise people. Super excited for what is to come.",
             "url_slug": "altman-gpt5-prep",
-            "korean_relevant": False
+            "korean_relevant": False,
+            "days_ago": 1
         },
         {
             "author": "Jerome Powell",
             "title": "FED interest rate policy briefing",
             "content": "Inflation is moderating but remains slightly above our 2% target. We will keep interest rates steady until we see clear evidence of soft landing. Strong dollar policies remain.",
             "url_slug": "powell-interest-rate-update",
-            "korean_relevant": True  # Interest rate changes affect KRW exchange rate and KOSPI significantly
+            "korean_relevant": True,
+            "days_ago": 7
         },
         {
             "author": "Tim Cook",
             "title": "Apple Vision Pro sales expansion",
             "content": "Apple Vision Pro is now expanding to more global markets. Spatial computing is officially here, and developers are creating incredible applications that redefine work and play.",
             "url_slug": "cook-vision-pro",
-            "korean_relevant": False
+            "korean_relevant": False,
+            "days_ago": 20
         }
     ]
     
@@ -177,13 +185,22 @@ def generate_mock_sns_posts(personalities):
     selected = random.sample(active_scenarios, k=min(4, len(active_scenarios)))
     
     for i, s in enumerate(selected):
-        # Slightly jitter the timestamp
-        time_jitter = now - timedelta(minutes=random.randint(1, 30))
+        days_ago = s.get("days_ago", 0)
+        if days_ago == 0:
+            # Live simulation: Jitter current time and attach timestamp to URL
+            time_jitter = now - timedelta(minutes=random.randint(1, 30))
+            url = f"https://x.com/{s['author'].replace(' ', '').lower()}/status/{s['url_slug']}-{int(time_jitter.timestamp())}"
+        else:
+            # Fixed historical simulation: Calculate a static date and keep URL constant
+            # Keeps the URL identical so that the DB's duplicate filter skips re-processing it!
+            time_jitter = now.replace(hour=12, minute=0, second=0, microsecond=0) - timedelta(days=days_ago)
+            url = f"https://x.com/{s['author'].replace(' ', '').lower()}/status/{s['url_slug']}"
+            
         posts.append({
             "title": f"@{s['author']} post: {s['title']}",
             "content": s["content"],
             "source": f"SNS ({s['author']})",
-            "url": f"https://x.com/{s['author'].replace(' ', '').lower()}/status/{s['url_slug']}-{int(time_jitter.timestamp())}",
+            "url": url,
             "published_at": time_jitter.isoformat()
         })
         
