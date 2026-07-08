@@ -1645,6 +1645,14 @@ def run_pipeline(config, analyzer):
 
 # --- FLASK APP ENDPOINTS ---
 
+@app.route('/api/ping')
+def handle_ping():
+    """
+    Lightweight API endpoint for cron-job / ping services to wake up the server
+    without fetching large HTML payload sizes.
+    """
+    return jsonify({"status": "ok", "message": "pong"})
+
 @app.route('/')
 def serve_dashboard():
     """
