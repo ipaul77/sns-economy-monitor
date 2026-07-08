@@ -813,6 +813,30 @@ def get_market_trend_regime() -> Dict[str, Any]:
         "message": "시장 국면 분석 실패 (기본값 상승 국면으로 우회)"
     }
 
+def calculate_rsi(prices: list, period: int = 14) -> float:
+    """
+    Calculates the Relative Strength Index (RSI) for a list of close prices.
+    Uses Wilder's smoothing method.
+    """
+    if len(prices) < period + 1:
+        return 50.0
+        
+    deltas = [prices[i] - prices[i-1] for i in range(1, len(prices))]
+    seed = deltas[:period]
+    up = sum(d for d in seed if d > 0) / period
+    down = sum(-d for d in seed if d < 0) / period
+    
+    for d in deltas[period:]:
+        d_up = d if d > 0 else 0.0
+        d_down = -d if d < 0 else 0.0
+        up = (up * (period - 1) + d_up) / period
+        down = (down * (period - 1) + d_down) / period
+        
+    if down == 0:
+        return 100.0
+    rs = up / down
+    return 100.0 - (100.0 / (1.0 + rs))
+
 def get_stock_indicators(ticker: str) -> Dict[str, Any]:
 
     """
@@ -823,12 +847,15 @@ def get_stock_indicators(ticker: str) -> Dict[str, Any]:
     4. Daily Volume
     5. 5-day Average Volume (excluding today)
     6. Volume Breakout Ratio (daily_vol / avg_5day_vol)
+    7. RSI (14) & RSI Prev
     """
     ticker = ticker.strip()
     result = {
         "current_price": 0.0,
         "ma_20": 0.0,
         "disparity": 100.0,
+        "rsi": 50.0,
+        "rsi_prev": 50.0,
         "daily_volume": 0,
         "avg_volume_5d": 0.0,
         "volume_ratio": 1.0,
@@ -900,6 +927,16 @@ def get_stock_indicators(ticker: str) -> Dict[str, Any]:
         # 3. 20-day Disparity Index (%)
         if ma_20 > 0:
             result["disparity"] = round((current_price / ma_20) * 100, 2)
+
+        # 3a. RSI (14) & RSI Prev
+        close_prices = hist["Close"].tolist()
+        if len(close_prices) > 0 and kis_price is not None:
+            close_prices[-1] = kis_price
+        
+        rsi_today = calculate_rsi(close_prices, 14)
+        rsi_prev = calculate_rsi(close_prices[:-1], 14) if len(close_prices) > 1 else rsi_today
+        result["rsi"] = round(rsi_today, 2)
+        result["rsi_prev"] = round(rsi_prev, 2)
 
         # 4. Daily Volume
         daily_volume = int(hist["Volume"].iloc[-1])
@@ -1986,8 +2023,17 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
         market_disp = kospi_disparity if ticker_market == "KOSPI" else kosdaq_disparity
         is_market_crash = (market_change <= -1.5) or (market_disp <= 97.0)
         if is_market_crash:
-            blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 매크로 불안] 해당 시장({ticker_market}) 지수가 급락하거나 약세장 침체(당일 등락률: {market_change:+.2f}%, 20MA 이격도: {market_disp:.1f}%) 상태이므로 신규 매수가 차단됩니다."
-            continue
+            # RSI 25 이하 극단적 침체 반등 예외 적용
+            rsi_val = market_indicators.get(ticker, {}).get("rsi", 50.0)
+            rsi_prev = market_indicators.get(ticker, {}).get("rsi_prev", 50.0)
+            daily_change = market_indicators.get(ticker, {}).get("daily_change_pct", 0.0)
+            is_rebound = (rsi_val <= 25 or rsi_prev <= 25) and (rsi_val > rsi_prev or daily_change > 0.0)
+            
+            if is_rebound:
+                print(f"[Trading Engine] Exception Triggered: Oversold Rebound for {ticker} (RSI: {rsi_val}, Prev: {rsi_prev}, Change: {daily_change}%). Bypassing market crash guardrail.")
+            else:
+                blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 매크로 불안] 해당 시장({ticker_market}) 지수가 급락하거나 약세장 침체(당일 등락률: {market_change:+.2f}%, 20MA 이격도: {market_disp:.1f}%) 상태이므로 신규 매수가 차단됩니다."
+                continue
 
         # 1c. 종목 뉴스 감성 Red Light 검사 (평균 뉴스 감성 점수 <= -0.3)
         ticker_news = []
@@ -2137,9 +2183,18 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             action = "HOLD"
             reasoning = f"[백엔드 규칙 기각: 리스크 가드레일] Gemini AI가 매수를 결정했으나 해당 종목은 매수 제한 상태입니다: {blocked_buy_reasons[ticker]}"
         elif is_ticker_market_shock:
-            print(f"[Trading Engine] BUY Order Overridden by Market Shock: {shock_reason}")
-            action = "HOLD"
-            reasoning = f"[백엔드 규칙 기각: 시장 쇼크] Gemini AI가 매수를 결정했으나 해당 주식의 소속 거래소({ticker_market}) 지수가 -1.5% 이상 패닉 급락 중이므로 추가 대방어 기각 규칙이 작동하여 HOLD 처리했습니다. ({shock_reason})"
+            # RSI 25 이하 극단적 침체 반등 예외 적용
+            rsi_val = market_indicators.get(ticker, {}).get("rsi", 50.0)
+            rsi_prev = market_indicators.get(ticker, {}).get("rsi_prev", 50.0)
+            daily_change = market_indicators.get(ticker, {}).get("daily_change_pct", 0.0)
+            is_rebound = (rsi_val <= 25 or rsi_prev <= 25) and (rsi_val > rsi_prev or daily_change > 0.0)
+            
+            if is_rebound:
+                print(f"[Trading Engine] Exception Triggered: Oversold Rebound for {ticker} (RSI: {rsi_val}, Prev: {rsi_prev}, Change: {daily_change}%). Bypassing market shock override.")
+            else:
+                print(f"[Trading Engine] BUY Order Overridden by Market Shock: {shock_reason}")
+                action = "HOLD"
+                reasoning = f"[백엔드 규칙 기각: 시장 쇼크] Gemini AI가 매수를 결정했으나 해당 주식의 소속 거래소({ticker_market}) 지수가 -1.5% 이상 패닉 급락 중이므로 추가 대방어 기각 규칙이 작동하여 HOLD 처리했습니다. ({shock_reason})"
         elif disparity >= 115.0:
             print(f"[Trading Engine] BUY Order Overridden by Disparity Limit: {disparity}% >= 115.0%")
             action = "HOLD"
@@ -2230,6 +2285,19 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
                     spend_cash = max_spend_due_to_cash_reserve
                     cash_reserve_triggered = True
 
+                # Guardrail 7: 극단적 RSI 과매도 반등 예외 매수 한도 제한 (전체 예수금의 최대 2% 이내로 매수 금액 제한)
+                rsi_val = market_indicators.get(ticker, {}).get("rsi", 50.0)
+                rsi_prev = market_indicators.get(ticker, {}).get("rsi_prev", 50.0)
+                daily_change = market_indicators.get(ticker, {}).get("daily_change_pct", 0.0)
+                is_rsi_rebound_triggered = (rsi_val <= 25 or rsi_prev <= 25) and (rsi_val > rsi_prev or daily_change > 0.0)
+                
+                rsi_rebound_cap_triggered = False
+                if is_rsi_rebound_triggered:
+                    max_rebound_cash = balance * 0.02
+                    if spend_cash > max_rebound_cash:
+                        spend_cash = max_rebound_cash
+                        rsi_rebound_cap_triggered = True
+
                 # Final quantity calculation
                 quantity = int(spend_cash / (current_price * (1 + fee_rate)))
                 
@@ -2250,6 +2318,8 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
                     gate_reasons.append(f"변동성 리스크 리미트(최대 손실 1.25% 제한)")
                 if cash_reserve_triggered:
                     gate_reasons.append(f"예수금 {min_cash_ratio*100:.0f}% 의무 적립 적용")
+                if rsi_rebound_cap_triggered:
+                    gate_reasons.append("극단침체 RSI 반등 분할매수 2% 한도 제한")
                     
                 if gate_reasons:
                     reasoning += f" [가드레일 작동: {', '.join(gate_reasons)}]"
