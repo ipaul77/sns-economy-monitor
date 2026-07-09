@@ -1734,7 +1734,7 @@ def handle_daily_feedback():
         if global_analyzer.api_configured:
             try:
                 import google.generativeai as genai
-                model_name = config.get("models", {}).get("pro_model", "gemini-1.5-pro")
+                model_name = global_config.get("models", {}).get("pro_model", "gemini-1.5-pro")
                 print(f"[Flask] Calling Gemini model '{model_name}' for daily critique...")
                 model = genai.GenerativeModel(
                     model_name=model_name,
@@ -1752,7 +1752,7 @@ def handle_daily_feedback():
         email_sent = False
         email_err = None
         
-        smtp_config = config.get("smtp", {})
+        smtp_config = global_config.get("smtp", {})
         recipient = "shoutofjoy@gmail.com"
         
         if smtp_config and smtp_config.get("email") and smtp_config.get("password"):
@@ -1772,8 +1772,8 @@ def handle_daily_feedback():
             chunk_size = 4000
             chunks = [full_msg[i:i+chunk_size] for i in range(0, len(full_msg), chunk_size)]
             
-            tg_token = config.get("telegram_bot_token")
-            tg_chat_id = config.get("telegram_chat_id")
+            tg_token = global_config.get("telegram_bot_token")
+            tg_chat_id = global_config.get("telegram_chat_id")
             if tg_token and tg_chat_id:
                 import requests
                 for idx, chunk in enumerate(chunks):
