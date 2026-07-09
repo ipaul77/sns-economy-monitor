@@ -2023,11 +2023,11 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
         market_disp = kospi_disparity if ticker_market == "KOSPI" else kosdaq_disparity
         is_market_crash = (market_change <= -1.5) or (market_disp <= 97.0)
         if is_market_crash:
-            # RSI 25 이하 극단적 침체 반등 예외 적용
+            # RSI 25 이하 극단적 침체 반등 예외 적용 (당일 등락률 >= +1.5%, RSI 상승폭 >= 1.5 정량적 반등 요건 강화)
             rsi_val = market_indicators.get(ticker, {}).get("rsi", 50.0)
             rsi_prev = market_indicators.get(ticker, {}).get("rsi_prev", 50.0)
             daily_change = market_indicators.get(ticker, {}).get("daily_change_pct", 0.0)
-            is_rebound = (rsi_val <= 25 or rsi_prev <= 25) and (rsi_val > rsi_prev or daily_change > 0.0)
+            is_rebound = (rsi_val <= 25 or rsi_prev <= 25) and (daily_change >= 1.5 and (rsi_val - rsi_prev) >= 1.5)
             
             if is_rebound:
                 print(f"[Trading Engine] Exception Triggered: Oversold Rebound for {ticker} (RSI: {rsi_val}, Prev: {rsi_prev}, Change: {daily_change}%). Bypassing market crash guardrail.")
@@ -2183,11 +2183,11 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             action = "HOLD"
             reasoning = f"[백엔드 규칙 기각: 리스크 가드레일] Gemini AI가 매수를 결정했으나 해당 종목은 매수 제한 상태입니다: {blocked_buy_reasons[ticker]}"
         elif is_ticker_market_shock:
-            # RSI 25 이하 극단적 침체 반등 예외 적용
+            # RSI 25 이하 극단적 침체 반등 예외 적용 (당일 등락률 >= +1.5%, RSI 상승폭 >= 1.5 정량적 반등 요건 강화)
             rsi_val = market_indicators.get(ticker, {}).get("rsi", 50.0)
             rsi_prev = market_indicators.get(ticker, {}).get("rsi_prev", 50.0)
             daily_change = market_indicators.get(ticker, {}).get("daily_change_pct", 0.0)
-            is_rebound = (rsi_val <= 25 or rsi_prev <= 25) and (rsi_val > rsi_prev or daily_change > 0.0)
+            is_rebound = (rsi_val <= 25 or rsi_prev <= 25) and (daily_change >= 1.5 and (rsi_val - rsi_prev) >= 1.5)
             
             if is_rebound:
                 print(f"[Trading Engine] Exception Triggered: Oversold Rebound for {ticker} (RSI: {rsi_val}, Prev: {rsi_prev}, Change: {daily_change}%). Bypassing market shock override.")
@@ -2289,7 +2289,7 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
                 rsi_val = market_indicators.get(ticker, {}).get("rsi", 50.0)
                 rsi_prev = market_indicators.get(ticker, {}).get("rsi_prev", 50.0)
                 daily_change = market_indicators.get(ticker, {}).get("daily_change_pct", 0.0)
-                is_rsi_rebound_triggered = (rsi_val <= 25 or rsi_prev <= 25) and (rsi_val > rsi_prev or daily_change > 0.0)
+                is_rsi_rebound_triggered = (rsi_val <= 25 or rsi_prev <= 25) and (daily_change >= 1.5 and (rsi_val - rsi_prev) >= 1.5)
                 
                 rsi_rebound_cap_triggered = False
                 if is_rsi_rebound_triggered:
@@ -2297,6 +2297,16 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
                     if spend_cash > max_rebound_cash:
                         spend_cash = max_rebound_cash
                         rsi_rebound_cap_triggered = True
+
+                # Guardrail 8: 가드레일 해제 회복 과도기 분할 매수 비중 제한
+                # 조건: 가드레일은 해제되었으나(not is_market_crash), KOSPI 지수 이격도가 100% 미만인 회복 장세일 때
+                is_recovery_phase = (not is_market_crash) and (kospi_disparity < 100.0)
+                recovery_cap_triggered = False
+                if is_recovery_phase and not is_rsi_rebound_triggered:  # RSI 극단적 예외 주문은 이미 2% 캡이 씌워졌으므로 제외
+                    max_recovery_cash = balance * 0.15
+                    if spend_cash > max_recovery_cash:
+                        spend_cash = max_recovery_cash
+                        recovery_cap_triggered = True
 
                 # Final quantity calculation
                 quantity = int(spend_cash / (current_price * (1 + fee_rate)))
@@ -2320,6 +2330,8 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
                     gate_reasons.append(f"예수금 {min_cash_ratio*100:.0f}% 의무 적립 적용")
                 if rsi_rebound_cap_triggered:
                     gate_reasons.append("극단침체 RSI 반등 분할매수 2% 한도 제한")
+                if recovery_cap_triggered:
+                    gate_reasons.append("가드레일 해제 회복 과도기 분할매수 15% 한도 적용")
                     
                 if gate_reasons:
                     reasoning += f" [가드레일 작동: {', '.join(gate_reasons)}]"
