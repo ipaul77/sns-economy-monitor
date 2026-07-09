@@ -1,5 +1,11 @@
 {
   "GEMINI_API_KEY": "",
+  "smtp": {
+    "server": "smtp.gmail.com",
+    "port": 587,
+    "email": "",
+    "password": ""
+  },
   "telegram_bot_token": "8671286076:AAHSYufYg1f9na314YgKz19LX02EpIrTQdw",
   "telegram_chat_id": "8806397400",
   "slack_webhook_url": "",

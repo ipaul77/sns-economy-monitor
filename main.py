@@ -1643,7 +1643,160 @@ def run_pipeline(config, analyzer):
         print(f"[Warning] Auto-Purge failed: {str(e)}")
 
 
-# --- FLASK APP ENDPOINTS ---
+@app.route('/api/daily-feedback', methods=['GET', 'POST'])
+def handle_daily_feedback():
+    """
+    Triggers the daily AI feedback and code improvement loop at KOSPI market close (15:40 KST).
+    Gathers today's KOSPI index and disparity data, queries Firestore for today's transactions,
+    sends this plus key code parts to Gemini API, and emails/telegrams the critique.
+    """
+    print("[Flask] Daily feedback endpoint triggered!")
+    try:
+        # 1. Gather Today's Transactions from Firestore
+        import trading_engine
+        txs = trading_engine.get_latest_transactions(limit=100)
+        
+        # Today's date cutoff (KST)
+        now_kst = db.get_kst_now()
+        cutoff_time = datetime(now_kst.year, now_kst.month, now_kst.day, 0, 0, 0)
+        
+        today_txs = []
+        for tx in txs:
+            ts_str = tx["timestamp"]
+            try:
+                if 'T' in ts_str:
+                    ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00")).replace(tzinfo=None)
+                else:
+                    ts = datetime.strptime(ts_str.split(".")[0], "%Y-%m-%d %H:%M:%S")
+            except Exception:
+                ts = cutoff_time
+                
+            if ts >= cutoff_time:
+                today_txs.append(tx)
+                
+        # 2. Gather KOSPI / KOSDAQ Index data via yfinance
+        import yfinance as yf
+        kospi_close = 0.0
+        kospi_disparity = 100.0
+        try:
+            ticker_yf = yf.Ticker("^KS11")
+            df = ticker_yf.history(period="1mo")
+            if not df.empty:
+                kospi_close = df["Close"].iloc[-1]
+                ma20 = df["Close"].rolling(20).mean().iloc[-1]
+                kospi_disparity = (kospi_close / ma20) * 100
+        except Exception as ex:
+            print(f"[Warning] Failed to fetch live KOSPI info via yfinance: {ex}")
+            
+        # Format the gathered data into a clean text block
+        data_summary = f"=== 당일 ({now_kst.date()}) 거래 데이터 및 지표 ===\n"
+        data_summary += f"KOSPI 종가: {kospi_close:,.2f} | 20MA 이격도: {kospi_disparity:.2f}%\n"
+        data_summary += f"오늘의 거래 검토 건수: {len(today_txs)}건\n\n"
+        
+        if not today_txs:
+            data_summary += "오늘 발생한 모의투자 거래 내역이 없습니다.\n"
+        else:
+            for idx, tx in enumerate(today_txs):
+                data_summary += f"[{idx+1}] 일시: {tx['timestamp']} | 종목: {tx['ticker']} | 주문: {tx['action']} | 수량: {tx['quantity']} | 가격: {tx['price']}\n"
+                data_summary += f"    결정사유: {tx['reasoning']}\n\n"
+
+        # 3. Read current core trading code part (Specifically the buy decision guardrails part)
+        core_code = ""
+        engine_path = "trading_engine.py"
+        if os.path.exists(engine_path):
+            try:
+                with open(engine_path, "r", encoding="utf-8") as f:
+                    lines = f.readlines()
+                # Extract key guardrail segment
+                # Sizing cap is around Line 2270-2340, we extract ~100 lines
+                core_code = "".join(lines[2260:2360])
+            except Exception as e:
+                core_code = f"# Failed to read trading_engine.py: {str(e)}"
+        else:
+            core_code = "# trading_engine.py not found locally"
+
+        # 4. Construct Gemini API query with system instructions
+        system_instruction = (
+            "너는 냉철하고 엄격한 주식 투자 전문가이자 시니어 파이썬 개발자야. "
+            "오늘 거래 로그에서 수수료를 낭비한 엇박자 매매(Whipsaw), 잘못된 타이밍의 물타기, 매크로 필터의 오작동을 찾아내고 비판해줘. "
+            "그리고 이 문제를 해결하기 위해 어떤 변수(RSI 임계치, 이격도 기준 등)나 코드 로직을 수정해야 하는지 "
+            "구체적인 파이썬 코드 수정본(diff 형태 또는 함수 재작성)을 출력해줘."
+        )
+        
+        user_prompt = (
+            f"=== 1. 오늘의 거래 데이터 및 시장 지표 ===\n{data_summary}\n"
+            f"=== 2. 현재 작동 중인 핵심 매매 로직 코드 일부 ===\n```python\n{core_code}\n```\n\n"
+            "위의 실제 데이터와 소스코드를 바탕으로 비판적인 투자 피드백과 소스코드 수정 제안을 작성해줘."
+        )
+
+        # Call Gemini via generator analyzer
+        critique = "Critique generation failed."
+        if global_analyzer.api_configured:
+            try:
+                import google.generativeai as genai
+                model_name = config.get("models", {}).get("pro_model", "gemini-1.5-pro")
+                print(f"[Flask] Calling Gemini model '{model_name}' for daily critique...")
+                model = genai.GenerativeModel(
+                    model_name=model_name,
+                    system_instruction=system_instruction
+                )
+                response = model.generate_content(user_prompt)
+                critique = response.text
+            except Exception as e:
+                critique = f"Gemini API call failed: {str(e)}"
+        else:
+            critique = "Gemini API key is missing or invalid. Demonstration/Mock mode critique."
+
+        # 5. Deliver results via Email (and Telegram Fallback)
+        report_subject = f"[Daily AI Feedback] {now_kst.date()} 모의투자 피드백 & 코드 개선 리포트"
+        email_sent = False
+        email_err = None
+        
+        smtp_config = config.get("smtp", {})
+        recipient = "shoutofjoy@gmail.com"
+        
+        if smtp_config and smtp_config.get("email") and smtp_config.get("password"):
+            try:
+                import email_helper
+                email_sent = email_helper.send_email(smtp_config, recipient, report_subject, critique)
+            except Exception as ex:
+                email_err = str(ex)
+                
+        # Send Telegram notification if email failed or smtp not configured
+        if not email_sent:
+            print("[Flask] Email configuration missing or failed. Sending report via Telegram...")
+            tg_header = f"🚨 *[Daily AI Feedback]*\n이메일 발송 실패(또는 설정 없음)로 인해 텔레그램으로 전송합니다.\n\n"
+            full_msg = tg_header + critique
+            
+            # Send in chunks of 4000 chars to satisfy Telegram limits
+            chunk_size = 4000
+            chunks = [full_msg[i:i+chunk_size] for i in range(0, len(full_msg), chunk_size)]
+            
+            tg_token = config.get("telegram_bot_token")
+            tg_chat_id = config.get("telegram_chat_id")
+            if tg_token and tg_chat_id:
+                import requests
+                for idx, chunk in enumerate(chunks):
+                    try:
+                        url = f"https://api.telegram.org/bot{tg_token.strip()}/sendMessage"
+                        requests.post(url, json={
+                            "chat_id": tg_chat_id,
+                            "text": chunk
+                        }, timeout=10)
+                    except Exception as ex:
+                        print(f"[Warning] Failed to send tg chunk {idx}: {ex}")
+        
+        return jsonify({
+            "status": "success",
+            "date": now_kst.date().isoformat(),
+            "email_sent": email_sent,
+            "email_error": email_err,
+            "report_preview": critique[:200] + "..."
+        })
+        
+    except Exception as e:
+        print(f"[Error] Daily feedback loop crash: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/ping')
 def handle_ping():
