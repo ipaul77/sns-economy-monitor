@@ -1630,7 +1630,19 @@ def append_to_logfile(item, rel_check, analysis, other_sources=None):
 def load_config():
     try:
         with open("config.json", "r", encoding="utf-8") as f:
-            return json.load(f)
+            cfg = json.load(f)
+        
+        # Sync with Firestore persisted settings to handle Render instance resets
+        firestore_cfg = db.load_system_config()
+        if firestore_cfg:
+            cfg.update(firestore_cfg)
+            try:
+                with open("config.json", "w", encoding="utf-8") as f:
+                    json.dump(cfg, f, indent=2, ensure_ascii=False)
+            except Exception as we:
+                print(f"[Warning] Failed to write back firestore config to config.json: {we}")
+                
+        return cfg
     except Exception as e:
         print(f"[Error] Failed to load config.json: {str(e)}")
         sys.exit(1)
@@ -2223,6 +2235,12 @@ def save_config():
             if os.path.exists("config.json"):
                 with open("config.json", "w", encoding="utf-8") as f:
                     json.dump(global_config, f, indent=2, ensure_ascii=False)
+                    
+            # Persist to Firestore settings/global_config
+            try:
+                db.save_system_config({"risk_profile": profile_val})
+            except Exception as fe:
+                print(f"[Warning] Failed to persist config to Firestore: {fe}")
                     
             print(f"[main.py] Successfully updated risk_profile to {profile_val}")
             

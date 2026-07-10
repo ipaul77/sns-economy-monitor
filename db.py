@@ -766,3 +766,32 @@ def _sqlite_fetch_fundamentals(ticker: str) -> dict:
     except Exception as e:
         print(f"[Error] SQLite fetch_fundamentals failed: {e}")
         return None
+
+def save_system_config(config_dict: dict):
+    """
+    Saves the system config metadata to Firestore to ensure persistence across Render deployments.
+    """
+    if not USE_FIREBASE or db_client is None:
+        return
+    try:
+        doc_ref = db_client.collection("settings").document("global_config")
+        doc_ref.set(config_dict, merge=True)
+        print("[DB] Successfully saved system config to Firestore settings/global_config.")
+    except Exception as e:
+        print(f"[Warning] Failed to save config to Firestore: {e}")
+
+def load_system_config() -> dict:
+    """
+    Loads the system config metadata from Firestore settings/global_config.
+    """
+    if not USE_FIREBASE or db_client is None:
+        return {}
+    try:
+        doc_ref = db_client.collection("settings").document("global_config")
+        doc = doc_ref.get()
+        if doc.exists:
+            print("[DB] Successfully loaded system config from Firestore settings/global_config.")
+            return doc.to_dict()
+    except Exception as e:
+        print(f"[Warning] Failed to load config from Firestore: {e}")
+    return {}
