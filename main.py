@@ -280,7 +280,7 @@ def generate_html_dashboard():
                     <div class="flex items-center space-x-3">
                         <span class="h-3 w-3 rounded-full bg-emerald-500 animate-pulse" id="tradingEngineStatusDot"></span>
                         <div>
-                            <span class="text-base font-bold text-slate-100">AI 에이전트 모의투자 계좌</span>
+                            <span class="text-base font-bold text-slate-100">AI 에이전트 모의투자 계좌 (v1.0.3-risk-patched)</span>
                             <span class="text-xs text-slate-500 ml-2">(초기 가상 자산: 10,000,000원 | 운용 30일 제한)</span>
                         </div>
                     </div>
@@ -288,6 +288,27 @@ def generate_html_dashboard():
                         <button onclick="triggerManualTrade()" id="tradeTriggerBtn" class="px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg transition duration-200 flex items-center gap-1.5">
                             ⚡ AI 모의투자 매매 1사이클 강제 구동
                         </button>
+                    </div>
+                </div>
+
+                <!-- Dynamic Risk Profile Controls -->
+                <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4 my-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div class="flex-1">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs font-bold text-slate-400">🛡️ 실시간 AI 투자 리스크 성향 제어</span>
+                            <span id="riskProfileBadge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">중립형 (3단계)</span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-1" id="riskProfileDesc">완만한 조정장 매수를 허용하며, Half-Kelly 비중 조절(0.50배) 및 40% 예수금 의무 보존 필터를 유지합니다.</p>
+                    </div>
+                    <div class="w-full md:w-72 flex flex-col items-center">
+                        <div class="w-full flex justify-between text-[10px] text-slate-500 mb-1 px-1 font-medium">
+                            <span>극단안정</span>
+                            <span>안정</span>
+                            <span>중립</span>
+                            <span>공격</span>
+                            <span>극단공격</span>
+                        </div>
+                        <input type="range" id="riskProfileRange" min="1" max="5" value="3" class="w-full h-2 rounded-lg appearance-none cursor-pointer focus:outline-none bg-gradient-to-r from-emerald-500 via-amber-500 to-rose-500" style="accent-color: #f59e0b;" oninput="updateRiskProfileUI(this.value)" onchange="saveRiskProfile(this.value)">
                     </div>
                 </div>
 
@@ -645,6 +666,85 @@ def generate_html_dashboard():
 
     <!-- Frontend Interactive Javascript -->
     <script>
+        // Risk Profile Interactive UI Update Helpers
+        const riskNames = {{
+            1: "극단적 안정형 (1단계)",
+            2: "안정형 (2단계)",
+            3: "중립형 (3단계)",
+            4: "공격형 (4단계)",
+            5: "극단적 공격형 (5단계)"
+        }};
+        const riskDescriptions = {{
+            1: "원금 보존 극대화. 이격도 98% 미만 시 즉시 차단, 1/4 Kelly 베팅(0.25배) 및 50% 현금 강제 보유.",
+            2: "자산 보호 우선. 이격도 97% 미만 시 차단, 0.35배 Kelly 베팅 및 45% 현금 강제 보유.",
+            3: "완만한 조정장 매수 허용. 이격도 95% 미만 시 차단, Half-Kelly 베팅(0.50배) 및 40% 현금 강제 보유.",
+            4: "하락장 속에서도 적극적 매수. 이격도 93% 미만 시 차단, 3/4 Kelly 베팅(0.75배) 및 30% 현금 강제 보유.",
+            5: "이익 극대화 풀베팅. 이격도 90% 미만 시 차단, Full Kelly 베팅(1.00배) 및 10% 현금만 보유."
+        }};
+        const riskColors = {{
+            1: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+            2: "bg-teal-500/20 text-teal-400 border-teal-500/30",
+            3: "bg-amber-500/20 text-amber-400 border-amber-500/30",
+            4: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+            5: "bg-rose-500/20 text-rose-400 border-rose-500/30"
+        }};
+        
+        function updateRiskProfileUI(val) {{
+            const valNum = parseInt(val);
+            const badge = document.getElementById("riskProfileBadge");
+            const desc = document.getElementById("riskProfileDesc");
+            const range = document.getElementById("riskProfileRange");
+            
+            if (badge) {{
+                badge.textContent = riskNames[valNum];
+                badge.className = "px-2 py-0.5 rounded text-[10px] font-bold border " + riskColors[valNum];
+            }}
+            if (desc) {{
+                desc.textContent = riskDescriptions[valNum];
+            }}
+            if (range) {{
+                const colors = {{1: "#10b981", 2: "#14b8a6", 3: "#f59e0b", 4: "#f97316", 5: "#f43f5e"}};
+                range.style.accentColor = colors[valNum];
+            }}
+        }}
+        
+        function saveRiskProfile(val) {{
+            const valNum = parseInt(val);
+            const range = document.getElementById("riskProfileRange");
+            if (range) {{
+                range.dataset.userInteracting = "";
+            }}
+            
+            console.log("Saving risk profile: ", valNum);
+            fetch('/api/save-config', {{
+                method: 'POST',
+                headers: {{ 'Content-Type': 'application/json' }},
+                body: JSON.stringify({{ risk_profile: valNum }})
+            }})
+            .then(res => res.json())
+            .then(data => {{
+                if (data.status === "success") {{
+                    console.log("Risk profile saved successfully!");
+                    loadTradingState();
+                }} else {{
+                    alert("설정 저장 실패: " + data.message);
+                }}
+            }})
+            .catch(err => {{
+                console.error("Error saving risk profile:", err);
+            }});
+        }}
+        
+        // Track user interaction state to prevent slider jumping during dragging
+        document.addEventListener("DOMContentLoaded", () => {{
+            const range = document.getElementById("riskProfileRange");
+            if (range) {{
+                range.addEventListener("input", () => {{
+                    range.dataset.userInteracting = "true";
+                }});
+            }}
+        }});
+
         // AI Trading State Loader & Manual Trigger JS (Classic String Concat for Python f-string Safety)
         function loadTradingState() {{
             fetch('/api/trading/state')
@@ -694,6 +794,15 @@ def generate_html_dashboard():
                 
                 let stockVal = state.total_asset - state.balance;
                 document.getElementById("tradingStockValue").textContent = Math.round(stockVal).toLocaleString() + "원";
+                
+                // Update Risk Profile UI
+                if (data.risk_profile !== undefined) {{
+                    const rangeEl = document.getElementById("riskProfileRange");
+                    if (rangeEl && !rangeEl.dataset.userInteracting) {{
+                        rangeEl.value = data.risk_profile;
+                        updateRiskProfileUI(data.risk_profile);
+                    }}
+                }}
                 
                 // Update Leading Flow Score
                 const score = data.leading_flow_score || 5;
