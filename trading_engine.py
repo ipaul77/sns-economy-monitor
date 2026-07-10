@@ -1521,6 +1521,15 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
     10. Run **Accounting Assert** (strict mathematical verification or lock and sys.exit).
     11. Log transaction & Update Firestore state.
     """
+    # Load config.json
+    config = {}
+    if os.path.exists("config.json"):
+        try:
+            with open("config.json", "r", encoding="utf-8") as f:
+                config = json.load(f)
+        except Exception as e:
+            print(f"[Warning] Failed to load config.json in run_simulation_cycle: {e}")
+
     # 1. State Load & Lock Check
     state = get_agent_state()
     if state.get("system_lock", False):
@@ -2018,10 +2027,14 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             continue
 
         # 1b. 지수 폭락 검사 (해당 지수 당일 등락률 <= -1.5% 이거나 20MA 대비 이격도 <= 97.0% 인 경우 차단)
+        risk_profile = config.get("risk_profile", 3)
+        disparity_limits = {1: 98.0, 2: 97.0, 3: 95.0, 4: 93.0, 5: 90.0}
+        disp_limit = disparity_limits.get(risk_profile, 95.0)
+
         ticker_market = market_indicators.get(ticker, {}).get("market", "KOSPI")
         market_change = index_changes.get(ticker_market, 0.0)
         market_disp = kospi_disparity if ticker_market == "KOSPI" else kosdaq_disparity
-        is_market_crash = (market_change <= -1.5) or (market_disp <= 97.0)
+        is_market_crash = (market_change <= -1.5) or (market_disp <= disp_limit)
         if is_market_crash:
             # RSI 25 이하 극단적 침체 반등 예외 적용 (당일 등락률 >= +1.5%, RSI 상승폭 >= 1.5 정량적 반등 요건 강화)
             rsi_val = market_indicators.get(ticker, {}).get("rsi", 50.0)
@@ -2214,7 +2227,11 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             if r_r <= 0.0:
                 r_r = 0.1
             expectation = win_p - (1.0 - win_p) / r_r
-            half_kelly = 0.5 * expectation
+            
+            # Kelly multiplier based on risk profile (1: 0.25, 2: 0.35, 3: 0.50, 4: 0.75, 5: 1.00)
+            kelly_multipliers = {1: 0.25, 2: 0.35, 3: 0.50, 4: 0.75, 5: 1.00}
+            kelly_multiplier = kelly_multipliers.get(risk_profile, 0.50)
+            half_kelly = kelly_multiplier * expectation
             
             if expectation <= 0.0:
                 action = "HOLD"
@@ -2277,8 +2294,16 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
                     spend_cash = risk_parity_cash
                     risk_parity_triggered = True
                     
-                # Guardrail 6: Cash Reserve Shield (enforce 40% cash in bear market, 10% in bull market)
-                min_cash_ratio = 0.40 if is_downtrend else 0.10
+                # Guardrail 6: Cash Shield (enforce cash reserve based on risk profile)
+                min_cash_ratios = {
+                    1: (0.50, 0.20),
+                    2: (0.45, 0.15),
+                    3: (0.40, 0.10),
+                    4: (0.30, 0.05),
+                    5: (0.10, 0.00)
+                }
+                bear_cash, bull_cash = min_cash_ratios.get(risk_profile, (0.40, 0.10))
+                min_cash_ratio = bear_cash if is_downtrend else bull_cash
                 max_spend_due_to_cash_reserve = max(balance - (total_asset * min_cash_ratio), 0.0)
                 cash_reserve_triggered = False
                 if spend_cash > max_spend_due_to_cash_reserve:
@@ -2313,7 +2338,9 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
                 
                 # Reasoning logging
                 gate_reasons = []
-                gate_reasons.append(f"하프-켈리 비율 조절 {half_kelly:.2f}배")
+                profile_names = {1: "극단안정", 2: "안정", 3: "중립", 4: "공격", 5: "극단공격"}
+                p_name = profile_names.get(risk_profile, "중립")
+                gate_reasons.append(f"[{p_name}] 켈리비율 {half_kelly:.2f}배")
                 if order_limit_triggered:
                     gate_reasons.append("1회 주문 10% 제한")
                 if sizing_triggered:

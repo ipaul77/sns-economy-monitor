@@ -2054,8 +2054,12 @@ def get_trading_state():
         except Exception as ex:
             print(f"[main.py] Failed to fetch top market indicators: {ex}")
 
+        # Get risk profile from global config
+        risk_profile = global_config.get("risk_profile", 3)
+
         response_data = {
             "status": "success",
+            "risk_profile": risk_profile,
             "state": state,
             "portfolio": portfolio,
             "market_prices": market_prices,
@@ -2085,6 +2089,43 @@ def get_trading_state():
             "status": "error",
             "message": f"Failed to retrieve paper trading state: {str(e)}"
         }), 500
+
+
+@app.route('/api/save-config', methods=['POST'])
+def save_config():
+    """
+    API endpoint: Updates config parameters such as risk_profile.
+    Saves to config.json and updates memory state.
+    """
+    global global_config, global_analyzer
+    try:
+        data = request.get_json() or {}
+        if "risk_profile" in data:
+            profile_val = int(data["risk_profile"])
+            if profile_val < 1 or profile_val > 5:
+                return jsonify({"status": "error", "message": "Risk profile must be between 1 and 5"}), 400
+                
+            # Update global config memory
+            global_config["risk_profile"] = profile_val
+            if global_analyzer:
+                global_analyzer.config["risk_profile"] = profile_val
+                
+            # Save to config.json file
+            if os.path.exists("config.json"):
+                with open("config.json", "w", encoding="utf-8") as f:
+                    json.dump(global_config, f, indent=2, ensure_ascii=False)
+                    
+            print(f"[main.py] Successfully updated risk_profile to {profile_val}")
+            
+            # Clear API state cache to force immediate UI refresh on next poll
+            global _trading_state_cache
+            _trading_state_cache = None
+            
+            return jsonify({"status": "success", "message": "Configuration updated successfully"})
+        return jsonify({"status": "error", "message": "Invalid request fields"}), 400
+    except Exception as e:
+        print(f"[Error] Failed to update config: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 @app.route('/api/trading/extend', methods=['POST'])
