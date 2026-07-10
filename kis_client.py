@@ -76,7 +76,7 @@ class KISClient:
         if env_sim is not None:
             self.is_simulation = env_sim.lower() in ("true", "1", "yes")
         else:
-            # Fall back to App Key prefix auto-detection
+            # Respect config.json settings if already loaded, fallback to prefix detection if app_key matches
             if self.app_key.startswith("OPS"):
                 self.is_simulation = True
             elif self.app_key.startswith("PS"):
