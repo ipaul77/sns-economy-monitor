@@ -1893,8 +1893,8 @@ def handle_daily_feedback():
             chunk_size = 4000
             chunks = [full_msg[i:i+chunk_size] for i in range(0, len(full_msg), chunk_size)]
             
-            tg_token = global_config.get("telegram_bot_token")
-            tg_chat_id = global_config.get("telegram_chat_id")
+            tg_token = global_config.get("telegram_bot_token") or os.getenv("TELEGRAM_BOT_TOKEN")
+            tg_chat_id = global_config.get("telegram_chat_id") or os.getenv("TELEGRAM_CHAT_ID")
             if tg_token and tg_chat_id:
                 import requests
                 for idx, chunk in enumerate(chunks):
