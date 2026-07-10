@@ -1196,8 +1196,8 @@ class TradingDecision(BaseModel):
     allocation_pct: float = Field(description="Percentage of available cash to allocate to this BUY trade (from 0.0 to 100.0). For SELL, represent the percentage of owned shares to sell (from 0.0 to 100.0). For HOLD, this must be 0.0.")
     reasoning: str = Field(description="Specific, detailed investment logic in Korean justifying the decision based on provided news sentiment and price analysis.")
     mode: Literal["VALUE", "TECHNICAL"] = Field(description="The investment mode chosen: 'VALUE' (fundamental, long-term margin of safety, wide stop limits) or 'TECHNICAL' (short-term technical momentum, sugeup, volume breakouts, tight stop limits).")
-    win_probability: float = Field(default=0.5, description="Estimated probability of success (win rate) for this trade, ranging from 0.0 to 1.0. For HOLD, default to 0.5.")
-    reward_to_risk_ratio: float = Field(default=1.0, description="Estimated reward-to-risk ratio (expected upside divided by expected downside) for this trade. Must be >= 0.1. For HOLD, default to 1.0.")
+    win_probability: float = Field(description="Estimated probability of success (win rate) for this trade, ranging from 0.0 to 1.0. For HOLD, set to 0.5.")
+    reward_to_risk_ratio: float = Field(description="Estimated reward-to-risk ratio (expected upside divided by expected downside) for this trade. Must be >= 0.1. For HOLD, set to 1.0.")
 
 
 def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: float, market_prices: Dict[str, float], news_context: List[Dict[str, Any]], market_indicators: Optional[Dict[str, Dict[str, Any]]] = None, index_changes: Optional[Dict[str, float]] = None, api_key: Optional[str] = None, blocked_buy_reasons: Optional[Dict[str, str]] = None) -> TradingDecision:
@@ -1481,7 +1481,7 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
         # Explicitly build schema dict and restore required list to fix SDK popping bug
         from google.generativeai.types import content_types
         schema = content_types._schema_for_class(TradingDecision)
-        schema["required"] = ["action", "ticker", "allocation_pct", "reasoning", "mode"]
+        schema["required"] = ["action", "ticker", "allocation_pct", "reasoning", "mode", "win_probability", "reward_to_risk_ratio"]
 
         response = model.generate_content(
             prompt,
