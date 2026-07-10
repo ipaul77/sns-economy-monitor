@@ -76,11 +76,12 @@ class KISClient:
         if env_sim is not None:
             self.is_simulation = env_sim.lower() in ("true", "1", "yes")
         else:
-            # Respect config.json settings if already loaded, fallback to prefix detection if app_key matches
-            if self.app_key.startswith("OPS"):
-                self.is_simulation = True
-            elif self.app_key.startswith("PS"):
-                self.is_simulation = False
+            # ONLY run prefix auto-detection if is_simulation was NOT already set to True by config.json
+            if not self.is_simulation:
+                if self.app_key.startswith("OPS"):
+                    self.is_simulation = True
+                elif self.app_key.startswith("PS"):
+                    self.is_simulation = False
             
         if self.is_simulation:
             self.base_url = "https://openapivts.koreainvestment.com:29443"
