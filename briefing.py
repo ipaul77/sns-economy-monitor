@@ -57,7 +57,6 @@ def generate_daily_briefing(analyzer, db_path="data/monitor.db"):
             print(f"[Warning] Failed to read briefing cache: {str(e)}")
 
     # 2. Fetch relevant articles from the last 24 hours
-    import db
     rows = db.fetch_recent_relevant(hours=24)
     
     if not rows:
