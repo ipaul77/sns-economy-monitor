@@ -243,25 +243,21 @@ def generate_trading_decision(
             reward_to_risk_ratio=1.0
         )
 
-def run_simulation_cycle(bypass_hours: bool = False) -> dict:
-    """
-    Executes a single end-to-end trading simulation cycle.
-    """
+
+def _load_config_and_check_eligibility(bypass_hours: bool) -> dict:
     config = {}
     if os.path.exists("config.json"):
         try:
             with open("config.json", "r", encoding="utf-8") as f:
                 config = json.load(f)
         except Exception as e:
-            print(f"[Warning] Failed to load config.json in run_simulation_cycle: {e}")
+            print(f"[Warning] Failed to load config.json: {e}")
 
-    # 1. State Load & Lock Check
     state = get_agent_state()
     if state.get("system_lock", False):
         print("[Trading Engine] CRITICAL: System is locked! Aborting simulation run.")
         return {"status": "error", "message": "System is locked due to past accounting anomalies."}
 
-    # 2. KST Market Hours Check
     now = get_kst_now()
     is_weekday = now.weekday() < 5
     market_start = now.replace(hour=9, minute=0, second=0, microsecond=0)
@@ -272,13 +268,11 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
         print(f"[Trading Engine] Out of market hours ({now.strftime('%Y-%m-%d %H:%M:%S')} KST). Simulation skipped.")
         return {"status": "skipped", "message": "Market is closed. Simulated runs only occur on weekdays between 09:00 and 15:30 KST."}
 
-    # 3. Get Portfolio, State Snapshots, and News Context Early
     portfolio = get_portfolio_holdings()
     news_context = db.fetch_recent_relevant(hours=24)
     balance = float(state.get("balance", 10000000.0))
     prev_total_asset = float(state.get("total_asset", 10000000.0))
 
-    # 4. Idempotency Lock Check (Time Interval)
     last_txs = get_latest_transactions(limit=1)
     if last_txs:
         last_tx = last_txs[0]
@@ -287,12 +281,24 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             time_diff = now.replace(tzinfo=None) - last_time
             cooldown = timedelta(minutes=15)
             if time_diff < cooldown and not bypass_hours:
-                print(f"[Trading Engine] Idempotency Lock: Trade within 15 minutes cooldown is blocked. Last trade was {time_diff.total_seconds() / 60:.1f} mins ago.")
+                print(f"[Trading Engine] Idempotency Lock: Trade within 15 minutes cooldown is blocked.")
                 return {"status": "skipped", "message": "Idempotency Lock: Minimum 15-minute interval between trades required."}
         except Exception as e:
             print(f"[Trading Engine] Failed to parse last transaction timestamp: {e}")
 
-    # 6. Fetch Market Prices & Indicators in parallel
+    return {
+        "status": "eligible",
+        "config": config,
+        "state": state,
+        "portfolio": portfolio,
+        "news_context": news_context,
+        "balance": balance,
+        "prev_total_asset": prev_total_asset,
+        "now": now,
+        "last_txs": last_txs
+    }
+
+def _fetch_market_indices_and_trends(now) -> dict:
     index_changes = get_market_index_change()
     print(f"[Trading Engine] Market Indices changes: {index_changes}")
     
@@ -336,24 +342,25 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
         print(f"[Trading Engine] [Warning] Failed to calculate index disparities: {e}")
     print(f"[Trading Engine] 20MA Disparities -> USD_KRW: {usdkrw_disparity:.2f}%, KOSPI: {kospi_disparity:.2f}%, KOSDAQ: {kosdaq_disparity:.2f}%")
 
-    is_market_shock = False
-    shock_reason = ""
-    for idx_name, val in index_changes.items():
-        if val <= -1.5:
-            is_market_shock = True
-            shock_reason = f"지수 급락 쇼크 경보 ({idx_name} 당일 등락률: {val:+.2f}%)"
-            break
-
     is_downtrend = False
     try:
         regime = get_market_trend_regime()
         is_downtrend = regime.get("is_downtrend", False)
-        print(f"[Trading Engine] Market Regime check: {'Downtrend (Bear Market)' if is_downtrend else 'Uptrend (Bull Market)'} - {regime.get('message')}")
+        print(f"[Trading Engine] Market Regime check: {'Downtrend' if is_downtrend else 'Uptrend'} - {regime.get('message')}")
     except Exception as e:
         print(f"[Trading Engine] [Warning] Failed to resolve market trend regime: {e}")
 
-    monitored_tickers = get_active_tickers(portfolio, news_context)
-    
+    return {
+        "index_changes": index_changes,
+        "usdkrw_price": usdkrw_price,
+        "usdkrw_change_pct": usdkrw_change_pct,
+        "usdkrw_disparity": usdkrw_disparity,
+        "kospi_disparity": kospi_disparity,
+        "kosdaq_disparity": kosdaq_disparity,
+        "is_downtrend": is_downtrend
+    }
+
+def _apply_preflight_cooldown_filters(monitored_tickers, portfolio, now) -> tuple:
     filtered_tickers = []
     pre_blocked_reasons = {}
     for ticker in monitored_tickers:
@@ -385,9 +392,9 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
                 print(f"[Trading Engine] [Warning] Failed to parse last sell timestamp for {ticker}: {e}")
 
         filtered_tickers.append(ticker)
-        
-    monitored_tickers = filtered_tickers
+    return filtered_tickers, pre_blocked_reasons
 
+def _fetch_prices_and_indicators(monitored_tickers) -> tuple:
     market_indicators = {}
     market_prices = {}
     
@@ -410,12 +417,13 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             price = ind.get("current_price", 0.0)
             if price > 0:
                 market_prices[tick] = price
+                
+    return market_indicators, market_prices
 
+def _check_technical_and_news_idempotency(market_indicators, news_context, last_txs, bypass_hours) -> Optional[dict]:
     has_technical_trigger = False
     
-    last_tx = None
-    if last_txs:
-        last_tx = last_txs[0]
+    last_tx = last_txs[0] if last_txs else None
     last_snapshot = last_tx.get("snapshot_context", {}) if last_tx else {}
     last_indicators = last_snapshot.get("market_indicators", {})
     
@@ -448,7 +456,7 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             
             if last_frgn_sig != curr_frgn_sig or last_inst_sig != curr_inst_sig:
                 has_technical_trigger = True
-                print(f"[Trading Engine] Technical Trigger: Sugeup signal changed (Foreigner: {last_frgn_sig}->{curr_frgn_sig}, Institution: {last_inst_sig}->{curr_inst_sig}) for {tick}.")
+                print(f"[Trading Engine] Technical Trigger: Sugeup signal changed for {tick}.")
                 break
             
     if news_context and not has_technical_trigger:
@@ -464,10 +472,11 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             print(f"[Trading Engine] Idempotency Lock: Already processed and acted upon the latest news URL: {latest_news_url}")
             return {"status": "skipped", "message": "Idempotency Lock: Latest news context has already been acted upon."}
 
-    # [Pre-filter: Macro Circuit Breaker State Check]
-    kospi_change = index_changes.get("KOSPI", 0.0)
-    macro_state = evaluate_macro_circuit_breaker(kospi_disparity, kospi_change)
-    
+    return None
+
+def _handle_macro_circuit_breaker_liquidation(
+    macro_state, portfolio, balance, market_prices, kospi_disparity, kospi_change
+) -> Optional[dict]:
     if macro_state == "SYSTEM_CRASH_LOCKDOWN":
         print(f"[EMERGENCY] 시장 붕괴 감지 (KOSPI 이격도 {kospi_disparity:.2f}%, 당일 변동률 {kospi_change:+.2f}%).")
         print("[EMERGENCY] AI 토론을 생략하고 전 종목 시장가 일괄 매도 후 시스템을 즉시 관망 모드로 전환합니다.")
@@ -530,8 +539,11 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             "message": "System lockdown active. Portfolio is already empty. All buys are disabled.",
             "reasoning": f"[매크로 서킷 브레이커: 시스템 락다운] KOSPI 이격도({kospi_disparity:.2f}%) 및 당일 변동률({kospi_change:+.2f}%)이 시스템 붕괴 수준에 도달하여 신규 매수가 전면 금지되고 관망 상태를 유지합니다."
         }
+    return None
 
-    # 6.5. Mechanical Stop-Loss & Trailing-Stop Evaluation
+def _evaluate_mechanical_exits(
+    portfolio, balance, market_prices, market_indicators, is_downtrend, kospi_change, news_context, prev_total_asset
+) -> Optional[dict]:
     today_str = get_kst_now().strftime("%Y-%m-%d")
 
     for ticker, holding in portfolio.items():
@@ -695,75 +707,17 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
                 "balance": new_balance,
                 "total_asset": new_total_asset
             }
+    return None
 
-    prev_portfolio_value_at_current_prices = sum(
-        portfolio.get(t, {}).get("quantity", 0) * market_prices.get(t, 0.0) 
-        for t in portfolio
-    )
-    expected_prev_total_asset_at_current_prices = balance + prev_portfolio_value_at_current_prices
+def _evaluate_buy_guardrails(
+    monitored_tickers, portfolio, balance, market_prices, market_indicators, 
+    index_changes, usdkrw_price, usdkrw_change_pct, usdkrw_disparity, 
+    kospi_disparity, kosdaq_disparity, is_downtrend, config, news_context, now
+) -> dict:
+    blocked_buy_reasons = {}
+    total_asset = balance + sum(p.get("quantity", 0) * market_prices.get(t, 0.0) for t, p in portfolio.items())
 
-    portfolio_value = prev_portfolio_value_at_current_prices
-    total_asset = balance + portfolio_value
-
-    # [HARD_NO_BUY: Minor Position Liquidation check]
-    if macro_state == "HARD_NO_BUY":
-        liquidated_tickers = []
-        total_sell_val = 0.0
-        total_fee = 0.0
-        for ticker, holding in list(portfolio.items()):
-            qty = holding.get("quantity", 0)
-            if qty <= 0:
-                continue
-            curr_price = market_prices.get(ticker, 0.0)
-            if curr_price <= 0:
-                curr_price = get_stock_price(ticker)
-                
-            if curr_price > 0:
-                val = qty * curr_price
-                weight = val / total_asset if total_asset > 0 else 0.0
-                if weight < 0.05:
-                    sell_val = qty * curr_price
-                    fee = sell_val * 0.001
-                    total_sell_val += sell_val
-                    total_fee += fee
-                    
-                    update_portfolio_holding_in_db(ticker, 0, holding.get("average_price", 0.0))
-                    
-                    reasoning = f"[소액 포지션 룰베이스 청산] 시장 폭락 장세(HARD_NO_BUY, KOSPI 이격도 {kospi_disparity:.2f}%)에서 전체 자산 대비 비중이 {weight*100:.1f}%(< 5%)인 소액 보유 종목을 수수료 및 API 비용 절감을 위해 기계적으로 청산합니다."
-                    snapshot = {
-                        "prev_balance": balance,
-                        "new_balance": balance + sell_val - fee,
-                        "prev_total_asset": total_asset,
-                        "new_total_asset": total_asset - fee,
-                        "transaction_fee": fee,
-                        "market_prices": market_prices,
-                        "minor_liquidation": True
-                    }
-                    save_transaction_to_db(ticker, "MINOR_POSITION_LIQUIDATION", qty, curr_price, reasoning, snapshot)
-                    trigger_telegram_trade_alert(
-                        ticker=ticker,
-                        action="MINOR_POSITION_LIQUIDATION",
-                        quantity=qty,
-                        price=curr_price,
-                        reasoning=reasoning,
-                        balance=balance + sell_val - fee,
-                        total_asset=total_asset - fee
-                    )
-                    liquidated_tickers.append(ticker)
-                    
-        if liquidated_tickers:
-            new_balance = balance + total_sell_val - total_fee
-            for t in liquidated_tickers:
-                portfolio.pop(t, None)
-            portfolio_value = sum(p.get("quantity", 0) * market_prices.get(t, 0.0) for t, p in portfolio.items())
-            new_total_asset = new_balance + portfolio_value
-            update_agent_state_in_db(new_balance, new_total_asset, system_lock=False)
-            return {
-                "status": "success",
-                "action": "MINOR_POSITION_LIQUIDATION",
-                "message": f"Rule-based minor position cleanup executed for {', '.join(liquidated_tickers)}."
-            }
-    
+    # Compile sector weights
     sector_values = {}
     for t, holding in portfolio.items():
         qty = holding.get("quantity", 0)
@@ -777,13 +731,7 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
     for sect, val in sector_values.items():
         sector_weights[sect] = (val / total_asset) if total_asset > 0 else 0.0
 
-    blocked_buy_reasons = {}
-    blocked_buy_reasons.update(pre_blocked_reasons)
-    
     for ticker in monitored_tickers:
-        if ticker in blocked_buy_reasons:
-            continue
-            
         curr_price = market_prices.get(ticker, 0.0)
         if curr_price <= 0:
             blocked_buy_reasons[ticker] = "실시간 시세 조회가 불가능합니다."
@@ -798,7 +746,7 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
                     blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 청산 후 쿨다운] 직전 손절/트레일링스탑 청산({last_exit['action']}) 후 120분 재매수 제한(쿨타임)이 진행 중입니다. (남은 시간: {120 - time_diff.total_seconds() / 60:.1f}분)"
                     continue
             except Exception as e:
-                print(f"[Trading Engine] [Warning] Failed to evaluate 120m cooldown for {ticker}: {e}")
+                print(f"[Trading Engine] Failed to evaluate cooldown for {ticker}: {e}")
 
         last_tx = get_last_transaction_of_ticker(ticker)
         if last_tx and last_tx.get("action") == "BUY":
@@ -823,7 +771,7 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
                     blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 분할매수 가드레일] 동일 종목 연속 매수 조건 미충족 ({', '.join(reasons)})"
                     continue
             except Exception as e:
-                print(f"[Trading Engine] [Warning] Failed to evaluate split-buy guardrail for {ticker}: {e}")
+                print(f"[Trading Engine] Failed to evaluate split-buy guardrail for {ticker}: {e}")
 
         is_usdkrw_surge = (usdkrw_price >= 1400.0) and (usdkrw_change_pct >= 1.0 or usdkrw_disparity >= 102.0)
         if is_usdkrw_surge:
@@ -845,7 +793,7 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             is_rebound = (rsi_val <= 25 or rsi_prev <= 25) and (daily_change >= 1.5 and (rsi_val - rsi_prev) >= 1.5)
             
             if is_rebound:
-                print(f"[Trading Engine] Exception Triggered: Oversold Rebound for {ticker} (RSI: {rsi_val}, Prev: {rsi_prev}, Change: {daily_change}%). Bypassing market crash guardrail.")
+                print(f"[Trading Engine] Exception Triggered: Oversold Rebound for {ticker}. Bypassing market crash guardrail.")
             else:
                 blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 매크로 불안] 해당 시장({ticker_market}) 지수가 급락하거나 약세장 침체(당일 등락률: {market_change:+.2f}%, 20MA 이격도: {market_disp:.1f}%) 상태이므로 신규 매수가 차단됩니다."
                 continue
@@ -876,7 +824,7 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
         ma_20 = market_indicators.get(ticker, {}).get("ma_20", 0.0)
         volume_ratio = market_indicators.get(ticker, {}).get("volume_ratio", 1.0)
         if ma_20 > 0 and curr_price < ma_20 and volume_ratio < 1.0:
-            blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 모멘텀 붕괴] 주가가 20일 이동평균선({ma_20:,.0f}원) 아래에서 거래량 없이 흘러내리는(거래량 비율: {volume_ratio:.2f}x) 떨어지는 칼날 상태이므로 신규 매수가 차단됩니다. (현재가: {curr_price:,.0f}원)"
+            blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 모멘텀 붕괴] 주가가 20일 이동평균선({ma_20:,.0f}원) 아래에서 거래량 없이 흘러내리는(거래량 비율: {volume_ratio:.2f}x) 떨어지는 칼날 상태이므로 신규 매수가 차단됩니다."
             continue
 
         ticker_sector = TICKER_TO_SECTOR.get(ticker, "기타")
@@ -904,10 +852,16 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
                 except Exception as ex:
                     print(f"[Trading Engine] Failed to evaluate whipsaw cooldown for {ticker}: {ex}")
 
+    return blocked_buy_reasons
+
+def _formulate_decision(
+    monitored_tickers, portfolio, balance, market_prices, market_indicators, 
+    index_changes, news_context, blocked_buy_reasons, kospi_disparity, 
+    kospi_change, macro_state
+) -> TradingDecision:
     has_active_holdings = any(h.get("quantity", 0) > 0 for h in portfolio.values())
     all_monitored_blocked = all(ticker in blocked_buy_reasons for ticker in monitored_tickers)
     
-    # Force skip Gemini call if HARD_NO_BUY is active
     if (not has_active_holdings and all_monitored_blocked) or macro_state == "HARD_NO_BUY":
         print("[Trading Engine] OPTIMIZATION: Skipping Gemini API call.")
         first_blocked_ticker = monitored_tickers[0] if monitored_tickers else "005930"
@@ -918,7 +872,7 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             first_reason = blocked_buy_reasons.get(first_blocked_ticker, "매수 제한")
             reasoning = f"[Python 시스템 차단: API 호출 최적화] 현재 포트폴리오가 비어 있고 모든 거래 후보 종목이 매수 제한 상태이므로 Gemini API 호출을 스킵하고 기계적으로 관망(HOLD) 결정을 실행합니다. (대표 사유: {first_reason})"
             
-        decision = TradingDecision(
+        return TradingDecision(
             action="HOLD",
             ticker=first_blocked_ticker,
             allocation_pct=0.0,
@@ -928,8 +882,7 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             reward_to_risk_ratio=1.0
         )
     else:
-        # 7. Gemini Decision Formulation
-        decision = generate_trading_decision(
+        return generate_trading_decision(
             portfolio=portfolio,
             balance=balance,
             market_prices=market_prices,
@@ -939,6 +892,11 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             blocked_buy_reasons=blocked_buy_reasons
         )
 
+def _execute_trading_decision(
+    decision, portfolio, balance, market_prices, market_indicators, 
+    index_changes, news_context, blocked_buy_reasons, prev_total_asset, 
+    config, is_downtrend, kospi_disparity, kospi_change, macro_state, now
+) -> dict:
     action = decision.action
     ticker = decision.ticker
     allocation_pct = decision.allocation_pct
@@ -952,8 +910,16 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
     quantity = 0
     transaction_fee = 0.0
     fee_rate = 0.001
+    risk_profile = config.get("risk_profile", 3)
 
-    # 8. backend Order Override & Validation
+    # Compile portfolio value at current prices
+    portfolio_value = sum(
+        portfolio.get(t, {}).get("quantity", 0) * market_prices.get(t, 0.0) 
+        for t in portfolio
+    )
+    total_asset = balance + portfolio_value
+    expected_prev_total_asset_at_current_prices = total_asset
+
     if action == "BUY":
         disparity = market_indicators.get(ticker, {}).get("disparity", 100.0) if ticker else 100.0
         
@@ -1007,7 +973,6 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             action = "HOLD"
             reasoning = f"[백엔드 규칙 기각: 수급 폭락] Gemini AI가 매수를 결정했으나 최근 5일간 외국인({frgn_net_5d:+,}주)과 기관({inst_net_5d:+,}주)의 동시 순매도 합산량({combined_net_sell:,}주)이 5일 평균 거래량({avg_vol_5d:,.0f}주)의 50%를 초과하는 수급 폭락 상태이므로 대방어 기각 규칙이 작동하여 HOLD 처리했습니다."
         else:
-            # Sizing & Guardrails cash calculation
             win_p = getattr(decision, "win_probability", 0.5)
             r_r = getattr(decision, "reward_to_risk_ratio", 1.0)
             if r_r <= 0.0:
@@ -1039,7 +1004,6 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
                 sizing_triggered = allocated_cash > max_new_cash
                 order_limit_triggered = allocated_cash > max_order_cash
                 
-                # Guardrail 2: KOSPI 5일선 연동 약세장 방어 (HARD_NO_BUY 및 감폭 고도화)
                 bear_triggered = False
                 if macro_state == "HARD_NO_BUY":
                     spend_cash = 0.0
@@ -1050,7 +1014,6 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
                         spend_cash *= 0.3
                         bear_triggered = True
                     
-                # Guardrail 3: 이격도 108%~115% 비례 매수 제한 (70% 감폭)
                 disparity_50_triggered = False
                 if 108.0 <= disparity < 115.0:
                     spend_cash *= 0.3
@@ -1078,10 +1041,10 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
                     spend_cash = risk_parity_cash
                     risk_parity_triggered = True
                     
-                min_cash_ratios = {
+                min_cash_reserves = {
                     1: (0.50, 0.20), 2: (0.45, 0.15), 3: (0.40, 0.10), 4: (0.30, 0.05), 5: (0.10, 0.00)
                 }
-                bear_cash, bull_cash = min_cash_ratios.get(risk_profile, (0.40, 0.10))
+                bear_cash, bull_cash = min_cash_reserves.get(risk_profile, (0.40, 0.10))
                 min_cash_ratio = bear_cash if is_downtrend else bull_cash
                 max_spend_due_to_cash_reserve = max(balance - (total_asset * min_cash_ratio), 0.0)
                 cash_reserve_triggered = False
@@ -1101,7 +1064,7 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
                         spend_cash = max_rebound_cash
                         rsi_rebound_cap_triggered = True
 
-                is_recovery_phase = (not is_market_crash) and (kospi_disparity < 100.0)
+                is_recovery_phase = (not is_ticker_market_shock and not is_sugeup_dump) and (kospi_disparity < 100.0)
                 recovery_cap_triggered = False
                 if is_recovery_phase and not is_rsi_rebound_triggered:
                     max_recovery_cash = balance * 0.15
@@ -1176,7 +1139,6 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             reasoning = f"REJECTED_BY_BACKEND: 매도 요청 수량({quantity}주)이 실제 보유 수량({owned_quantity}주)을 초과하여 주문이 거부되었습니다."
             quantity = 0
 
-    # 9. Perform Accounting & Process Updates
     new_balance = balance
     new_portfolio = {t: dict(info) for t, info in portfolio.items()}
 
@@ -1235,14 +1197,13 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
     )
     new_total_asset = new_balance + new_portfolio_value_at_current_prices
 
-    # 10. Accounting Assert Check
     expected_new_total_asset = expected_prev_total_asset_at_current_prices - transaction_fee
-    discrepancy = abs(new_total_asset - expected_new_total_asset)
+    accounting_discrepancy = abs(new_total_asset - expected_new_total_asset)
 
     print(f"[Trading Engine] Accounting Check: Calculated New Asset = {new_total_asset:,.2f} KRW | Expected New Asset = {expected_new_total_asset:,.2f} KRW")
     
-    if discrepancy > 10.0 or new_balance < 0:
-        error_msg = f"CRITICAL_ACCOUNTING_FAULT: Discrepancy of {discrepancy:,.2f} KRW detected or Negative Balance ({new_balance:,.2f} KRW) reached! Mathematical safety breach."
+    if accounting_discrepancy > 10.0 or new_balance < 0:
+        error_msg = f"CRITICAL_ACCOUNTING_FAULT: Discrepancy of {accounting_discrepancy:,.2f} KRW detected or Negative Balance ({new_balance:,.2f} KRW) reached! Mathematical safety breach."
         print(f"[Trading Engine] {error_msg}")
         lock_system()
         save_transaction_to_db(
@@ -1254,14 +1215,13 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             snapshot_context={
                 "prev_balance": balance,
                 "new_balance": new_balance,
-                "discrepancy": discrepancy,
+                "discrepancy": accounting_discrepancy,
                 "expected_new_total_asset": expected_new_total_asset,
                 "new_total_asset": new_total_asset
             }
         )
         sys.exit(error_msg)
 
-    # 11. Log Transaction & Update State in Database
     update_agent_state_in_db(new_balance, new_total_asset, system_lock=False)
     
     snapshot_context = {
@@ -1305,6 +1265,149 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
         "balance": new_balance,
         "total_asset": new_total_asset
     }
+
+def run_simulation_cycle(bypass_hours: bool = False) -> dict:
+    """
+    Executes a single end-to-end trading simulation cycle.
+    Modular Orchestrator.
+    """
+    # 1. Load config and check eligibility
+    eligibility = _load_config_and_check_eligibility(bypass_hours)
+    if "status" in eligibility and eligibility["status"] in ["error", "skipped"]:
+        return eligibility
+
+    config = eligibility["config"]
+    portfolio = eligibility["portfolio"]
+    news_context = eligibility["news_context"]
+    balance = eligibility["balance"]
+    prev_total_asset = eligibility["prev_total_asset"]
+    now = eligibility["now"]
+    last_txs = eligibility["last_txs"]
+
+    # 2. Fetch market index changes, trends, and disparities
+    market_context = _fetch_market_indices_and_trends(now)
+    index_changes = market_context["index_changes"]
+    usdkrw_price = market_context["usdkrw_price"]
+    usdkrw_change_pct = market_context["usdkrw_change_pct"]
+    usdkrw_disparity = market_context["usdkrw_disparity"]
+    kospi_disparity = market_context["kospi_disparity"]
+    kosdaq_disparity = market_context["kosdaq_disparity"]
+    is_downtrend = market_context["is_downtrend"]
+
+    # 3. Filter monitored tickers and fetch prices/indicators in parallel
+    monitored_tickers = get_active_tickers(portfolio, news_context)
+    monitored_tickers, pre_blocked_reasons = _apply_preflight_cooldown_filters(monitored_tickers, portfolio, now)
+
+    market_indicators, market_prices = _fetch_prices_and_indicators(monitored_tickers)
+
+    # 4. Check technical trigger & news idempotency cooldowns
+    idempotency = _check_technical_and_news_idempotency(market_indicators, news_context, last_txs, bypass_hours)
+    if idempotency:
+        return idempotency
+
+    # 5. Check macro circuit breakers
+    kospi_change = index_changes.get("KOSPI", 0.0)
+    macro_state = evaluate_macro_circuit_breaker(kospi_disparity, kospi_change)
+    circuit_breaker_result = _handle_macro_circuit_breaker_liquidation(
+        macro_state, portfolio, balance, market_prices, kospi_disparity, kospi_change
+    )
+    if circuit_breaker_result:
+        return circuit_breaker_result
+
+    # 6. Evaluate mechanical Stop-Loss and Trailing-Stop
+    exit_result = _evaluate_mechanical_exits(
+        portfolio, balance, market_prices, market_indicators, is_downtrend, kospi_change, news_context, prev_total_asset
+    )
+    if exit_result:
+        return exit_result
+
+    # [HARD_NO_BUY: Minor Position Liquidation check]
+    # In the original code, this was run if macro_state == "HARD_NO_BUY".
+    # Since we want to preserve exact behavior, we call the minor position liquidation logic here.
+    if macro_state == "HARD_NO_BUY":
+        # Calculate current total asset
+        portfolio_value = sum(portfolio.get(t, {}).get("quantity", 0) * market_prices.get(t, 0.0) for t in portfolio)
+        total_asset = balance + portfolio_value
+        
+        liquidated_tickers = []
+        total_sell_val = 0.0
+        total_fee = 0.0
+        for ticker, holding in list(portfolio.items()):
+            qty = holding.get("quantity", 0)
+            if qty <= 0:
+                continue
+            curr_price = market_prices.get(ticker, 0.0)
+            if curr_price <= 0:
+                curr_price = get_stock_price(ticker)
+                
+            if curr_price > 0:
+                val = qty * curr_price
+                weight = val / total_asset if total_asset > 0 else 0.0
+                if weight < 0.05:
+                    sell_val = qty * curr_price
+                    fee = sell_val * 0.001
+                    total_sell_val += sell_val
+                    total_fee += fee
+                    
+                    update_portfolio_holding_in_db(ticker, 0, holding.get("average_price", 0.0))
+                    
+                    reasoning = f"[소액 포지션 룰베이스 청산] 시장 폭락 장세(HARD_NO_BUY, KOSPI 이격도 {kospi_disparity:.2f}%)에서 전체 자산 대비 비중이 {weight*100:.1f}%(< 5%)인 소액 보유 종목을 수수료 및 API 비용 절감을 위해 기계적으로 청산합니다."
+                    snapshot = {
+                        "prev_balance": balance,
+                        "new_balance": balance + sell_val - fee,
+                        "prev_total_asset": total_asset,
+                        "new_total_asset": total_asset - fee,
+                        "transaction_fee": fee,
+                        "market_prices": market_prices,
+                        "minor_liquidation": True
+                    }
+                    save_transaction_to_db(ticker, "MINOR_POSITION_LIQUIDATION", qty, curr_price, reasoning, snapshot)
+                    trigger_telegram_trade_alert(
+                        ticker=ticker,
+                        action="MINOR_POSITION_LIQUIDATION",
+                        quantity=qty,
+                        price=curr_price,
+                        reasoning=reasoning,
+                        balance=balance + sell_val - fee,
+                        total_asset=total_asset - fee
+                    )
+                    liquidated_tickers.append(ticker)
+                    
+        if liquidated_tickers:
+            new_balance = balance + total_sell_val - total_fee
+            for t in liquidated_tickers:
+                portfolio.pop(t, None)
+            portfolio_value = sum(p.get("quantity", 0) * market_prices.get(t, 0.0) for t, p in portfolio.items())
+            new_total_asset = new_balance + portfolio_value
+            update_agent_state_in_db(new_balance, new_total_asset, system_lock=False)
+            return {
+                "status": "success",
+                "action": "MINOR_POSITION_LIQUIDATION",
+                "message": f"Rule-based minor position cleanup executed for {', '.join(liquidated_tickers)}."
+            }
+
+    # 7. Evaluate buy guardrails
+    blocked_buy_reasons = _evaluate_buy_guardrails(
+        monitored_tickers, portfolio, balance, market_prices, market_indicators, 
+        index_changes, usdkrw_price, usdkrw_change_pct, usdkrw_disparity, 
+        kospi_disparity, kosdaq_disparity, is_downtrend, config, news_context, now
+    )
+    # Add preflight cooldowns
+    blocked_buy_reasons.update(pre_blocked_reasons)
+
+    # 8. Formulate final decision (Gemini debate or direct HOLD fallback)
+    decision = _formulate_decision(
+        monitored_tickers, portfolio, balance, market_prices, market_indicators, 
+        index_changes, news_context, blocked_buy_reasons, kospi_disparity, 
+        kospi_change, macro_state
+    )
+
+    # 9. Execute trading decision and perform accounting validation
+    return _execute_trading_decision(
+        decision, portfolio, balance, market_prices, market_indicators, 
+        index_changes, news_context, blocked_buy_reasons, prev_total_asset, 
+        config, is_downtrend, kospi_disparity, kospi_change, macro_state, now
+    )
 
 if __name__ == "__main__":
     print("[Trading Engine] Initialized as standalone. Testing yfinance connection...")
