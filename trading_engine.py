@@ -1187,6 +1187,22 @@ def get_stock_price(ticker: str) -> float:
             
     return 0.0
 
+def evaluate_macro_circuit_breaker(kospi_disparity: float, kospi_daily_change: float) -> str:
+    """
+    시장 데이터를 기반으로 기계적 서킷 브레이커 작동 여부를 판별합니다.
+    LLM의 개입 없이 즉각적으로 매수를 금지하거나 비상 청산을 명령합니다.
+    """
+    # 1. 초극단적 시스템 붕괴 상태 (블랙스완 국면)
+    if kospi_disparity < 88.0 or kospi_daily_change <= -4.5:
+        return "SYSTEM_CRASH_LOCKDOWN"  # 모든 매수 금지 및 즉시 보유주식 100% 현금화 후 시스템 다운타임 진입
+        
+    # 2. 심각한 약세장 국면 (매수 전면 차단)
+    elif kospi_disparity < 93.0 or kospi_daily_change <= -3.0:
+        return "HARD_NO_BUY"  # 신규 매수 절대 불가 (LLM 토론 생략), 기존 보유분은 기계적 추적 청산만 허용
+        
+    return "NORMAL"
+
+
 # ---------------------------------------------------------------------------
 # PHASE 2: GEMINI API STRUCTURED INVESTMENT DECISION FORMULATION
 # ---------------------------------------------------------------------------
@@ -1758,9 +1774,78 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             print(f"[Trading Engine] Idempotency Lock: Already processed and acted upon the latest news URL: {latest_news_url}")
             return {"status": "skipped", "message": "Idempotency Lock: Latest news context has already been acted upon."}
 
+    # [Pre-filter: Macro Circuit Breaker State Check]
+    kospi_change = index_changes.get("KOSPI", 0.0)
+    macro_state = evaluate_macro_circuit_breaker(kospi_disparity, kospi_change)
+    
+    if macro_state == "SYSTEM_CRASH_LOCKDOWN":
+        print(f"[EMERGENCY] 시장 붕괴 감지 (KOSPI 이격도 {kospi_disparity:.2f}%, 당일 변동률 {kospi_change:+.2f}%).")
+        print("[EMERGENCY] AI 토론을 생략하고 전 종목 시장가 일괄 매도 후 시스템을 즉시 관망 모드로 전환합니다.")
+        
+        emergency_orders_executed = []
+        total_sell_val = 0.0
+        total_fee = 0.0
+        
+        # Calculate current total asset
+        current_portfolio_value = sum(holding.get("quantity", 0) * market_prices.get(t, 0.0) for t, holding in portfolio.items())
+        current_total_asset = balance + current_portfolio_value
+        
+        for ticker, info in list(portfolio.items()):
+            qty = info.get("quantity", 0)
+            if qty > 0:
+                curr_price = market_prices.get(ticker, 0.0)
+                if curr_price <= 0:
+                    curr_price = get_stock_price(ticker)
+                if curr_price > 0:
+                    sell_val = qty * curr_price
+                    fee = sell_val * 0.001
+                    total_sell_val += sell_val
+                    total_fee += fee
+                    
+                    # Remove from portfolio in DB
+                    update_portfolio_holding_in_db(ticker, 0, info.get("average_price", 0.0))
+                    
+                    # Save transaction
+                    reasoning = f"[매크로 서킷 브레이커: 기계적 일괄 청산] KOSPI 이격도({kospi_disparity:.2f}%) 및 당일 변동률({kospi_change:+.2f}%)이 초극단적 시스템 붕괴 기준을 초과하여 전 종목 일괄 기계적 현금화(전량 청산)가 집행되었습니다. (체결가: {curr_price:,.0f}원, 수량: {qty}주)"
+                    snapshot = {
+                        "prev_balance": balance,
+                        "new_balance": balance + sell_val - fee,
+                        "prev_total_asset": current_total_asset,
+                        "new_total_asset": current_total_asset - fee,
+                        "transaction_fee": fee,
+                        "market_prices": market_prices,
+                        "circuit_breaker": True
+                    }
+                    save_transaction_to_db(ticker, "SYSTEMIC_LIQUIDATION", qty, curr_price, reasoning, snapshot)
+                    trigger_telegram_trade_alert(
+                        ticker=ticker,
+                        action="SYSTEMIC_LIQUIDATION",
+                        quantity=qty,
+                        price=curr_price,
+                        reasoning=reasoning,
+                        balance=balance + sell_val - fee,
+                        total_asset=current_total_asset - fee
+                    )
+                    emergency_orders_executed.append(ticker)
+                    
+        if emergency_orders_executed:
+            new_balance = balance + total_sell_val - total_fee
+            update_agent_state_in_db(new_balance, new_balance, system_lock=False)
+            return {
+                "status": "success",
+                "action": "SYSTEMIC_LIQUIDATION",
+                "message": f"Emergency liquidation executed for {', '.join(emergency_orders_executed)}."
+            }
+            
+        return {
+            "status": "success",
+            "action": "HOLD",
+            "message": "System lockdown active. Portfolio is already empty. All buys are disabled.",
+            "reasoning": f"[매크로 서킷 브레이커: 시스템 락다운] KOSPI 이격도({kospi_disparity:.2f}%) 및 당일 변동률({kospi_change:+.2f}%)이 시스템 붕괴 수준에 도달하여 신규 매수가 전면 금지되고 관망 상태를 유지합니다."
+        }
+
     # 6.5. Mechanical Stop-Loss & Trailing-Stop Evaluation
     today_str = get_kst_now().strftime("%Y-%m-%d")
-    kospi_change = index_changes.get("KOSPI", 0.0)
 
     for ticker, holding in portfolio.items():
         current_price = market_prices.get(ticker, 0.0)
@@ -1951,6 +2036,65 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
     # Compute sector values, weights and total asset
     portfolio_value = prev_portfolio_value_at_current_prices
     total_asset = balance + portfolio_value
+
+    # [HARD_NO_BUY: Minor Position Liquidation check]
+    if macro_state == "HARD_NO_BUY":
+        liquidated_tickers = []
+        total_sell_val = 0.0
+        total_fee = 0.0
+        for ticker, holding in list(portfolio.items()):
+            qty = holding.get("quantity", 0)
+            if qty <= 0:
+                continue
+            curr_price = market_prices.get(ticker, 0.0)
+            if curr_price <= 0:
+                curr_price = get_stock_price(ticker)
+                
+            if curr_price > 0:
+                val = qty * curr_price
+                weight = val / total_asset if total_asset > 0 else 0.0
+                if weight < 0.05:  # Evaluating under 5% weight
+                    sell_val = qty * curr_price
+                    fee = sell_val * 0.001
+                    total_sell_val += sell_val
+                    total_fee += fee
+                    
+                    update_portfolio_holding_in_db(ticker, 0, holding.get("average_price", 0.0))
+                    
+                    reasoning = f"[소액 포지션 룰베이스 청산] 시장 폭락 장세(HARD_NO_BUY, KOSPI 이격도 {kospi_disparity:.2f}%)에서 전체 자산 대비 비중이 {weight*100:.1f}%(< 5%)인 소액 보유 종목을 수수료 및 API 비용 절감을 위해 기계적으로 청산합니다."
+                    snapshot = {
+                        "prev_balance": balance,
+                        "new_balance": balance + sell_val - fee,
+                        "prev_total_asset": total_asset,
+                        "new_total_asset": total_asset - fee,
+                        "transaction_fee": fee,
+                        "market_prices": market_prices,
+                        "minor_liquidation": True
+                    }
+                    save_transaction_to_db(ticker, "MINOR_POSITION_LIQUIDATION", qty, curr_price, reasoning, snapshot)
+                    trigger_telegram_trade_alert(
+                        ticker=ticker,
+                        action="MINOR_POSITION_LIQUIDATION",
+                        quantity=qty,
+                        price=curr_price,
+                        reasoning=reasoning,
+                        balance=balance + sell_val - fee,
+                        total_asset=total_asset - fee
+                    )
+                    liquidated_tickers.append(ticker)
+                    
+        if liquidated_tickers:
+            new_balance = balance + total_sell_val - total_fee
+            for t in liquidated_tickers:
+                portfolio.pop(t, None)
+            portfolio_value = sum(p.get("quantity", 0) * market_prices.get(t, 0.0) for t, p in portfolio.items())
+            new_total_asset = new_balance + portfolio_value
+            update_agent_state_in_db(new_balance, new_total_asset, system_lock=False)
+            return {
+                "status": "success",
+                "action": "MINOR_POSITION_LIQUIDATION",
+                "message": f"Rule-based minor position cleanup executed for {', '.join(liquidated_tickers)}."
+            }
     
     sector_values = {}
     for t, holding in portfolio.items():
@@ -2115,15 +2259,22 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
     has_active_holdings = any(h.get("quantity", 0) > 0 for h in portfolio.values())
     all_monitored_blocked = all(ticker in blocked_buy_reasons for ticker in monitored_tickers)
     
-    if not has_active_holdings and all_monitored_blocked:
-        print("[Trading Engine] OPTIMIZATION: Portfolio is empty and all candidate tickers are blocked from BUY. Skipping Gemini API call.")
+    # Force skip Gemini call if HARD_NO_BUY is active
+    if (not has_active_holdings and all_monitored_blocked) or macro_state == "HARD_NO_BUY":
+        print("[Trading Engine] OPTIMIZATION: Skipping Gemini API call.")
         first_blocked_ticker = monitored_tickers[0] if monitored_tickers else "005930"
-        first_reason = blocked_buy_reasons.get(first_blocked_ticker, "매수 제한")
+        
+        if macro_state == "HARD_NO_BUY":
+            reasoning = f"[Python 시스템 차단: HARD_NO_BUY] KOSPI 이격도({kospi_disparity:.2f}%) 및 당일 변동률({kospi_change:+.2f}%)이 심각한 약세장 기준에 도달하여 신규 매수가 전면 금지되고 관망(HOLD) 상태를 강제 유지합니다. 기존 보유분은 기계적 손절매/추적청산으로만 대응합니다."
+        else:
+            first_reason = blocked_buy_reasons.get(first_blocked_ticker, "매수 제한")
+            reasoning = f"[Python 시스템 차단: API 호출 최적화] 현재 포트폴리오가 비어 있고 모든 거래 후보 종목이 매수 제한 상태이므로 Gemini API 호출을 스킵하고 기계적으로 관망(HOLD) 결정을 실행합니다. (대표 사유: {first_reason})"
+            
         decision = TradingDecision(
             action="HOLD",
             ticker=first_blocked_ticker,
             allocation_pct=0.0,
-            reasoning=f"[Python 시스템 차단: API 호출 최적화] 현재 포트폴리오가 비어 있고 모든 거래 후보 종목이 매수 제한 상태이므로 Gemini API 호출을 스킵하고 기계적으로 관망(HOLD) 결정을 실행합니다. (대표 사유: {first_reason})",
+            reasoning=reasoning,
             mode="VALUE",
             win_probability=0.5,
             reward_to_risk_ratio=1.0
@@ -2262,16 +2413,21 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
                 sizing_triggered = allocated_cash > max_new_cash
                 order_limit_triggered = allocated_cash > max_order_cash
                 
-                # Guardrail 2: KOSPI 5일선 연동 약세장 방어
+                # Guardrail 2: KOSPI 5일선 연동 약세장 방어 (HARD_NO_BUY 및 감폭 고도화)
                 bear_triggered = False
-                if is_kospi_bear_market():
-                    spend_cash *= 0.5
+                if macro_state == "HARD_NO_BUY":
+                    spend_cash = 0.0
                     bear_triggered = True
+                    print(f"[{ticker}] 매크로 시스템 경보(HARD_NO_BUY) 작동: 매수 한도를 0원으로 강제 제한합니다.")
+                else:
+                    if is_kospi_bear_market():
+                        spend_cash *= 0.3  # 기존 0.5에서 리스크 관리를 위해 0.3으로 하향 조정
+                        bear_triggered = True
                     
-                # Guardrail 3: 이격도 108%~115% 비례 매수 제한 (50% 감폭)
+                # Guardrail 3: 이격도 108%~115% 비례 매수 제한 (70% 감폭으로 리스크 억제 강화)
                 disparity_50_triggered = False
                 if 108.0 <= disparity < 115.0:
-                    spend_cash *= 0.5
+                    spend_cash *= 0.3  # 기존 0.5에서 70% 감폭(즉 0.3배)으로 리스크 억제 강화
                     disparity_50_triggered = True
 
                 # Guardrail 4: Sector Allocation Limit (50% in uptrend, 20% in downtrend)
