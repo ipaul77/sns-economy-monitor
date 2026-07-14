@@ -81,8 +81,23 @@ def generate_daily_briefing(analyzer, db_path="data/monitor.db"):
             f"  위험도: {r['alert_level']}\n"
         )
         
-    context_text = "\n".join(context_list)
-    
+    # 2.5. Fetch real-time market data to feed into LLM context to prevent hallucinations!
+    market_str = ""
+    usdkrw_rate = 1350.0
+    try:
+        from market import get_market_indicators
+        m_data = get_market_indicators()
+        if m_data:
+            market_str = "=== 금일 주요 금융/경제 시장 실시간 지표 (Real-time Market Indicators) ===\n"
+            for label, info in m_data.items():
+                unit = "pt" if label in ["KOSPI", "SOXX"] else "원"
+                change_sign = "+" if info["change"] > 0 else ""
+                market_str += f"- {label}: {info['price']:,}{unit} (당일 등락률: {change_sign}{info['percent']}%)\n"
+            if "USD_KRW" in m_data:
+                usdkrw_rate = m_data["USD_KRW"].get("price", 1350.0)
+    except Exception as e:
+        print(f"[Warning] Failed to fetch market indicators for daily briefing prompt: {e}")
+
     # 4. Request Gemini Synthesis (Stage 2 Model)
     if analyzer.api_configured:
         try:
@@ -98,8 +113,10 @@ def generate_daily_briefing(analyzer, db_path="data/monitor.db"):
             prompt = (
                 f"최근 24시간 동안 수집 및 분석된 주요 경제 뉴스 요약 정보는 다음과 같습니다:\n\n"
                 f"{context_text}\n\n"
-                f"위 기사들과 국내외 주요 증권사 리서치 센터의 컨센서스 및 신뢰 기관(한국은행, KDI 등)의 거시경제 전망을 종합적으로 융합 분석하여 "
-                f"대한민국 투자자들을 위한 최고 수준의 신뢰도를 갖춘 거시경제 브리핑 보고서를 한글로 작성해 주십시오.\n\n"
+                f"또한, 현재 기준의 실시간 주요 금융/외환 시장 지표는 다음과 같습니다:\n"
+                f"{market_str}\n"
+                f"보고서 작성 시 반드시 위의 실시간 시장 지표(특히 환율 및 KOSPI 지수 등)를 반영하여 정확한 수치를 토대로 작성해야 하며, 과거의 낡은 환율 범위를 언급하는 등의 환각(hallucination)을 절대 방지하십시오 (환율 서술 시 반드시 실시간 지표인 {usdkrw_rate:,.2f}원선을 기준으로 서술하세요).\n\n"
+                f"위 정보들을 종합적으로 융합 분석하여 대한민국 투자자들을 위한 최고 수준의 신뢰도를 갖춘 거시경제 브리핑 보고서를 한글로 작성해 주십시오.\n\n"
                 f"다음과 같은 양식과 내용으로 반드시 작성해 주세요 (HTML 태그를 적절히 활용하여 스타일리시하게 만들어 주세요):\n"
                 f"1. '<div class=\"mb-6\"><h3 class=\"text-lg font-bold text-indigo-400 mb-2\">[1] 금일 한반도 경제 종합 요약 (증권사 및 주요 기관 컨센서스 반영)</h3>'과 함께 거시 분석을 3~4문장으로 서술해 주세요.\n"
                 f"2. '<div class=\"mb-6\"><h3 class=\"text-lg font-bold text-purple-400 mb-2\">[2] 금일 3대 고위험 핵심 전선 (기관 리서치 종합 분석)</h3>' 아래에 집중해야 할 3대 위험 요소나 기회를 목록형태로 서술해 주세요. 각 전선별로 주요 증권사의 매수/매도 센티먼트나 핵심 리서치 오피니언을 함께 결합해 설명해 주세요.\n"
@@ -143,12 +160,22 @@ def get_fallback_briefing_report(rows):
     total = len(rows)
     high_count = len([r for r in rows if r['alert_level'] == 'HIGH'])
     
+    usdkrw_rate_str = "1,400원대"
+    try:
+        from market import get_market_indicators
+        m_data = get_market_indicators()
+        if m_data and "USD_KRW" in m_data:
+            price = m_data["USD_KRW"].get("price", 1400.0)
+            usdkrw_rate_str = f"{price:,.2f}원"
+    except Exception as e:
+        print(f"[Warning] Failed to fetch USD_KRW for fallback report: {e}")
+        
     # Simple templates based on content
     briefing = f"""
     <div class="mb-6">
         <h3 class="text-lg font-bold text-indigo-400 mb-2">[1] 금일 한반도 경제 종합 요약</h3>
         <p class="text-sm text-slate-300 leading-relaxed">
-            최근 24시간 내 수집된 총 {total}건의 대외 이슈를 교차 분석한 결과, 글로벌 IT 반도체 생태계의 호조와 미 연준의 매파적 금리 정책 동향이 대칭을 이루며 혼조세를 견인하고 있습니다. NVIDIA의 차세대 Blackwell 칩 출하 개시 모멘텀이 삼성전자와 SK하이닉스 등 국내 메모리 대기업의 반도체 사이클 상승 기류를 강력하게 지원하고 있으나, 원/달러 환율 상방 압력이 외국인 순매수를 일부 제약하는 요소로 작용 중입니다.
+            최근 24시간 내 수집된 총 {total}건의 대외 이슈를 교차 분석한 결과, 글로벌 IT 반도체 생태계의 호조와 미 연준의 매파적 금리 정책 동향이 대칭을 이루며 혼조세를 견인하고 있습니다. NVIDIA의 차세대 Blackwell 칩 출하 개시 모멘텀이 삼성전자 and SK하이닉스 등 국내 메모리 대기업의 반도체 사이클 상승 기류를 강력하게 지원하고 있으나, 원/달러 환율 상방 압력이 외국인 순매수를 일부 제약하는 요소로 작용 중입니다.
         </p>
     </div>
     
@@ -177,7 +204,7 @@ def get_fallback_briefing_report(rows):
                 <strong>이차전지 바텀 피싱 자제</strong>: 기가팩토리 유치 소문은 단기 모멘텀일 뿐 실적 연동성 확인 전까지 비중 확대는 유보, 안정성 위주 분할 매수만 권고합니다.
             </li>
             <li>
-                <strong>환율 헤징 포지션 확보</strong>: 원/달러 1,360원대 돌파에 따라 외환 노출도가 높은 수출형 강소기업 위주로 선별 접근하며 안전 통화 자산 일부 확보가 현명합니다.
+                <strong>환율 헤징 포지션 확보</strong>: 원/달러 {usdkrw_rate_str}선 돌파/등락에 따라 외환 노출도가 높은 수출형 강소기업 위주로 선별 접근하며 안전 통화 자산 일부 확보가 현명합니다.
             </li>
         </ol>
     </div>
