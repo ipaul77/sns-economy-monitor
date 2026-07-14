@@ -144,6 +144,9 @@ def generate_html_dashboard():
                 <button onclick="openBriefing()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition duration-200 shadow-lg shadow-indigo-900/40 flex items-center">
                     📄 일일 AI 종합 브리핑 보기
                 </button>
+                <button onclick="openFeedbackModal()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white transition duration-200 shadow-lg shadow-amber-900/40 flex items-center">
+                    💡 피드백 제안서 보기
+                </button>
                 <button onclick="forceRefresh()" id="refreshBtn" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition duration-200 flex items-center gap-1">
                     🔄 실시간 수동 갱신
                 </button>
@@ -538,6 +541,42 @@ def generate_html_dashboard():
             </div>
             <div class="pt-4 border-t border-slate-800 flex justify-end">
                 <button onclick="closeBriefing()" class="px-5 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+                    닫기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Feedback Suggestions Modal -->
+    <div id="feedbackModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+        <div class="glass-card w-full max-w-4xl rounded-3xl p-6 border border-slate-800 shadow-2xl flex flex-col max-h-[85vh]">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+                <h2 class="text-2xl font-bold bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent flex items-center gap-2">
+                    💡 Gemini AI 피드백 제안서
+                </h2>
+                <button onclick="closeFeedbackModal()" class="text-slate-400 hover:text-slate-200 text-xl font-bold">&times;</button>
+            </div>
+            
+            <div class="flex flex-col md:flex-row gap-4 mt-4 flex-1 overflow-hidden">
+                <!-- Left Sidebar: Date List -->
+                <div class="w-full md:w-52 border-b md:border-b-0 md:border-r border-slate-800 pb-4 md:pb-0 md:pr-4 flex flex-col gap-2 overflow-y-auto" id="feedbackDateList">
+                    <!-- Date items loaded dynamically -->
+                </div>
+                
+                <!-- Right Content: Suggestion Detail -->
+                <div class="flex-1 flex flex-col overflow-hidden">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-800/50 mb-3">
+                        <span class="text-xs text-slate-400 font-bold" id="feedbackSelectedDate">날짜 선택 필요</span>
+                        <span id="feedbackAppliedBadge"></span>
+                    </div>
+                    <div id="feedbackContent" class="overflow-y-auto text-slate-300 text-sm leading-relaxed flex-1 whitespace-pre-wrap font-mono bg-slate-950/40 p-4 rounded-xl border border-white/5">
+                        피드백 제안서를 선택해 주세요.
+                    </div>
+                </div>
+            </div>
+            
+            <div class="pt-4 border-t border-slate-800 flex justify-end">
+                <button onclick="closeFeedbackModal()" class="px-5 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
                     닫기
                 </button>
             </div>
@@ -1418,6 +1457,96 @@ def generate_html_dashboard():
                 btn.disabled = false;
                 btn.innerHTML = "🔄 실시간 수동 갱신";
             }});
+        }}
+        
+        let feedbackList = [];
+        
+        function openFeedbackModal() {{
+            const modal = document.getElementById("feedbackModal");
+            modal.classList.remove("hidden");
+            
+            const dateListEl = document.getElementById("feedbackDateList");
+            dateListEl.innerHTML = `
+                <div class="text-xs text-slate-500 py-4 text-center">불러오는 중...</div>
+            `;
+            
+            fetch('/api/daily-feedback/list')
+            .then(res => res.json())
+            .then(data => {{
+                if (data.status !== "success") {{
+                    dateListEl.innerHTML = `<div class="text-xs text-rose-400 py-4 text-center">오류: ${{data.message}}</div>`;
+                    return;
+                }}
+                
+                feedbackList = data.suggestions || [];
+                if (feedbackList.length === 0) {{
+                    dateListEl.innerHTML = `<div class="text-xs text-slate-500 py-4 text-center">저장된 제안서 없음</div>`;
+                    document.getElementById("feedbackContent").textContent = "최근 7일 동안 기록된 피드백 제안서가 없습니다.";
+                    document.getElementById("feedbackSelectedDate").textContent = "";
+                    document.getElementById("feedbackAppliedBadge").innerHTML = "";
+                    return;
+                }}
+                
+                renderFeedbackDates();
+                // Select the first one by default
+                selectFeedback(0);
+            }})
+            .catch(err => {{
+                dateListEl.innerHTML = `<div class="text-xs text-rose-400 py-4 text-center">오류가 발생했습니다.</div>`;
+            }});
+        }}
+        
+        function renderFeedbackDates() {{
+            const dateListEl = document.getElementById("feedbackDateList");
+            dateListEl.innerHTML = "";
+            
+            feedbackList.forEach((item, idx) => {{
+                const btn = document.createElement("button");
+                btn.onclick = () => selectFeedback(idx);
+                btn.id = "feedback-date-btn-" + idx;
+                
+                const appliedIcon = item.applied ? "🟢 반영됨" : "🔴 미반영";
+                const isAppliedClass = item.applied ? "text-emerald-400" : "text-amber-500";
+                
+                btn.className = "w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition flex flex-col gap-1";
+                btn.innerHTML = `
+                    <span class="text-slate-200">${{item.date}}</span>
+                    <span class="text-[10px] ${{isAppliedClass}}">${{appliedIcon}}</span>
+                `;
+                dateListEl.appendChild(btn);
+            }});
+        }}
+        
+        function selectFeedback(idx) {{
+            // Remove active classes
+            document.querySelectorAll("#feedbackDateList button").forEach(btn => {{
+                btn.className = "w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition flex flex-col gap-1";
+            }});
+            
+            const activeBtn = document.getElementById("feedback-date-btn-" + idx);
+            if (activeBtn) {{
+                activeBtn.className = "w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold bg-amber-600/20 text-amber-200 border border-amber-500/30 flex flex-col gap-1 shadow-lg shadow-amber-950/30";
+            }}
+            
+            const item = feedbackList[idx];
+            if (!item) return;
+            
+            document.getElementById("feedbackSelectedDate").textContent = `제안일자: ${{item.date}} (${{item.timestamp.substring(11, 19)}})`;
+            
+            const badgeEl = document.getElementById("feedbackAppliedBadge");
+            if (item.applied) {{
+                badgeEl.innerHTML = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">🟢 소스코드 반영 완료</span>`;
+            }} else {{
+                badgeEl.innerHTML = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">🔴 미반영 (대기 중)</span>`;
+            }}
+            
+            // Render markdown suggestion content
+            let text = item.suggestion || "";
+            document.getElementById("feedbackContent").textContent = text;
+        }}
+        
+        function closeFeedbackModal() {{
+            document.getElementById("feedbackModal").classList.add("hidden");
         }}
         
         // Client-side Bloomberg-like Timeline Filtering

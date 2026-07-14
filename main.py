@@ -330,6 +330,37 @@ def handle_daily_feedback():
         print(f"[Error] Daily feedback loop crash: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route('/api/daily-feedback/list', methods=['GET'])
+def get_feedback_list():
+    """
+    Retrieves the last 7 daily feedback suggestions from Firestore for dashboard display.
+    """
+    if not db.USE_FIREBASE or db.db_client is None:
+        return jsonify({"status": "error", "message": "Firebase is not configured"}), 400
+    try:
+        docs = db.db_client.collection("daily_suggestions")\
+                           .order_by("date", direction=db.firestore.Query.DESCENDING)\
+                           .limit(7)\
+                           .stream()
+        
+        suggestions = []
+        for doc in docs:
+            d = doc.to_dict()
+            suggestions.append({
+                "date": d.get("date"),
+                "suggestion": d.get("suggestion"),
+                "applied": d.get("applied", False),
+                "timestamp": d.get("timestamp")
+            })
+            
+        return jsonify({
+            "status": "success",
+            "suggestions": suggestions
+        })
+    except Exception as e:
+        print(f"[Error] Failed to fetch feedback list: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @app.route('/api/ping')
 def handle_ping():
     """
