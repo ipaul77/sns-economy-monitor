@@ -1502,7 +1502,9 @@ def generate_trading_decision(portfolio: Dict[str, Dict[str, Any]], balance: flo
             ticker="005930",
             allocation_pct=0.0,
             reasoning=f"Gemini API 호출 및 스키마 검증 과정에서 예외가 발생하여 자산 안전을 위해 HOLD 처리했습니다. (에러: {str(e)})",
-            mode="VALUE"
+            mode="VALUE",
+            win_probability=0.5,
+            reward_to_risk_ratio=1.0
         )
 
 
@@ -2122,7 +2124,9 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
             ticker=first_blocked_ticker,
             allocation_pct=0.0,
             reasoning=f"[Python 시스템 차단: API 호출 최적화] 현재 포트폴리오가 비어 있고 모든 거래 후보 종목이 매수 제한 상태이므로 Gemini API 호출을 스킵하고 기계적으로 관망(HOLD) 결정을 실행합니다. (대표 사유: {first_reason})",
-            mode="VALUE"
+            mode="VALUE",
+            win_probability=0.5,
+            reward_to_risk_ratio=1.0
         )
     else:
         # 7. Gemini Decision Formulation
