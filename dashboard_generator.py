@@ -1560,7 +1560,7 @@ def generate_html_dashboard():
                 btn.className = "sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95";
             }});
             
-            const safeId = "".join([c for c in sect if c.isalnum() || c in ["-", "_"]])
+            const safeId = Array.from(sect).filter(c => /[\\p{{L}}\\p{{N}}_-]/u.test(c)).join('');
             const activeBtn = document.getElementById(sect === 'ALL' ? "filter-all" : "filter-" + safeId);
             if (activeBtn) {{
                 activeBtn.className = "px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600 text-white border border-indigo-500/20 transition duration-200 shadow-lg shadow-indigo-950/50 hover:scale-105 active:scale-95";

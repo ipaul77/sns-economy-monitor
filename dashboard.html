@@ -46,6 +46,9 @@
                 <button onclick="openBriefing()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition duration-200 shadow-lg shadow-indigo-900/40 flex items-center">
                     📄 일일 AI 종합 브리핑 보기
                 </button>
+                <button onclick="openFeedbackModal()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white transition duration-200 shadow-lg shadow-amber-900/40 flex items-center">
+                    💡 피드백 제안서 보기
+                </button>
                 <button onclick="forceRefresh()" id="refreshBtn" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition duration-200 flex items-center gap-1">
                     🔄 실시간 수동 갱신
                 </button>
@@ -59,43 +62,43 @@
         <h3 class="text-sm font-semibold text-slate-500 mt-6 mb-3">📈 실시간 금융 시장 지표 (Yahoo Finance 연동)</h3>
         <section class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             
-        <div class="glass-card rounded-2xl p-4 glow-red border border-slate-800/80" id="market-card-KOSPI">
+        <div class="glass-card rounded-2xl p-4 glow-green border border-slate-800/80" id="market-card-KOSPI">
             <p class="text-xs font-semibold text-slate-500">코스피 지수 (^KS11)</p>
             <div class="flex items-baseline justify-between mt-1">
-                <span class="text-lg font-bold text-slate-100" id="market-price-KOSPI">7,529.35pt</span>
-                <span class="text-xs font-bold text-rose-400" id="market-change-KOSPI">-126.96 (-1.66%)</span>
+                <span class="text-lg font-bold text-slate-100" id="market-price-KOSPI">6,856.83pt</span>
+                <span class="text-xs font-bold text-emerald-400" id="market-change-KOSPI">+49.9 (+0.73%)</span>
             </div>
         </div>
         
-        <div class="glass-card rounded-2xl p-4 glow-green border border-slate-800/80" id="market-card-USD_KRW">
+        <div class="glass-card rounded-2xl p-4 glow-red border border-slate-800/80" id="market-card-USD_KRW">
             <p class="text-xs font-semibold text-slate-500">원/달러 환율 (USDKRW=X)</p>
             <div class="flex items-baseline justify-between mt-1">
-                <span class="text-lg font-bold text-slate-100" id="market-price-USD_KRW">1,513.28원</span>
-                <span class="text-xs font-bold text-emerald-400" id="market-change-USD_KRW">+0.37 (+0.02%)</span>
+                <span class="text-lg font-bold text-slate-100" id="market-price-USD_KRW">1,487.56원</span>
+                <span class="text-xs font-bold text-rose-400" id="market-change-USD_KRW">-9.46 (-0.63%)</span>
             </div>
         </div>
         
-        <div class="glass-card rounded-2xl p-4 glow-red border border-slate-800/80" id="market-card-SAMSUNG">
+        <div class="glass-card rounded-2xl p-4 glow-green border border-slate-800/80" id="market-card-SAMSUNG">
             <p class="text-xs font-semibold text-slate-500">삼성전자 (005930.KS)</p>
             <div class="flex items-baseline justify-between mt-1">
-                <span class="text-lg font-bold text-slate-100" id="market-price-SAMSUNG">286,750원</span>
-                <span class="text-xs font-bold text-rose-400" id="market-change-SAMSUNG">-9,250 (-3.12%)</span>
+                <span class="text-lg font-bold text-slate-100" id="market-price-SAMSUNG">263,000원</span>
+                <span class="text-xs font-bold text-emerald-400" id="market-change-SAMSUNG">+8,500 (+3.34%)</span>
             </div>
         </div>
         
         <div class="glass-card rounded-2xl p-4 glow-green border border-slate-800/80" id="market-card-HYNIX">
             <p class="text-xs font-semibold text-slate-500">SK하이닉스 (000660.KS)</p>
             <div class="flex items-baseline justify-between mt-1">
-                <span class="text-lg font-bold text-slate-100" id="market-price-HYNIX">2,234,000원</span>
-                <span class="text-xs font-bold text-emerald-400" id="market-change-HYNIX">+33,000 (+1.5%)</span>
+                <span class="text-lg font-bold text-slate-100" id="market-price-HYNIX">1,913,000원</span>
+                <span class="text-xs font-bold text-emerald-400" id="market-change-HYNIX">+68,000 (+3.69%)</span>
             </div>
         </div>
         
-        <div class="glass-card rounded-2xl p-4 glow-red border border-slate-800/80" id="market-card-SOXX">
+        <div class="glass-card rounded-2xl p-4 glow-green border border-slate-800/80" id="market-card-SOXX">
             <p class="text-xs font-semibold text-slate-500">필라델피아 반도체 지수 (^SOX)</p>
             <div class="flex items-baseline justify-between mt-1">
-                <span class="text-lg font-bold text-slate-100" id="market-price-SOXX">12,300.52pt</span>
-                <span class="text-xs font-bold text-rose-400" id="market-change-SOXX">-599.63 (-4.65%)</span>
+                <span class="text-lg font-bold text-slate-100" id="market-price-SOXX">12,790.41pt</span>
+                <span class="text-xs font-bold text-emerald-400" id="market-change-SOXX">+442.63 (+3.58%)</span>
             </div>
         </div>
         
@@ -109,7 +112,7 @@
             </div>
             <div class="glass-card rounded-xl p-3 glow-green">
                 <p class="text-xs font-semibold text-slate-400">연관 기사</p>
-                <p class="mt-1 text-lg font-extrabold text-emerald-400" id="stat-relevant">9 건</p>
+                <p class="mt-1 text-lg font-extrabold text-emerald-400" id="stat-relevant">6 건</p>
             </div>
             <div class="glass-card rounded-xl p-3 glow-red">
                 <p class="text-xs font-semibold text-slate-400">고위험 경보 (HIGH)</p>
@@ -117,7 +120,7 @@
             </div>
             <div class="glass-card rounded-xl p-3 glow-blue">
                 <p class="text-xs font-semibold text-slate-400">평균 감성 지수</p>
-                <p class="mt-1 text-lg font-extrabold text-emerald-400" id="stat-avg-sentiment">+0.56</p>
+                <p class="mt-1 text-lg font-extrabold text-slate-400" id="stat-avg-sentiment">+0.04</p>
             </div>
         </section>
 
@@ -290,452 +293,338 @@
             전체보기
         </button>
     
-        <button onclick="filterSector('IT H/W')" id="filter-ITHW" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            IT H/W
+        <button onclick="filterSector('Export Sector')" id="filter-ExportSector" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            Export Sector
+        </button>
+        
+        <button onclick="filterSector('Exports')" id="filter-Exports" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            Exports
+        </button>
+        
+        <button onclick="filterSector('Financials')" id="filter-Financials" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            Financials
+        </button>
+        
+        <button onclick="filterSector('IT 플랫폼')" id="filter-IT플랫폼" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            IT 플랫폼
+        </button>
+        
+        <button onclick="filterSector('IT/기술')" id="filter-IT기술" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            IT/기술
+        </button>
+        
+        <button onclick="filterSector('Information Technology')" id="filter-InformationTechnology" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            Information Technology
+        </button>
+        
+        <button onclick="filterSector('Semiconductors')" id="filter-Semiconductors" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            Semiconductors
+        </button>
+        
+        <button onclick="filterSector('Technology Hardware')" id="filter-TechnologyHardware" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            Technology Hardware
         </button>
         
         <button onclick="filterSector('금융')" id="filter-금융" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
             금융
         </button>
         
-        <button onclick="filterSector('기타')" id="filter-기타" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            기타
-        </button>
-        
-        <button onclick="filterSector('바이오')" id="filter-바이오" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            바이오
+        <button onclick="filterSector('금융 및 자본시장')" id="filter-금융및자본시장" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            금융 및 자본시장
         </button>
         
         <button onclick="filterSector('반도체')" id="filter-반도체" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
             반도체
         </button>
         
+        <button onclick="filterSector('성장주')" id="filter-성장주" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            성장주
+        </button>
+        
         <button onclick="filterSector('이차전지')" id="filter-이차전지" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
             이차전지
         </button>
         
-        <button onclick="filterSector('자동차')" id="filter-자동차" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            자동차
-        </button>
-        
-        <button onclick="filterSector('증시')" id="filter-증시" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
-            증시
+        <button onclick="filterSector('정보기술(IT)')" id="filter-정보기술IT" class="sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95">
+            정보기술(IT)
         </button>
         
         </div>
         
         <div class="space-y-6" id="timelineContainer">
     
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-slate-800 transition duration-300 hover:bg-slate-900/50" data-sectors='["증시", "금융"]' data-search-text='개장 전부터 오픈런…\'토큰화 주식\' 시장 선점 경쟁  \'개장 전부터 오픈런…\'토큰화 주식\' 시장 선점 경쟁\' 뉴스는 국내 자본시장 개미 투자자들의 투자 열기와 증시 거래대금 변화를 보여주며, 시장 유동성 및 증권가 전반의 수수료 수익 구조에 단기적 영향을 미칠 수 있습니다. 증시, 금융 <span class=\"font-semibold text-slate-300\">증권사</span>, <span class=\"font-semibold text-slate-300\">자산운용사</span> hankyung economy'>
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["반도체", "IT 플랫폼", "성장주", "금융"]' data-search-text='cpi shockingly cool, curbing fed rate-hike odds; warsh ahead (live coverage)  미국의 소비자물가지수(cpi)가 예상보다 크게 둔화되면서 연준의 추가 금리 인상 우려가 불식되었습니다. 이로 인해 글로벌 위험자산 선호 심리가 회복되어 원화 가치 상승과 함께 국내 기술주 및 성장주 중심의 강한 반등이 기대됩니다. 반도체, it 플랫폼, 성장주, 금융 <span class=\"font-semibold text-slate-100\">삼성전자</span> <span class=\"text-xs text-emerald-400 font-medium\">(263,000원 +3.34%)</span>, <span class=\"font-semibold text-slate-100\">sk하이닉스</span> <span class=\"text-xs text-emerald-400 font-medium\">(1,913,000원 +3.69%)</span>, <span class=\"font-semibold text-slate-300\">naver</span>, <span class=\"font-semibold text-slate-300\">카카오</span> yahoo finance'>
                     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
                         <div class="flex items-center space-x-3">
-                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Hankyung Economy</span>
+                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Yahoo Finance</span>
                             <span class="text-xs text-slate-400">
-                                <span class="text-indigo-400 font-medium">작성:</span> 2026-07-08 10:57:09
+                                <span class="text-indigo-400 font-medium">작성:</span> 2026-07-14 22:06:27
                                 <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-07-08 11:15:04
+                                <span class="text-slate-500">수집:</span> 2026-07-14 22:12:25
                             </span>
                         </div>
                         <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">중립 (+0.0)</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-700 text-slate-300">경보: 낮음 (LOW)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 (+0.8)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>
                         </div>
                     </div>
                     
-                    <h3 class="text-lg font-bold text-slate-100 mb-2">개장 전부터 오픈런…'토큰화 주식' 시장 선점 경쟁</h3>
+                    <h3 class="text-lg font-bold text-slate-100 mb-2">CPI Shockingly Cool, Curbing Fed Rate-Hike Odds; Warsh Ahead (Live Coverage)</h3>
                     <p class="text-sm text-slate-400 line-clamp-3 mb-4"></p>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
                             <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">증시, 금융</span>
+                                <span class="text-indigo-300">반도체, IT 플랫폼, 성장주, 금융</span>
                                 <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-300">증권사</span>, <span class="font-semibold text-slate-300">자산운용사</span>
+                                <span class="font-semibold text-slate-100">삼성전자</span> <span class="text-xs text-emerald-400 font-medium">(263,000원 +3.34%)</span>, <span class="font-semibold text-slate-100">SK하이닉스</span> <span class="text-xs text-emerald-400 font-medium">(1,913,000원 +3.69%)</span>, <span class="font-semibold text-slate-300">NAVER</span>, <span class="font-semibold text-slate-300">카카오</span>
                             </p>
                         </div>
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">개인 투자자 자금 흐름 다변화 및 국내 주식 거래 대금 변동에 따른 증권업종 센티먼트 영향.</p>
+                            <p class="text-sm text-slate-200">미국 금리 인상 우려 완화로 원/달러 환율이 하락(원화 강세)하고, 한국 국채 금리도 하향 안정화될 것으로 보입니다. 이는 한국은행의 통화정책 압박을 줄이고 국내 증시로의 외국인 자금 유입을 촉진하는 요인입니다.</p>
                         </div>
                     </div>
                     
                     <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
                         <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">'개장 전부터 오픈런…'토큰화 주식' 시장 선점 경쟁' 뉴스는 국내 자본시장 개미 투자자들의 투자 열기와 증시 거래대금 변화를 보여주며, 시장 유동성 및 증권가 전반의 수수료 수익 구조에 단기적 영향을 미칠 수 있습니다.</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">미국의 소비자물가지수(CPI)가 예상보다 크게 둔화되면서 연준의 추가 금리 인상 우려가 불식되었습니다. 이로 인해 글로벌 위험자산 선호 심리가 회복되어 원화 가치 상승과 함께 국내 기술주 및 성장주 중심의 강한 반등이 기대됩니다.</p>
                     </div>
                     
                     <div class="flex justify-between items-center text-xs text-slate-500">
-                        <span>관련성 분류 이유: 글로벌 이슈 및 핵심 키워드 (주식) 검색 매칭에 따른 한국 경제 관련성 판별 완료 (데모 모드).</span>
-                        <a href="https://www.hankyung.com/article/202607067061i" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
+                        <span>관련성 분류 이유: 미국 소비자물가지수(CPI) 발표 및 연준의 금리 정책 변화는 한국의 통화 정책과 금융 시장에 직접적인 영향을 미칩니다.</span>
+                        <a href="https://www.investors.com/news/cpi-inflation-june-federal-reserve-warsh-testimony-oil-prices-sp-500/?src=A00220&yptr=yahoo" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
                     </div>
                     
                 </div>
                 
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["반도체", "IT H/W"]' data-search-text='구윤철 “경제대도약 원년 완성…하반기 경제성장전략 조만간 발표” 잠재성장률 반등·양극화 극복 등 반영 “호남 반도체 클러스터 전속력 추진” 수입철강재 조강국 정보 제출 의무화 위기대응사업 지원대상도 추가 결정구윤철 부총리 겸 재정경제부 장관이 .. \'구윤철 “경제대도약 원년 완성…하반기 경제성장전략 조만간 발표”\' 뉴스는 글로벌 ai 및 반도체 공급망 리스크 호재에 따른 국내 주요 반도체 제조사(삼성전자, sk하이닉스)의 실적 성장 가능성을 시사합니다. 반도체, it h/w <span class=\"font-semibold text-slate-100\">삼성전자</span> <span class=\"text-xs text-rose-400 font-medium\">(286,750원 -3.12%)</span>, <span class=\"font-semibold text-slate-100\">sk하이닉스</span> <span class=\"text-xs text-emerald-400 font-medium\">(2,234,000원 +1.5%)</span> maeil business economy'>
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["반도체", "IT/기술", "금융"]' data-search-text='stock market today: s&p climbs on surprise cpi inflation report; ibm plunges 23% on earnings (live coverage)  미국의 예상치 못한 cpi 상승률 둔화 소식으로 s&p 500 지수가 상승하며 글로벌 위험자산 선호 심리가 개선되었습니다. 이는 원/달러 환율 하락과 함께 국내 증시, 특히 반도체 등 수출형 대형 it 기업들에 긍정적인 영향을 미칠 것입니다. 반도체, it/기술, 금융 <span class=\"font-semibold text-slate-100\">삼성전자</span> <span class=\"text-xs text-emerald-400 font-medium\">(263,000원 +3.34%)</span>, <span class=\"font-semibold text-slate-100\">sk하이닉스</span> <span class=\"text-xs text-emerald-400 font-medium\">(1,913,000원 +3.69%)</span> yahoo finance'>
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
+                        <div class="flex items-center space-x-3">
+                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Yahoo Finance</span>
+                            <span class="text-xs text-slate-400">
+                                <span class="text-indigo-400 font-medium">작성:</span> 2026-07-14 22:06:27
+                                <span class="mx-1 text-slate-600">|</span>
+                                <span class="text-slate-500">수집:</span> 2026-07-14 22:10:11
+                            </span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 (+0.6)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-lg font-bold text-slate-100 mb-2">Stock Market Today: S&P Climbs On Surprise CPI Inflation Report; IBM Plunges 23% On Earnings (Live Coverage)</h3>
+                    <p class="text-sm text-slate-400 line-clamp-3 mb-4"></p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
+                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
+                                <span class="text-indigo-300">반도체, IT/기술, 금융</span>
+                                <span class="text-slate-500">|</span>
+                                <span class="font-semibold text-slate-100">삼성전자</span> <span class="text-xs text-emerald-400 font-medium">(263,000원 +3.34%)</span>, <span class="font-semibold text-slate-100">SK하이닉스</span> <span class="text-xs text-emerald-400 font-medium">(1,913,000원 +3.69%)</span>
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
+                            <p class="text-sm text-slate-200">미국 CPI 상승률 둔화로 미 연준의 금리 인하 가능성이 높아짐에 따라 원/달러 환율 안정(하락) 및 KOSPI 지수 상승 요인으로 작용할 것으로 예상됩니다.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
+                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">미국의 예상치 못한 CPI 상승률 둔화 소식으로 S&P 500 지수가 상승하며 글로벌 위험자산 선호 심리가 개선되었습니다. 이는 원/달러 환율 하락과 함께 국내 증시, 특히 반도체 등 수출형 대형 IT 기업들에 긍정적인 영향을 미칠 것입니다.</p>
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-xs text-slate-500">
+                        <span>관련성 분류 이유: 미국 증시와 물가 지표는 한국 증시 및 금융 시장과 밀접한 연관성을 가지고 있어 경제 흐름에 큰 영향을 미칩니다.</span>
+                        <a href="https://www.investors.com/market-trend/stock-market-today/dow-jones-sp500-nasdaq-june-cpi-inflation-ibm-stock/?src=A00220&yptr=yahoo" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
+                    </div>
+                    
+                </div>
+                
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-slate-800 transition duration-300 hover:bg-slate-900/50" data-sectors='["Financials", "Information Technology", "Export Sector"]' data-search-text='warsh\'s statement to congress: fed has \'no tolerance for persistently elevated inflation\'  인플레이션 제어를 위한 연준의 매파적 입장은 미국 금리 인하 지연 및 고금리 장기화 가능성을 높입니다. 이는 달러화 강세를 유발해 원/달러 환율과 수입 물가에 상방 압력을 가하며, 한국 증시의 외인 자금 이탈 우려를 키웁니다. 한국은행 또한 한미 금리차와 고환율 부담으로 수입 물가 관리에 어려움을 겪고 통화 긴축 완화 전환이 늦어질 수 있습니다. financials, information technology, export sector <span class=\"font-semibold text-slate-300\">samsung electronics</span>, <span class=\"font-semibold text-slate-300\">sk hynix</span> yahoo finance'>
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
+                        <div class="flex items-center space-x-3">
+                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Yahoo Finance</span>
+                            <span class="text-xs text-slate-400">
+                                <span class="text-indigo-400 font-medium">작성:</span> 2026-07-14 21:38:25
+                                <span class="mx-1 text-slate-600">|</span>
+                                <span class="text-slate-500">수집:</span> 2026-07-14 21:39:31
+                            </span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">부정 (-0.6)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-700 text-slate-300">경보: 낮음 (LOW)</span>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-lg font-bold text-slate-100 mb-2">Warsh's statement to Congress: Fed has 'no tolerance for persistently elevated inflation'</h3>
+                    <p class="text-sm text-slate-400 line-clamp-3 mb-4"></p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
+                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
+                                <span class="text-indigo-300">Financials, Information Technology, Export Sector</span>
+                                <span class="text-slate-500">|</span>
+                                <span class="font-semibold text-slate-300">Samsung Electronics</span>, <span class="font-semibold text-slate-300">SK Hynix</span>
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
+                            <p class="text-sm text-slate-200">미 연준의 고금리 장기화 우려로 인한 원/달러 환율 상승 압력 및 자본 유출 위험 증가, 한국 증시(KOSPI) 하락 압력, 한국은행의 기준금리 인하 제약</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
+                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">인플레이션 제어를 위한 연준의 매파적 입장은 미국 금리 인하 지연 및 고금리 장기화 가능성을 높입니다. 이는 달러화 강세를 유발해 원/달러 환율과 수입 물가에 상방 압력을 가하며, 한국 증시의 외인 자금 이탈 우려를 키웁니다. 한국은행 또한 한미 금리차와 고환율 부담으로 수입 물가 관리에 어려움을 겪고 통화 긴축 완화 전환이 늦어질 수 있습니다.</p>
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-xs text-slate-500">
+                        <span>관련성 분류 이유: 미국 연준의 통화 정책은 한국의 금리 결정 및 자본 시장에 직접적인 영향을 미치기 때문에 관련이 있습니다.</span>
+                        <a href="https://finance.yahoo.com/economy/policy/article/warshs-statement-to-congress-fed-has-no-tolerance-for-persistently-elevated-inflation-123000475.html" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
+                    </div>
+                    
+                </div>
+                
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["반도체", "정보기술(IT)", "이차전지", "금융"]' data-search-text='stock market today: dow, s&p 500, nasdaq futures mixed as traders lift fed rate hike bets ahead of key inflation data  미국의 주요 인플레이션 지표 발표를 앞두고 연준의 금리 인상 가능성이 제기되면서 글로벌 투자 심리가 위축되고 있습니다. 이는 원/달러 환율 상승 및 외국인 매도세를 유발하여 코스피 지수에 하방 압력을 가할 것으로 보입니다. 금리에 민감한 반도체 및 2차전지 등 대형 기술주 중심의 변동성 확대에 유의해야 합니다. 반도체, 정보기술(it), 이차전지, 금융 <span class=\"font-semibold text-slate-100\">삼성전자</span> <span class=\"text-xs text-emerald-400 font-medium\">(263,000원 +3.34%)</span>, <span class=\"font-semibold text-slate-100\">sk하이닉스</span> <span class=\"text-xs text-emerald-400 font-medium\">(1,913,000원 +3.69%)</span>, <span class=\"font-semibold text-slate-300\">lg에너지솔루션</span> yahoo finance'>
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
+                        <div class="flex items-center space-x-3">
+                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Yahoo Finance</span>
+                            <span class="text-xs text-slate-400">
+                                <span class="text-indigo-400 font-medium">작성:</span> 2026-07-14 21:38:25
+                                <span class="mx-1 text-slate-600">|</span>
+                                <span class="text-slate-500">수집:</span> 2026-07-14 21:38:51
+                            </span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">부정 (-0.5)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-lg font-bold text-slate-100 mb-2">Stock market today: Dow, S&P 500, Nasdaq futures mixed as traders lift Fed rate hike bets ahead of key inflation data</h3>
+                    <p class="text-sm text-slate-400 line-clamp-3 mb-4"></p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
+                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
+                                <span class="text-indigo-300">반도체, 정보기술(IT), 이차전지, 금융</span>
+                                <span class="text-slate-500">|</span>
+                                <span class="font-semibold text-slate-100">삼성전자</span> <span class="text-xs text-emerald-400 font-medium">(263,000원 +3.34%)</span>, <span class="font-semibold text-slate-100">SK하이닉스</span> <span class="text-xs text-emerald-400 font-medium">(1,913,000원 +3.69%)</span>, <span class="font-semibold text-slate-300">LG에너지솔루션</span>
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
+                            <p class="text-sm text-slate-200">미 연준의 추가 금리 인상 우려가 커지면서 원/달러 환율 상승 압력이 강화되고 KOSPI 시장에서 외국인 자금 이탈 가능성이 높아집니다. 이는 국내 시중 금리 상승 압력으로도 작용할 수 있습니다.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
+                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">미국의 주요 인플레이션 지표 발표를 앞두고 연준의 금리 인상 가능성이 제기되면서 글로벌 투자 심리가 위축되고 있습니다. 이는 원/달러 환율 상승 및 외국인 매도세를 유발하여 코스피 지수에 하방 압력을 가할 것으로 보입니다. 금리에 민감한 반도체 및 2차전지 등 대형 기술주 중심의 변동성 확대에 유의해야 합니다.</p>
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-xs text-slate-500">
+                        <span>관련성 분류 이유: 미국 연방준비제도의 금리 정책과 인플레이션 지표는 한국 금융 시장 및 원화 가치에 직접적인 영향을 미치는 주요 요인입니다.</span>
+                        <a href="https://finance.yahoo.com/markets/live/stock-market-today-tuesday-july-14-dow-sp-500-nasdaq-070833816.html" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
+                    </div>
+                    
+                </div>
+                
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-rose-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["반도체", "금융 및 자본시장", "정보기술(IT)"]' data-search-text='외국인 자금 \'썰물\' … 올해 국내 증시서 1102억弗 빠졌다 외국인들이 국내 증권시장에서 지난 한 달 동안 47조원에 가까운 자금을 회수한 것으로 나타났다. 역대 최대 규모다. 인공지능(ai) 투자 과열에 대한 우려가 커진 데다 주가 상승으.. 외국인 투자자들이 최근 한 달 동안 역대 최대 규모인 약 47조 원의 자금을 국내 증시에서 회수하며 시장 불안을 고조시키고 있습니다. ai 투자 과열 우려와 차익 실현 매물이 맞물리면서 시가총액이 큰 대형 반도체주를 중심으로 매도세가 집중되었습니다. 이는 외환시장 불안과 코스피 하락의 직접적인 원인으로 작용하고 있습니다. 반도체, 금융 및 자본시장, 정보기술(it) <span class=\"font-semibold text-slate-100\">삼성전자</span> <span class=\"text-xs text-emerald-400 font-medium\">(263,000원 +3.34%)</span>, <span class=\"font-semibold text-slate-100\">sk하이닉스</span> <span class=\"text-xs text-emerald-400 font-medium\">(1,913,000원 +3.69%)</span> maeil business economy'>
                     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
                         <div class="flex items-center space-x-3">
                             <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Maeil Business Economy</span>
                             <span class="text-xs text-slate-400">
-                                <span class="text-indigo-400 font-medium">작성:</span> 2026-07-08 11:07:38
+                                <span class="text-indigo-400 font-medium">작성:</span> 2026-07-15 02:52:23
                                 <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-07-08 11:15:03
+                                <span class="text-slate-500">수집:</span> 2026-07-14 21:31:59
                             </span>
                         </div>
                         <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 (+0.8)</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>
-                        </div>
-                    </div>
-                    
-                    <h3 class="text-lg font-bold text-slate-100 mb-2">구윤철 “경제대도약 원년 완성…하반기 경제성장전략 조만간 발표”</h3>
-                    <p class="text-sm text-slate-400 line-clamp-3 mb-4">잠재성장률 반등·양극화 극복 등 반영 “호남 반도체 클러스터 전속력 추진” 수입철강재 조강국 정보 제출 의무화 위기대응사업 지원대상도 추가 결정구윤철 부총리 겸 재정경제부 장관이 ..</p>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
-                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">반도체, IT H/W</span>
-                                <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-100">삼성전자</span> <span class="text-xs text-rose-400 font-medium">(286,750원 -3.12%)</span>, <span class="font-semibold text-slate-100">SK하이닉스</span> <span class="text-xs text-emerald-400 font-medium">(2,234,000원 +1.5%)</span>
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">글로벌 반도체 및 AI 수요 강세 지속으로 국내 IT 하드웨어 수출 증가와 KOSPI 상방 모멘텀 지원.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
-                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">'구윤철 “경제대도약 원년 완성…하반기 경제성장전략 조만간 발표”' 뉴스는 글로벌 AI 및 반도체 공급망 리스크 호재에 따른 국내 주요 반도체 제조사(삼성전자, SK하이닉스)의 실적 성장 가능성을 시사합니다.</p>
-                    </div>
-                    
-                    <div class="flex justify-between items-center text-xs text-slate-500">
-                        <span>관련성 분류 이유: 글로벌 이슈 및 핵심 키워드 (반도체, 성장률) 검색 매칭에 따른 한국 경제 관련성 판별 완료 (데모 모드).</span>
-                        <a href="https://www.mk.co.kr/news/economy/12093144" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
-                    </div>
-                    
-                </div>
-                
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["기타"]' data-search-text='[증권사 리포트 - sk증권] 코스맥스: 변곡점을 통과했다 2q26 preview: 영업이익 시장 컨센서스 부합 추정동사의 2 분기 실적은 매출액 7,490 억 원(+20.1% yoy, 이하 yoy 생략), 영업이익 690 억 원(+13.4%, opm 9.2%) 기록해 영업이익 기준 시장 컨센서스인 692 억 원에 부합할 것이다. [별도법인] 매출액 18.4%, 영업이익 8.8% 성장한 것으로 추정한다.2분기에 기초화장품 중심으로 수출 업황이 매우 강했는데, 동사의 영업 확대 기조와 맞물려 스킨케어 제품 매출이 39% 성장해 실적을 견인했을 것이다. 색조화장품 매출은 9% 감소해 1 분기 대비 감소폭이 완화된 것으로 추정한다. 영업이익률은 전년 동기대비 1.0%p 감소할 것으로 추정하는데, 작년에 인식한 40 억 원의 대손상각비 환입 효과 때문이며, 이를 제외할 경우 0.5%p 개선될 것이다. [해외법인] 중국 매출은 자국 브랜드 선호 및 c뷰티 글로벌 판매 호조로 19%의 높은 성장률 기록했을 것이다. 미국 법인 매출은 53% 성장한 것으로 추정한다. 탑 고객사 색조 판매 호조가 지속되었고, 기초 제품 리오더 수량이 확대되고 있다. 인도네시아 매출은 고객사 채널별 고른 성장세로 32% 성장했을 것이며, 태국 매출은 10% 성장 예상한다. 2q26 preview: 영업이익 시장 컨센서스 부합 추정동사의 2 분기 실적은 매출액 7,490 억 원(+20.1% yoy, 이하 yoy 생략), 영업이익 690 억 원(+13.4%, opm 9.2%) 기록해 영업이익 기준 시장 컨센서스인 692 억 원에 부합할 것이다. [별도법인] 매출액 18.4%, 영업이익 8.8% 성장한 것으로 추정한다.2분기에 기초화장품 중심으로 수출 업황이 매우 강했는데, 동사의 영업 확대 기조와 맞물려 스킨케어 제품 매출이 39% 성장해 실적을 견인했을 것이다. 색조화장품 매출은 9% 감소해 1 분기 대비 감소폭이 완화된 것으로 추정한다. 영업이익률은 전년 동기대비 1.0%p 감소할 것으로 추정하는데, 작년에 인식한 40 억 원의 대손상각비 환입 효과 때문이며, 이를 제외할 경우 0.5%p 개선될 것이다. [해외법인] 중국 매출은 자국 브랜드 선호 및 c뷰티 글로벌 판매 호조로 19%의 높은 성장률 기록했을 것이다. 미국 법인 매출은 53% 성장한 것으로 추정한다. 탑 고객사 색조 판매 호조가 지속되었고, 기초 제품 리오더 수량이 확대되고 있다. 인도네시아 매출은 고객사 채널별 고른 성장세로 32% 성장했을 것이며, 태국 매출은 10% 성장 예상한다. 기타 <span class=\"font-semibold text-slate-300\">코스맥스</span> naver research'>
-                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
-                        <div class="flex items-center space-x-3">
-                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Naver Research</span>
-                            <span class="text-xs text-slate-400">
-                                <span class="text-indigo-400 font-medium">작성:</span> 2026-07-08 09:00:00
-                                <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-07-08 10:44:05
-                            </span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 (+0.6)</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>
-                        </div>
-                    </div>
-                    
-                    <h3 class="text-lg font-bold text-slate-100 mb-2">[증권사 리포트 - SK증권] 코스맥스: 변곡점을 통과했다</h3>
-                    <p class="text-sm text-slate-400 line-clamp-3 mb-4">2Q26 Preview: 영업이익 시장 컨센서스 부합 추정동사의 2 분기 실적은 매출액 7,490 억 원(+20.1% YoY, 이하 YoY 생략), 영업이익 690 억 원(+13.4%, OPM 9.2%) 기록해 영업이익 기준 시장 컨센서스인 692 억 원에 부합할 것이다. [별도법인] 매출액 18.4%, 영업이익 8.8% 성장한 것으로 추정한다.2분기에 기초화장품 중심으로 수출 업황이 매우 강했는데, 동사의 영업 확대 기조와 맞물려 스킨케어 제품 매출이 39% 성장해 실적을 견인했을 것이다. 색조화장품 매출은 9% 감소해 1 분기 대비 감소폭이 완화된 것으로 추정한다. 영업이익률은 전년 동기대비 1.0%p 감소할 것으로 추정하는데, 작년에 인식한 40 억 원의 대손상각비 환입 효과 때문이며, 이를 제외할 경우 0.5%p 개선될 것이다. [해외법인] 중국 매출은 자국 브랜드 선호 및 C뷰티 글로벌 판매 호조로 19%의 높은 성장률 기록했을 것이다. 미국 법인 매출은 53% 성장한 것으로 추정한다. 탑 고객사 색조 판매 호조가 지속되었고, 기초 제품 리오더 수량이 확대되고 있다. 인도네시아 매출은 고객사 채널별 고른 성장세로 32% 성장했을 것이며, 태국 매출은 10% 성장 예상한다.</p>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
-                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">기타</span>
-                                <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-300">코스맥스</span>
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">해당 기업(코스맥스)의 애널리스트 분석(매수, 목표가 250,000원 제시) 정보가 주식 시장 수급 및 업종별 센티먼트에 개별적 영향 유발.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
-                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">2Q26 Preview: 영업이익 시장 컨센서스 부합 추정동사의 2 분기 실적은 매출액 7,490 억 원(+20.1% YoY, 이하 YoY 생략), 영업이익 690 억 원(+13.4%, OPM 9.2%) 기록해 영업이익 기준 시장 컨센서스인 692 억 원에 부합할 것이다. [별도법인] 매출액 18.4%, 영업이익 8.8% 성장한 것으로 추정한다.2분기에 기초화장품 중심으로 수출 업황이 매우 강했는데, 동사의 영업 확대 기조와 맞물려 스킨케어 제품 매출이 39% 성장해 실적을 견인했을 것이다. 색조화장품 매출은 9% 감소해 1 분기 대비 감소폭이 완화된 것으로 추정한다. 영업이익률은 전년 동기대비 1.0%p 감소할 것으로 추정하는데, 작년에 인식한 40 억 원의 대손상각비 환입 효과 때문이며, 이를 제외할 경우 0.5%p 개선될 것이다. [해외법인] 중국 매출은 자국 브랜드 선호 및 C뷰티 글로벌 판매 호조로 19%의 높은 성장률 기록했을 것이다. 미국 법인 매출은 53% 성장한 것으로 추정한다. 탑 고객사 색조 판매 호조가 지속되었고, 기초 제품 리오더 수량이 확대되고 있다. 인도네시아 매출은 고객사 채널별 고른 성장세로 32% 성장했을 것이며, 태국 매출은 10% 성장 예상한다.</p>
-                    </div>
-                    
-                    <div class="flex justify-between items-center text-xs text-slate-500">
-                        <span>관련성 분류 이유: 증권사(네이버 증권 리서치) 종목 분석 리포트 - 대상 기업: 코스맥스</span>
-                        <a href="https://finance.naver.com/research/company_read.naver?nid=93970&page=1" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
-                    </div>
-                    
-                </div>
-                
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["반도체"]' data-search-text='[증권사 리포트 - 유진투자증권] 삼성전자: 걱정의 벽을 타고 \" 삼성전자의 2q26 잠정 실적은 매출액 171.0조원(+28%qoq), 영업이익 89.4원(+56%qoq)을 기록했다. 부문별 영업이익은 ds 89.6조원(dram 71.0조원, nand 21.3조원, foundry/lsi -2.8조원), mx/nw -1.0조원, sdc 0.4조원, harman 0.3조원을 기록한 것으로 추정한다.\" 메모리 부문의 영업이익(92.4조원)이 당사 추정치(83.1조원)를 크게 뛰어 넘은 것으로 추정된다. 삼성전자의 blended asp는 2027년까지 계속해서 업계 최고 수준을 유지할 것으로 보인다. 공격적 협상 전략과 업계 최대 수준의 capa가 결부되어 압도적 가격 협상력이 지속될 전망이다.\" 반면 메모리 외 사업부의 실적은 뚜렷한 약세를 유지할 것을 보인다. mx의 경우 비수기와 메모리 가격 급등이 맞물려 예상보다 빠른 적자 전환에 직면한 것을 보이며, foundry/lsi의 경우 본질적인 턴어라운드가 시작되었으나 성과금 충당금 반영으로 인해 흑자전환의 시점이 지연될 것으로 예상된다.\" 범용 dram 및 nand asp가 예상보다 높은 수준의 상승률을 보임에 따라, 2027년까지의 실적 추정치가 상향 조정되었다. 2027년은 올해보다 더욱 메모리 쇼티지가 심화될 것으로 예측되므로, 예상보다 강한 단기 메모리 가격 협상 결과는 \'27년까지의 asp 눈높이 상향으로 이어진다.\" 이번 잠정 실적은 삼성전자의 강력한 펀더멘탈을 재증명하였으나, 최근 나타난 메모리 업종의 강한 주가 조정 속 불거진 시장의 우려를 잠재우기엔 역부족이었던 것으로 보인다. 이제 시장의 시선은 단기적인 어닝 서프라이즈를 넘어서, 실적의 장기 지속성에 초점이 맞춰지고 있다.\" 시장의 우려는 빅테크 어닝콜에서 발표될 ai capex 톤에 대한 불확실성, 메모리 가격의 상승률 둔화, 줄어드는 컨센서스의 추가 상향 여력, 상장과 함께 나타날 중국 메모리 업체의 영향력 확대 등에 맞춰졌다. 메모리 업종의 주가가 이러한 우려를 이겨 내고 재차 상승세를 보일 것으로 전망한다.\" 중요한 점은 meta 등 주요 빅테크 업체들이 여전히 프론티어 모델 개발 경쟁을 포기하지 않았다는 점이다. 2q26 어닝콜에서 강한 ai capex 투입 의지를 재확인할 것으로 보인다. 2h26 범용 dram 및 nand, 2027년 hbm의 가격 협상은 시장 기대치를 뛰어 넘는 수준을 기록할 것으로 보여 실적 컨센서스의 추가 상향으로 이어질 전망이다. 중국 dram의 경우 장비 수출 제재의 영향이 올해부터 극대화되고 있으며, 풍부한 부지 및 전력/용수에 근거한 본격적인 시장 점유율 확대는 2029년 이후로 예측되는 바, 메모리 업황에 대한 영향은 장기간 부재할 것으로 보인다.\" 향후 메모리 업체들의 소통을 통해 강화된 주주환원과 lta를 통한 이익 지속성 확보가 확인될 것으로 보이며, 이를 통해 슈퍼사이클 진입 이후 반복적으로 나타나는 주가 조정을 이겨낼 것으로 판단한다. \" 삼성전자의 2q26 잠정 실적은 매출액 171.0조원(+28%qoq), 영업이익 89.4원(+56%qoq)을 기록했다. 부문별 영업이익은 ds 89.6조원(dram 71.0조원, nand 21.3조원, foundry/lsi -2.8조원), mx/nw -1.0조원, sdc 0.4조원, harman 0.3조원을 기록한 것으로 추정한다.\" 메모리 부문의 영업이익(92.4조원)이 당사 추정치(83.1조원)를 크게 뛰어 넘은 것으로 추정된다. 삼성전자의 blended asp는 2027년까지 계속해서 업계 최고 수준을 유지할 것으로 보인다. 공격적 협상 전략과 업계 최대 수준의 capa가 결부되어 압도적 가격 협상력이 지속될 전망이다.\" 반면 메모리 외 사업부의 실적은 뚜렷한 약세를 유지할 것을 보인다. mx의 경우 비수기와 메모리 가격 급등이 맞물려 예상보다 빠른 적자 전환에 직면한 것을 보이며, foundry/lsi의 경우 본질적인 턴어라운드가 시작되었으나 성과금 충당금 반영으로 인해 흑자전환의 시점이 지연될 것으로 예상된다.\" 범용 dram 및 nand asp가 예상보다 높은 수준의 상승률을 보임에 따라, 2027년까지의 실적 추정치가 상향 조정되었다. 2027년은 올해보다 더욱 메모리 쇼티지가 심화될 것으로 예측되므로, 예상보다 강한 단기 메모리 가격 협상 결과는 \'27년까지의 asp 눈높이 상향으로 이어진다.\" 이번 잠정 실적은 삼성전자의 강력한 펀더멘탈을 재증명하였으나, 최근 나타난 메모리 업종의 강한 주가 조정 속 불거진 시장의 우려를 잠재우기엔 역부족이었던 것으로 보인다. 이제 시장의 시선은 단기적인 어닝 서프라이즈를 넘어서, 실적의 장기 지속성에 초점이 맞춰지고 있다.\" 시장의 우려는 빅테크 어닝콜에서 발표될 ai capex 톤에 대한 불확실성, 메모리 가격의 상승률 둔화, 줄어드는 컨센서스의 추가 상향 여력, 상장과 함께 나타날 중국 메모리 업체의 영향력 확대 등에 맞춰졌다. 메모리 업종의 주가가 이러한 우려를 이겨 내고 재차 상승세를 보일 것으로 전망한다.\" 중요한 점은 meta 등 주요 빅테크 업체들이 여전히 프론티어 모델 개발 경쟁을 포기하지 않았다는 점이다. 2q26 어닝콜에서 강한 ai capex 투입 의지를 재확인할 것으로 보인다. 2h26 범용 dram 및 nand, 2027년 hbm의 가격 협상은 시장 기대치를 뛰어 넘는 수준을 기록할 것으로 보여 실적 컨센서스의 추가 상향으로 이어질 전망이다. 중국 dram의 경우 장비 수출 제재의 영향이 올해부터 극대화되고 있으며, 풍부한 부지 및 전력/용수에 근거한 본격적인 시장 점유율 확대는 2029년 이후로 예측되는 바, 메모리 업황에 대한 영향은 장기간 부재할 것으로 보인다.\" 향후 메모리 업체들의 소통을 통해 강화된 주주환원과 lta를 통한 이익 지속성 확보가 확인될 것으로 보이며, 이를 통해 슈퍼사이클 진입 이후 반복적으로 나타나는 주가 조정을 이겨낼 것으로 판단한다. 반도체 <span class=\"font-semibold text-slate-100\">삼성전자</span> <span class=\"text-xs text-rose-400 font-medium\">(286,750원 -3.12%)</span> naver research'>
-                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
-                        <div class="flex items-center space-x-3">
-                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Naver Research</span>
-                            <span class="text-xs text-slate-400">
-                                <span class="text-indigo-400 font-medium">작성:</span> 2026-07-08 09:00:00
-                                <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-07-08 10:44:04
-                            </span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 (+0.6)</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>
-                        </div>
-                    </div>
-                    
-                    <h3 class="text-lg font-bold text-slate-100 mb-2">[증권사 리포트 - 유진투자증권] 삼성전자: 걱정의 벽을 타고</h3>
-                    <p class="text-sm text-slate-400 line-clamp-3 mb-4">" 삼성전자의 2Q26 잠정 실적은 매출액 171.0조원(+28%qoq), 영업이익 89.4원(+56%qoq)을 기록했다. 부문별 영업이익은 DS 89.6조원(DRAM 71.0조원, NAND 21.3조원, Foundry/LSI -2.8조원), MX/NW -1.0조원, SDC 0.4조원, Harman 0.3조원을 기록한 것으로 추정한다." 메모리 부문의 영업이익(92.4조원)이 당사 추정치(83.1조원)를 크게 뛰어 넘은 것으로 추정된다. 삼성전자의 blended ASP는 2027년까지 계속해서 업계 최고 수준을 유지할 것으로 보인다. 공격적 협상 전략과 업계 최대 수준의 Capa가 결부되어 압도적 가격 협상력이 지속될 전망이다." 반면 메모리 외 사업부의 실적은 뚜렷한 약세를 유지할 것을 보인다. MX의 경우 비수기와 메모리 가격 급등이 맞물려 예상보다 빠른 적자 전환에 직면한 것을 보이며, Foundry/LSI의 경우 본질적인 턴어라운드가 시작되었으나 성과금 충당금 반영으로 인해 흑자전환의 시점이 지연될 것으로 예상된다." 범용 DRAM 및 NAND ASP가 예상보다 높은 수준의 상승률을 보임에 따라, 2027년까지의 실적 추정치가 상향 조정되었다. 2027년은 올해보다 더욱 메모리 쇼티지가 심화될 것으로 예측되므로, 예상보다 강한 단기 메모리 가격 협상 결과는 '27년까지의 ASP 눈높이 상향으로 이어진다." 이번 잠정 실적은 삼성전자의 강력한 펀더멘탈을 재증명하였으나, 최근 나타난 메모리 업종의 강한 주가 조정 속 불거진 시장의 우려를 잠재우기엔 역부족이었던 것으로 보인다. 이제 시장의 시선은 단기적인 어닝 서프라이즈를 넘어서, 실적의 장기 지속성에 초점이 맞춰지고 있다." 시장의 우려는 빅테크 어닝콜에서 발표될 AI CapEx 톤에 대한 불확실성, 메모리 가격의 상승률 둔화, 줄어드는 컨센서스의 추가 상향 여력, 상장과 함께 나타날 중국 메모리 업체의 영향력 확대 등에 맞춰졌다. 메모리 업종의 주가가 이러한 우려를 이겨 내고 재차 상승세를 보일 것으로 전망한다." 중요한 점은 Meta 등 주요 빅테크 업체들이 여전히 프론티어 모델 개발 경쟁을 포기하지 않았다는 점이다. 2Q26 어닝콜에서 강한 AI CapEx 투입 의지를 재확인할 것으로 보인다. 2H26 범용 DRAM 및 NAND, 2027년 HBM의 가격 협상은 시장 기대치를 뛰어 넘는 수준을 기록할 것으로 보여 실적 컨센서스의 추가 상향으로 이어질 전망이다. 중국 DRAM의 경우 장비 수출 제재의 영향이 올해부터 극대화되고 있으며, 풍부한 부지 및 전력/용수에 근거한 본격적인 시장 점유율 확대는 2029년 이후로 예측되는 바, 메모리 업황에 대한 영향은 장기간 부재할 것으로 보인다." 향후 메모리 업체들의 소통을 통해 강화된 주주환원과 LTA를 통한 이익 지속성 확보가 확인될 것으로 보이며, 이를 통해 슈퍼사이클 진입 이후 반복적으로 나타나는 주가 조정을 이겨낼 것으로 판단한다.</p>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
-                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">반도체</span>
-                                <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-100">삼성전자</span> <span class="text-xs text-rose-400 font-medium">(286,750원 -3.12%)</span>
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">해당 기업(삼성전자)의 애널리스트 분석(StrongBuy, 목표가 560,000원 제시) 정보가 주식 시장 수급 및 업종별 센티먼트에 개별적 영향 유발.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
-                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">" 삼성전자의 2Q26 잠정 실적은 매출액 171.0조원(+28%qoq), 영업이익 89.4원(+56%qoq)을 기록했다. 부문별 영업이익은 DS 89.6조원(DRAM 71.0조원, NAND 21.3조원, Foundry/LSI -2.8조원), MX/NW -1.0조원, SDC 0.4조원, Harman 0.3조원을 기록한 것으로 추정한다." 메모리 부문의 영업이익(92.4조원)이 당사 추정치(83.1조원)를 크게 뛰어 넘은 것으로 추정된다. 삼성전자의 blended ASP는 2027년까지 계속해서 업계 최고 수준을 유지할 것으로 보인다. 공격적 협상 전략과 업계 최대 수준의 Capa가 결부되어 압도적 가격 협상력이 지속될 전망이다." 반면 메모리 외 사업부의 실적은 뚜렷한 약세를 유지할 것을 보인다. MX의 경우 비수기와 메모리 가격 급등이 맞물려 예상보다 빠른 적자 전환에 직면한 것을 보이며, Foundry/LSI의 경우 본질적인 턴어라운드가 시작되었으나 성과금 충당금 반영으로 인해 흑자전환의 시점이 지연될 것으로 예상된다." 범용 DRAM 및 NAND ASP가 예상보다 높은 수준의 상승률을 보임에 따라, 2027년까지의 실적 추정치가 상향 조정되었다. 2027년은 올해보다 더욱 메모리 쇼티지가 심화될 것으로 예측되므로, 예상보다 강한 단기 메모리 가격 협상 결과는 '27년까지의 ASP 눈높이 상향으로 이어진다." 이번 잠정 실적은 삼성전자의 강력한 펀더멘탈을 재증명하였으나, 최근 나타난 메모리 업종의 강한 주가 조정 속 불거진 시장의 우려를 잠재우기엔 역부족이었던 것으로 보인다. 이제 시장의 시선은 단기적인 어닝 서프라이즈를 넘어서, 실적의 장기 지속성에 초점이 맞춰지고 있다." 시장의 우려는 빅테크 어닝콜에서 발표될 AI CapEx 톤에 대한 불확실성, 메모리 가격의 상승률 둔화, 줄어드는 컨센서스의 추가 상향 여력, 상장과 함께 나타날 중국 메모리 업체의 영향력 확대 등에 맞춰졌다. 메모리 업종의 주가가 이러한 우려를 이겨 내고 재차 상승세를 보일 것으로 전망한다." 중요한 점은 Meta 등 주요 빅테크 업체들이 여전히 프론티어 모델 개발 경쟁을 포기하지 않았다는 점이다. 2Q26 어닝콜에서 강한 AI CapEx 투입 의지를 재확인할 것으로 보인다. 2H26 범용 DRAM 및 NAND, 2027년 HBM의 가격 협상은 시장 기대치를 뛰어 넘는 수준을 기록할 것으로 보여 실적 컨센서스의 추가 상향으로 이어질 전망이다. 중국 DRAM의 경우 장비 수출 제재의 영향이 올해부터 극대화되고 있으며, 풍부한 부지 및 전력/용수에 근거한 본격적인 시장 점유율 확대는 2029년 이후로 예측되는 바, 메모리 업황에 대한 영향은 장기간 부재할 것으로 보인다." 향후 메모리 업체들의 소통을 통해 강화된 주주환원과 LTA를 통한 이익 지속성 확보가 확인될 것으로 보이며, 이를 통해 슈퍼사이클 진입 이후 반복적으로 나타나는 주가 조정을 이겨낼 것으로 판단한다.</p>
-                    </div>
-                    
-                    <div class="flex justify-between items-center text-xs text-slate-500">
-                        <span>관련성 분류 이유: 증권사(네이버 증권 리서치) 종목 분석 리포트 - 대상 기업: 삼성전자</span>
-                        <a href="https://finance.naver.com/research/company_read.naver?nid=93971&page=1" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
-                    </div>
-                    
-                </div>
-                
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["이차전지"]' data-search-text='[증권사 리포트 - 유진투자증권] lg에너지솔루션: 그래도 꿈과 희망이 있다 \" [투자의견] 당사는 lg에너지솔루션에 대해 목표주가를 470,000원으로 15% 하향하며, 투자의견 buy를 유지한다. 북미 ev 파우치 가동률 부진과 ess 신규 공장 초기 램프업 비용을 반영해 ‘26년 영업이익을 1조원에서 6,300억원으로 하향 조정했기 때문이다. 그러나 유럽 전기차 판매량이 증가세를 지속하고 있고 3q26부터 gm 공장 가동 재개로 북미 ev 물량도 점진적으로 회복될 전망이다. 동사는 tesla와 43억달러 규모의 lfp 배터리 공급계약을 확보했고, 한화큐셀과도 5gwh 규모의 ess 배터리 공급계약을 체결해 2024년 4.8gwh 계약에 이어 추가 물량을 확보했다. 이외에도 최근 dte에너지와 6gwh, 16억달러 규모의 ess 공급계약을 체결하는 등 북미 ess 수주 모멘텀이 ai 데이터센터와 대형 전력망 프로젝트로 확대되고 있다. 북미 ess 생산능력도 ‘26년말 50gwh+로 확대될 예정이며, ev 수요 부진으로 유휴화된 생산거점을 ess로 전환해 신규 투자 부담을 낮추면서 빠르게 캐파를 확보하고 있다. 단기 실적 부진은 지속되고 있으나 유럽 ev 수요 회복, gm 공장 가동 재개, 46시리즈 출하 증가와 북미 ess 가동 본격화를 고려하면 실적과 주가의 바닥은 지나고 있다고 판단한다.\" [2q26 review] 매출액 7.5조원(+15%qoq, +25%yoy), 영업이익 1,133억원(흑전qoq, -77%yoy)으로 당사 추정을 하회하는 부진한 실적을 기록했다. ampc는 북미 ess 생산량 증가로 2,410억원(+27%qoq)이 반영되었으며, 이를 제외한 영업이익은 -1,277억원으로 3개 분기 연속 영업손실을 기록했다. 1) 원통형 전지는 2170 및 46시리즈 물량이 동반 증가하며 가동률이 70%를 상회해 매출액 2.2조원, 영업이익 1,673억원(영업이익률 +7.5%)을 달성한 것으로 추정된다(kita 원통형 마진 스프레드 36달러/kwh로 전분기 대비 5달러/kwh 개선). 2) ev 파우치는 유럽향 물량 회복에도 gm 공장 가동 중단 영향으로 매출액 3.4조원, 영업손실 797억원(영업이익률 -2.4%)을 기록한 것으로 추정된다. 관세 환급 반영에도 마진 스프레드는 20달러/kwh로 여전히 고정비가 커버되지 않는 상황이다. 3) ess는 매출액 2.0조원, 영업이익 260억원(영업이익률 +1.3%)으로 추정한다. 신규 공장 가동과 북미 출하량 증가로 외형 성장을 지속했으며, 2q ampc 증분의 대부분을 차지한 것으로 보인다. ampc 포함 시 흑자를 기록했으나 초기 램프업 비용과 팩 조립 병목 영향으로 이를 제외한 수익성은 부진했다.\" [3q26 preview] 매출액 7.9조원(+4%qoq, +39%yoy), 영업이익 2,113억원(+87%qoq, -65%yoy)로 전망한다. 3q부터 gm 공장 가동이 재개되며 1~2q 부진했던 북미 ev 파우치 물량이 회복되고, 유럽향 물량도 점진적으로 증가할 전망이다. ess는 초기 램프업 비용과 팩 조립 병목이 완전히 해소되지 않아 3q에도 ampc를 제외한 흑자 전환은 어려울 것으로 예상된다. ess의 본격적인 수익성 턴어라운드 시점은 4q26으로 예상된다. \" [투자의견] 당사는 lg에너지솔루션에 대해 목표주가를 470,000원으로 15% 하향하며, 투자의견 buy를 유지한다. 북미 ev 파우치 가동률 부진과 ess 신규 공장 초기 램프업 비용을 반영해 ‘26년 영업이익을 1조원에서 6,300억원으로 하향 조정했기 때문이다. 그러나 유럽 전기차 판매량이 증가세를 지속하고 있고 3q26부터 gm 공장 가동 재개로 북미 ev 물량도 점진적으로 회복될 전망이다. 동사는 tesla와 43억달러 규모의 lfp 배터리 공급계약을 확보했고, 한화큐셀과도 5gwh 규모의 ess 배터리 공급계약을 체결해 2024년 4.8gwh 계약에 이어 추가 물량을 확보했다. 이외에도 최근 dte에너지와 6gwh, 16억달러 규모의 ess 공급계약을 체결하는 등 북미 ess 수주 모멘텀이 ai 데이터센터와 대형 전력망 프로젝트로 확대되고 있다. 북미 ess 생산능력도 ‘26년말 50gwh+로 확대될 예정이며, ev 수요 부진으로 유휴화된 생산거점을 ess로 전환해 신규 투자 부담을 낮추면서 빠르게 캐파를 확보하고 있다. 단기 실적 부진은 지속되고 있으나 유럽 ev 수요 회복, gm 공장 가동 재개, 46시리즈 출하 증가와 북미 ess 가동 본격화를 고려하면 실적과 주가의 바닥은 지나고 있다고 판단한다.\" [2q26 review] 매출액 7.5조원(+15%qoq, +25%yoy), 영업이익 1,133억원(흑전qoq, -77%yoy)으로 당사 추정을 하회하는 부진한 실적을 기록했다. ampc는 북미 ess 생산량 증가로 2,410억원(+27%qoq)이 반영되었으며, 이를 제외한 영업이익은 -1,277억원으로 3개 분기 연속 영업손실을 기록했다. 1) 원통형 전지는 2170 및 46시리즈 물량이 동반 증가하며 가동률이 70%를 상회해 매출액 2.2조원, 영업이익 1,673억원(영업이익률 +7.5%)을 달성한 것으로 추정된다(kita 원통형 마진 스프레드 36달러/kwh로 전분기 대비 5달러/kwh 개선). 2) ev 파우치는 유럽향 물량 회복에도 gm 공장 가동 중단 영향으로 매출액 3.4조원, 영업손실 797억원(영업이익률 -2.4%)을 기록한 것으로 추정된다. 관세 환급 반영에도 마진 스프레드는 20달러/kwh로 여전히 고정비가 커버되지 않는 상황이다. 3) ess는 매출액 2.0조원, 영업이익 260억원(영업이익률 +1.3%)으로 추정한다. 신규 공장 가동과 북미 출하량 증가로 외형 성장을 지속했으며, 2q ampc 증분의 대부분을 차지한 것으로 보인다. ampc 포함 시 흑자를 기록했으나 초기 램프업 비용과 팩 조립 병목 영향으로 이를 제외한 수익성은 부진했다.\" [3q26 preview] 매출액 7.9조원(+4%qoq, +39%yoy), 영업이익 2,113억원(+87%qoq, -65%yoy)로 전망한다. 3q부터 gm 공장 가동이 재개되며 1~2q 부진했던 북미 ev 파우치 물량이 회복되고, 유럽향 물량도 점진적으로 증가할 전망이다. ess는 초기 램프업 비용과 팩 조립 병목이 완전히 해소되지 않아 3q에도 ampc를 제외한 흑자 전환은 어려울 것으로 예상된다. ess의 본격적인 수익성 턴어라운드 시점은 4q26으로 예상된다. 이차전지 <span class=\"font-semibold text-slate-300\">lg에너지솔루션</span> naver research'>
-                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
-                        <div class="flex items-center space-x-3">
-                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Naver Research</span>
-                            <span class="text-xs text-slate-400">
-                                <span class="text-indigo-400 font-medium">작성:</span> 2026-07-08 09:00:00
-                                <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-07-08 10:44:04
-                            </span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 (+0.6)</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>
-                        </div>
-                    </div>
-                    
-                    <h3 class="text-lg font-bold text-slate-100 mb-2">[증권사 리포트 - 유진투자증권] LG에너지솔루션: 그래도 꿈과 희망이 있다</h3>
-                    <p class="text-sm text-slate-400 line-clamp-3 mb-4">" [투자의견] 당사는 LG에너지솔루션에 대해 목표주가를 470,000원으로 15% 하향하며, 투자의견 BUY를 유지한다. 북미 EV 파우치 가동률 부진과 ESS 신규 공장 초기 램프업 비용을 반영해 ‘26년 영업이익을 1조원에서 6,300억원으로 하향 조정했기 때문이다. 그러나 유럽 전기차 판매량이 증가세를 지속하고 있고 3Q26부터 GM 공장 가동 재개로 북미 EV 물량도 점진적으로 회복될 전망이다. 동사는 Tesla와 43억달러 규모의 LFP 배터리 공급계약을 확보했고, 한화큐셀과도 5GWh 규모의 ESS 배터리 공급계약을 체결해 2024년 4.8GWh 계약에 이어 추가 물량을 확보했다. 이외에도 최근 DTE에너지와 6GWh, 16억달러 규모의 ESS 공급계약을 체결하는 등 북미 ESS 수주 모멘텀이 AI 데이터센터와 대형 전력망 프로젝트로 확대되고 있다. 북미 ESS 생산능력도 ‘26년말 50GWh+로 확대될 예정이며, EV 수요 부진으로 유휴화된 생산거점을 ESS로 전환해 신규 투자 부담을 낮추면서 빠르게 캐파를 확보하고 있다. 단기 실적 부진은 지속되고 있으나 유럽 EV 수요 회복, GM 공장 가동 재개, 46시리즈 출하 증가와 북미 ESS 가동 본격화를 고려하면 실적과 주가의 바닥은 지나고 있다고 판단한다." [2Q26 Review] 매출액 7.5조원(+15%qoq, +25%yoy), 영업이익 1,133억원(흑전qoq, -77%yoy)으로 당사 추정을 하회하는 부진한 실적을 기록했다. AMPC는 북미 ESS 생산량 증가로 2,410억원(+27%qoq)이 반영되었으며, 이를 제외한 영업이익은 -1,277억원으로 3개 분기 연속 영업손실을 기록했다. 1) 원통형 전지는 2170 및 46시리즈 물량이 동반 증가하며 가동률이 70%를 상회해 매출액 2.2조원, 영업이익 1,673억원(영업이익률 +7.5%)을 달성한 것으로 추정된다(KITA 원통형 마진 스프레드 36달러/kWh로 전분기 대비 5달러/kWh 개선). 2) EV 파우치는 유럽향 물량 회복에도 GM 공장 가동 중단 영향으로 매출액 3.4조원, 영업손실 797억원(영업이익률 -2.4%)을 기록한 것으로 추정된다. 관세 환급 반영에도 마진 스프레드는 20달러/kWh로 여전히 고정비가 커버되지 않는 상황이다. 3) ESS는 매출액 2.0조원, 영업이익 260억원(영업이익률 +1.3%)으로 추정한다. 신규 공장 가동과 북미 출하량 증가로 외형 성장을 지속했으며, 2Q AMPC 증분의 대부분을 차지한 것으로 보인다. AMPC 포함 시 흑자를 기록했으나 초기 램프업 비용과 팩 조립 병목 영향으로 이를 제외한 수익성은 부진했다." [3Q26 Preview] 매출액 7.9조원(+4%qoq, +39%yoy), 영업이익 2,113억원(+87%qoq, -65%yoy)로 전망한다. 3Q부터 GM 공장 가동이 재개되며 1~2Q 부진했던 북미 EV 파우치 물량이 회복되고, 유럽향 물량도 점진적으로 증가할 전망이다. ESS는 초기 램프업 비용과 팩 조립 병목이 완전히 해소되지 않아 3Q에도 AMPC를 제외한 흑자 전환은 어려울 것으로 예상된다. ESS의 본격적인 수익성 턴어라운드 시점은 4Q26으로 예상된다.</p>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
-                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">이차전지</span>
-                                <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-300">LG에너지솔루션</span>
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">해당 기업(LG에너지솔루션)의 애널리스트 분석(Buy, 목표가 470,000원 제시) 정보가 주식 시장 수급 및 업종별 센티먼트에 개별적 영향 유발.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
-                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">" [투자의견] 당사는 LG에너지솔루션에 대해 목표주가를 470,000원으로 15% 하향하며, 투자의견 BUY를 유지한다. 북미 EV 파우치 가동률 부진과 ESS 신규 공장 초기 램프업 비용을 반영해 ‘26년 영업이익을 1조원에서 6,300억원으로 하향 조정했기 때문이다. 그러나 유럽 전기차 판매량이 증가세를 지속하고 있고 3Q26부터 GM 공장 가동 재개로 북미 EV 물량도 점진적으로 회복될 전망이다. 동사는 Tesla와 43억달러 규모의 LFP 배터리 공급계약을 확보했고, 한화큐셀과도 5GWh 규모의 ESS 배터리 공급계약을 체결해 2024년 4.8GWh 계약에 이어 추가 물량을 확보했다. 이외에도 최근 DTE에너지와 6GWh, 16억달러 규모의 ESS 공급계약을 체결하는 등 북미 ESS 수주 모멘텀이 AI 데이터센터와 대형 전력망 프로젝트로 확대되고 있다. 북미 ESS 생산능력도 ‘26년말 50GWh+로 확대될 예정이며, EV 수요 부진으로 유휴화된 생산거점을 ESS로 전환해 신규 투자 부담을 낮추면서 빠르게 캐파를 확보하고 있다. 단기 실적 부진은 지속되고 있으나 유럽 EV 수요 회복, GM 공장 가동 재개, 46시리즈 출하 증가와 북미 ESS 가동 본격화를 고려하면 실적과 주가의 바닥은 지나고 있다고 판단한다." [2Q26 Review] 매출액 7.5조원(+15%qoq, +25%yoy), 영업이익 1,133억원(흑전qoq, -77%yoy)으로 당사 추정을 하회하는 부진한 실적을 기록했다. AMPC는 북미 ESS 생산량 증가로 2,410억원(+27%qoq)이 반영되었으며, 이를 제외한 영업이익은 -1,277억원으로 3개 분기 연속 영업손실을 기록했다. 1) 원통형 전지는 2170 및 46시리즈 물량이 동반 증가하며 가동률이 70%를 상회해 매출액 2.2조원, 영업이익 1,673억원(영업이익률 +7.5%)을 달성한 것으로 추정된다(KITA 원통형 마진 스프레드 36달러/kWh로 전분기 대비 5달러/kWh 개선). 2) EV 파우치는 유럽향 물량 회복에도 GM 공장 가동 중단 영향으로 매출액 3.4조원, 영업손실 797억원(영업이익률 -2.4%)을 기록한 것으로 추정된다. 관세 환급 반영에도 마진 스프레드는 20달러/kWh로 여전히 고정비가 커버되지 않는 상황이다. 3) ESS는 매출액 2.0조원, 영업이익 260억원(영업이익률 +1.3%)으로 추정한다. 신규 공장 가동과 북미 출하량 증가로 외형 성장을 지속했으며, 2Q AMPC 증분의 대부분을 차지한 것으로 보인다. AMPC 포함 시 흑자를 기록했으나 초기 램프업 비용과 팩 조립 병목 영향으로 이를 제외한 수익성은 부진했다." [3Q26 Preview] 매출액 7.9조원(+4%qoq, +39%yoy), 영업이익 2,113억원(+87%qoq, -65%yoy)로 전망한다. 3Q부터 GM 공장 가동이 재개되며 1~2Q 부진했던 북미 EV 파우치 물량이 회복되고, 유럽향 물량도 점진적으로 증가할 전망이다. ESS는 초기 램프업 비용과 팩 조립 병목이 완전히 해소되지 않아 3Q에도 AMPC를 제외한 흑자 전환은 어려울 것으로 예상된다. ESS의 본격적인 수익성 턴어라운드 시점은 4Q26으로 예상된다.</p>
-                    </div>
-                    
-                    <div class="flex justify-between items-center text-xs text-slate-500">
-                        <span>관련성 분류 이유: 증권사(네이버 증권 리서치) 종목 분석 리포트 - 대상 기업: LG에너지솔루션</span>
-                        <a href="https://finance.naver.com/research/company_read.naver?nid=93972&page=1" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
-                    </div>
-                    
-                </div>
-                
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["기타"]' data-search-text='[증권사 리포트 - 유진투자증권] 달바글로벌: 2q26 preview: 태풍이 지나간 후 맑음 \" 2q26 매출액 1,794억원(+39.8%, 이하 yoy), 영업이익 398억원(+36.2%) 전망. 일본, 북미, 유럽의 오프라인 확대 효과가 외형 성장을 일으켰다. b2b 매출이 확대되며 매출원가율은 낮추지 못하지만 비고정성 광고비 줄이며 영업이익률 22.2% 달성 예상\" 한국 매출액 500억원(+6.1%), 해외 매출액 1,294억원(+59.4%) 전망, 비중 각각 27.9%, 72.1%\" 국가별 매출액: 일본 366억원(+41.9%), 러시아 170억원(-9.1%), 북미 290억원(+128.6%), 유럽 140억원(+133.4%), 아세안 190억원(+69.7%), 중화권 99억원(+71.4%) 전망\" 북미: 점포수와 sku의 증가로 매출액 290억 예상. 미국 코스트코 입점 점포수는 450개까지 늘림. 작년말 sku 2개에서 올해 최소 3개까지 확대 기대. 아마존프라임데이에 미스트 77위, 멀티밤 3위, 그라인딩 크림 11위, 갈바닉 아이크림 49위 차지. 전년도 보다 다양한 sku가 랭킹에 안착했다는점 긍정적. 다만 아마존프라임데이(6/23~27) 일정상 일부 실적은 3분기에 반영될 가능성 높음\" 유럽: 매출액 140억 예상. 유럽 오프라인 매장수 200여개 이상 입점. 최대 뷰티 리테일러인 notino 여름 행사 15위 입성, 스페인 druni 입점, 스페인 코스트코 세번째 sku 추가, 이탈리아 ovs/shaka 입점, uk boots 입점 등 순항중. 북미처럼 아마존프라임데이 일부 실적은 3분기 반영 예상. 스페인 미스트 1위, 멀티밤 3위, 독일 미스트 3위, 영국 멀티밤 1위 랭크\" 일본: 매출액 366억 예상. 큐텐 2차 메가와리에서 브랜드 랭킹 상위권 유지하며 양호한 실적 보임. 마츠모토키요시, 이온몰 등 오프라인 매장수 4500개 이상 확대\" 2026년 가이던스: 매출액 7,000억원, 영업이익률 20% 초반 유지. 2분기 실적 발표 향후 상향 가능성 존재.\" 투자의견 ‘buy’ 유지. 목표주가 320,000원 유지. 26년 5월 보호예수 물량(전체 발행주식의 5.24%, 약 63만1,507주) 출회에 따른 주가 하락은 마무리. 보호 예수 잔여 물량은 28년 5월 행사될 약 194만주(전체 발행주식의 약 16.11%)뿐이라 신규상장 특유의 오버행 부담은 이번 해제를 끝으로 사실상 소멸 \" 2q26 매출액 1,794억원(+39.8%, 이하 yoy), 영업이익 398억원(+36.2%) 전망. 일본, 북미, 유럽의 오프라인 확대 효과가 외형 성장을 일으켰다. b2b 매출이 확대되며 매출원가율은 낮추지 못하지만 비고정성 광고비 줄이며 영업이익률 22.2% 달성 예상\" 한국 매출액 500억원(+6.1%), 해외 매출액 1,294억원(+59.4%) 전망, 비중 각각 27.9%, 72.1%\" 국가별 매출액: 일본 366억원(+41.9%), 러시아 170억원(-9.1%), 북미 290억원(+128.6%), 유럽 140억원(+133.4%), 아세안 190억원(+69.7%), 중화권 99억원(+71.4%) 전망\" 북미: 점포수와 sku의 증가로 매출액 290억 예상. 미국 코스트코 입점 점포수는 450개까지 늘림. 작년말 sku 2개에서 올해 최소 3개까지 확대 기대. 아마존프라임데이에 미스트 77위, 멀티밤 3위, 그라인딩 크림 11위, 갈바닉 아이크림 49위 차지. 전년도 보다 다양한 sku가 랭킹에 안착했다는점 긍정적. 다만 아마존프라임데이(6/23~27) 일정상 일부 실적은 3분기에 반영될 가능성 높음\" 유럽: 매출액 140억 예상. 유럽 오프라인 매장수 200여개 이상 입점. 최대 뷰티 리테일러인 notino 여름 행사 15위 입성, 스페인 druni 입점, 스페인 코스트코 세번째 sku 추가, 이탈리아 ovs/shaka 입점, uk boots 입점 등 순항중. 북미처럼 아마존프라임데이 일부 실적은 3분기 반영 예상. 스페인 미스트 1위, 멀티밤 3위, 독일 미스트 3위, 영국 멀티밤 1위 랭크\" 일본: 매출액 366억 예상. 큐텐 2차 메가와리에서 브랜드 랭킹 상위권 유지하며 양호한 실적 보임. 마츠모토키요시, 이온몰 등 오프라인 매장수 4500개 이상 확대\" 2026년 가이던스: 매출액 7,000억원, 영업이익률 20% 초반 유지. 2분기 실적 발표 향후 상향 가능성 존재.\" 투자의견 ‘buy’ 유지. 목표주가 320,000원 유지. 26년 5월 보호예수 물량(전체 발행주식의 5.24%, 약 63만1,507주) 출회에 따른 주가 하락은 마무리. 보호 예수 잔여 물량은 28년 5월 행사될 약 194만주(전체 발행주식의 약 16.11%)뿐이라 신규상장 특유의 오버행 부담은 이번 해제를 끝으로 사실상 소멸 기타 <span class=\"font-semibold text-slate-300\">달바글로벌</span> naver research'>
-                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
-                        <div class="flex items-center space-x-3">
-                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Naver Research</span>
-                            <span class="text-xs text-slate-400">
-                                <span class="text-indigo-400 font-medium">작성:</span> 2026-07-08 09:00:00
-                                <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-07-08 10:44:03
-                            </span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 (+0.6)</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>
-                        </div>
-                    </div>
-                    
-                    <h3 class="text-lg font-bold text-slate-100 mb-2">[증권사 리포트 - 유진투자증권] 달바글로벌: 2Q26 Preview: 태풍이 지나간 후 맑음</h3>
-                    <p class="text-sm text-slate-400 line-clamp-3 mb-4">" 2Q26 매출액 1,794억원(+39.8%, 이하 yoy), 영업이익 398억원(+36.2%) 전망. 일본, 북미, 유럽의 오프라인 확대 효과가 외형 성장을 일으켰다. B2B 매출이 확대되며 매출원가율은 낮추지 못하지만 비고정성 광고비 줄이며 영업이익률 22.2% 달성 예상" 한국 매출액 500억원(+6.1%), 해외 매출액 1,294억원(+59.4%) 전망, 비중 각각 27.9%, 72.1%" 국가별 매출액: 일본 366억원(+41.9%), 러시아 170억원(-9.1%), 북미 290억원(+128.6%), 유럽 140억원(+133.4%), 아세안 190억원(+69.7%), 중화권 99억원(+71.4%) 전망" 북미: 점포수와 SKU의 증가로 매출액 290억 예상. 미국 코스트코 입점 점포수는 450개까지 늘림. 작년말 SKU 2개에서 올해 최소 3개까지 확대 기대. 아마존프라임데이에 미스트 77위, 멀티밤 3위, 그라인딩 크림 11위, 갈바닉 아이크림 49위 차지. 전년도 보다 다양한 SKU가 랭킹에 안착했다는점 긍정적. 다만 아마존프라임데이(6/23~27) 일정상 일부 실적은 3분기에 반영될 가능성 높음" 유럽: 매출액 140억 예상. 유럽 오프라인 매장수 200여개 이상 입점. 최대 뷰티 리테일러인 Notino 여름 행사 15위 입성, 스페인 Druni 입점, 스페인 코스트코 세번째 SKU 추가, 이탈리아 OVS/Shaka 입점, UK Boots 입점 등 순항중. 북미처럼 아마존프라임데이 일부 실적은 3분기 반영 예상. 스페인 미스트 1위, 멀티밤 3위, 독일 미스트 3위, 영국 멀티밤 1위 랭크" 일본: 매출액 366억 예상. 큐텐 2차 메가와리에서 브랜드 랭킹 상위권 유지하며 양호한 실적 보임. 마츠모토키요시, 이온몰 등 오프라인 매장수 4500개 이상 확대" 2026년 가이던스: 매출액 7,000억원, 영업이익률 20% 초반 유지. 2분기 실적 발표 향후 상향 가능성 존재." 투자의견 ‘BUY’ 유지. 목표주가 320,000원 유지. 26년 5월 보호예수 물량(전체 발행주식의 5.24%, 약 63만1,507주) 출회에 따른 주가 하락은 마무리. 보호 예수 잔여 물량은 28년 5월 행사될 약 194만주(전체 발행주식의 약 16.11%)뿐이라 신규상장 특유의 오버행 부담은 이번 해제를 끝으로 사실상 소멸</p>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
-                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">기타</span>
-                                <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-300">달바글로벌</span>
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">해당 기업(달바글로벌)의 애널리스트 분석(Buy, 목표가 320,000원 제시) 정보가 주식 시장 수급 및 업종별 센티먼트에 개별적 영향 유발.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
-                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">" 2Q26 매출액 1,794억원(+39.8%, 이하 yoy), 영업이익 398억원(+36.2%) 전망. 일본, 북미, 유럽의 오프라인 확대 효과가 외형 성장을 일으켰다. B2B 매출이 확대되며 매출원가율은 낮추지 못하지만 비고정성 광고비 줄이며 영업이익률 22.2% 달성 예상" 한국 매출액 500억원(+6.1%), 해외 매출액 1,294억원(+59.4%) 전망, 비중 각각 27.9%, 72.1%" 국가별 매출액: 일본 366억원(+41.9%), 러시아 170억원(-9.1%), 북미 290억원(+128.6%), 유럽 140억원(+133.4%), 아세안 190억원(+69.7%), 중화권 99억원(+71.4%) 전망" 북미: 점포수와 SKU의 증가로 매출액 290억 예상. 미국 코스트코 입점 점포수는 450개까지 늘림. 작년말 SKU 2개에서 올해 최소 3개까지 확대 기대. 아마존프라임데이에 미스트 77위, 멀티밤 3위, 그라인딩 크림 11위, 갈바닉 아이크림 49위 차지. 전년도 보다 다양한 SKU가 랭킹에 안착했다는점 긍정적. 다만 아마존프라임데이(6/23~27) 일정상 일부 실적은 3분기에 반영될 가능성 높음" 유럽: 매출액 140억 예상. 유럽 오프라인 매장수 200여개 이상 입점. 최대 뷰티 리테일러인 Notino 여름 행사 15위 입성, 스페인 Druni 입점, 스페인 코스트코 세번째 SKU 추가, 이탈리아 OVS/Shaka 입점, UK Boots 입점 등 순항중. 북미처럼 아마존프라임데이 일부 실적은 3분기 반영 예상. 스페인 미스트 1위, 멀티밤 3위, 독일 미스트 3위, 영국 멀티밤 1위 랭크" 일본: 매출액 366억 예상. 큐텐 2차 메가와리에서 브랜드 랭킹 상위권 유지하며 양호한 실적 보임. 마츠모토키요시, 이온몰 등 오프라인 매장수 4500개 이상 확대" 2026년 가이던스: 매출액 7,000억원, 영업이익률 20% 초반 유지. 2분기 실적 발표 향후 상향 가능성 존재." 투자의견 ‘BUY’ 유지. 목표주가 320,000원 유지. 26년 5월 보호예수 물량(전체 발행주식의 5.24%, 약 63만1,507주) 출회에 따른 주가 하락은 마무리. 보호 예수 잔여 물량은 28년 5월 행사될 약 194만주(전체 발행주식의 약 16.11%)뿐이라 신규상장 특유의 오버행 부담은 이번 해제를 끝으로 사실상 소멸</p>
-                    </div>
-                    
-                    <div class="flex justify-between items-center text-xs text-slate-500">
-                        <span>관련성 분류 이유: 증권사(네이버 증권 리서치) 종목 분석 리포트 - 대상 기업: 달바글로벌</span>
-                        <a href="https://finance.naver.com/research/company_read.naver?nid=93973&page=1" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
-                    </div>
-                    
-                </div>
-                
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["반도체", "자동차", "바이오"]' data-search-text='[증권사 리포트 - 한국ir협의회] 서울반도체: 광반도체 고부가 응용처 확장의 시작 ■ 2026년 실적 회복의 핵심은 자동차향 고부가 led. 완성차 생산대수 증가보다 차량당 탑재량 확대와 고부가 제품 채택이 성장을 견인하는 구조.2026년 자동차향 고부가 led(wicop·hv 광반도체) 비중 확대(16.5%→29.0%) 전망■ 서울바이오시스(micro led·vcsel 광원)와 동사(wicop 패키징)의 수직계열화가 ai 데이터센터 광인터커넥트라는 중장기 신규 응용처로 사업 확장 가능성 존재■ 자동차 믹스 개선과 원가율 하락으로 2026년 매출총이익률이 22.0%(+1.8%p)까지 개선되나, 별도 기준 적자 지속과 roe 1.2% 수준은 아직 수익성 정상화 초입임을 시사 ■ 2026년 실적 회복의 핵심은 자동차향 고부가 led. 완성차 생산대수 증가보다 차량당 탑재량 확대와 고부가 제품 채택이 성장을 견인하는 구조.2026년 자동차향 고부가 led(wicop·hv 광반도체) 비중 확대(16.5%→29.0%) 전망■ 서울바이오시스(micro led·vcsel 광원)와 동사(wicop 패키징)의 수직계열화가 ai 데이터센터 광인터커넥트라는 중장기 신규 응용처로 사업 확장 가능성 존재■ 자동차 믹스 개선과 원가율 하락으로 2026년 매출총이익률이 22.0%(+1.8%p)까지 개선되나, 별도 기준 적자 지속과 roe 1.2% 수준은 아직 수익성 정상화 초입임을 시사 반도체, 자동차, 바이오 <span class=\"font-semibold text-slate-300\">서울반도체</span> naver research'>
-                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
-                        <div class="flex items-center space-x-3">
-                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Naver Research</span>
-                            <span class="text-xs text-slate-400">
-                                <span class="text-indigo-400 font-medium">작성:</span> 2026-07-08 09:00:00
-                                <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-07-08 10:44:03
-                            </span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 (+0.4)</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>
-                        </div>
-                    </div>
-                    
-                    <h3 class="text-lg font-bold text-slate-100 mb-2">[증권사 리포트 - 한국IR협의회] 서울반도체: 광반도체 고부가 응용처 확장의 시작</h3>
-                    <p class="text-sm text-slate-400 line-clamp-3 mb-4">■ 2026년 실적 회복의 핵심은 자동차향 고부가 LED. 완성차 생산대수 증가보다 차량당 탑재량 확대와 고부가 제품 채택이 성장을 견인하는 구조.2026년 자동차향 고부가 LED(WICOP·HV 광반도체) 비중 확대(16.5%→29.0%) 전망■ 서울바이오시스(Micro LED·VCSEL 광원)와 동사(WICOP 패키징)의 수직계열화가 AI 데이터센터 광인터커넥트라는 중장기 신규 응용처로 사업 확장 가능성 존재■ 자동차 믹스 개선과 원가율 하락으로 2026년 매출총이익률이 22.0%(+1.8%p)까지 개선되나, 별도 기준 적자 지속과 ROE 1.2% 수준은 아직 수익성 정상화 초입임을 시사</p>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
-                            <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">반도체, 자동차, 바이오</span>
-                                <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-300">서울반도체</span>
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">해당 기업(서울반도체)의 애널리스트 분석(없음, 의견 변동) 정보가 주식 시장 수급 및 업종별 센티먼트에 개별적 영향 유발.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
-                        <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">■ 2026년 실적 회복의 핵심은 자동차향 고부가 LED. 완성차 생산대수 증가보다 차량당 탑재량 확대와 고부가 제품 채택이 성장을 견인하는 구조.2026년 자동차향 고부가 LED(WICOP·HV 광반도체) 비중 확대(16.5%→29.0%) 전망■ 서울바이오시스(Micro LED·VCSEL 광원)와 동사(WICOP 패키징)의 수직계열화가 AI 데이터센터 광인터커넥트라는 중장기 신규 응용처로 사업 확장 가능성 존재■ 자동차 믹스 개선과 원가율 하락으로 2026년 매출총이익률이 22.0%(+1.8%p)까지 개선되나, 별도 기준 적자 지속과 ROE 1.2% 수준은 아직 수익성 정상화 초입임을 시사</p>
-                    </div>
-                    
-                    <div class="flex justify-between items-center text-xs text-slate-500">
-                        <span>관련성 분류 이유: 증권사(네이버 증권 리서치) 종목 분석 리포트 - 대상 기업: 서울반도체</span>
-                        <a href="https://finance.naver.com/research/company_read.naver?nid=93974&page=1" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
-                    </div>
-                    
-                </div>
-                
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-rose-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["기타"]' data-search-text='[증권사 리포트 - 유안타증권] lg이노텍: 2q26 pre: 서프라이즈 지속, 모두 한 단계 더 2q26 preview: 이번에도 확인될 서프라이즈2q26 매출 4조 8,885억원(yoy +24.2%, qoq -11.7%), 영업이익 1,977억원(opm 4.0%)을 기록하며 이익 기준 컨센(1,599억)을 약 24%가량 상회하는 호실적을 전망. 광학솔루션은 우호적 환율 여건과 아이폰 17시리즈 매출 호조가 맞물리며 수익성이 재차 시장 기대치를 상회. 수요 환경은 녹록지 않으나 1h26 주 고객사의 ms 확대 전략이 효과를 거두었다는 점에 주목. 전반적인 스마트폰 업황을 상회하는 차별적 수요 흐름과 우호적 환율 여건 수혜가 호실적으로 연결. 패키지솔루션은 높은 가동률이 유지되는 가운데 고부가 프리미엄 제품 중심 믹스 개선으로 마진 상승을 전망. 모빌리티솔루션은 수익성 개선으로 안정적 흐름을 유지 2q26 preview: 이번에도 확인될 서프라이즈2q26 매출 4조 8,885억원(yoy +24.2%, qoq -11.7%), 영업이익 1,977억원(opm 4.0%)을 기록하며 이익 기준 컨센(1,599억)을 약 24%가량 상회하는 호실적을 전망. 광학솔루션은 우호적 환율 여건과 아이폰 17시리즈 매출 호조가 맞물리며 수익성이 재차 시장 기대치를 상회. 수요 환경은 녹록지 않으나 1h26 주 고객사의 ms 확대 전략이 효과를 거두었다는 점에 주목. 전반적인 스마트폰 업황을 상회하는 차별적 수요 흐름과 우호적 환율 여건 수혜가 호실적으로 연결. 패키지솔루션은 높은 가동률이 유지되는 가운데 고부가 프리미엄 제품 중심 믹스 개선으로 마진 상승을 전망. 모빌리티솔루션은 수익성 개선으로 안정적 흐름을 유지 기타 <span class=\"font-semibold text-slate-300\">lg이노텍</span> naver research'>
-                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
-                        <div class="flex items-center space-x-3">
-                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Naver Research</span>
-                            <span class="text-xs text-slate-400">
-                                <span class="text-indigo-400 font-medium">작성:</span> 2026-07-08 09:00:00
-                                <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-07-08 10:44:02
-                            </span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 (+0.8)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">부정 (-0.8)</span>
                             <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-600 text-white shadow-lg shadow-rose-900/40">경보: 높음 (HIGH)</span>
                         </div>
                     </div>
                     
-                    <h3 class="text-lg font-bold text-slate-100 mb-2">[증권사 리포트 - 유안타증권] LG이노텍: 2Q26 Pre: 서프라이즈 지속, 모두 한 단계 더</h3>
-                    <p class="text-sm text-slate-400 line-clamp-3 mb-4">2Q26 Preview: 이번에도 확인될 서프라이즈2Q26 매출 4조 8,885억원(YoY +24.2%, QoQ -11.7%), 영업이익 1,977억원(OPM 4.0%)을 기록하며 이익 기준 컨센(1,599억)을 약 24%가량 상회하는 호실적을 전망. 광학솔루션은 우호적 환율 여건과 아이폰 17시리즈 매출 호조가 맞물리며 수익성이 재차 시장 기대치를 상회. 수요 환경은 녹록지 않으나 1H26 주 고객사의 MS 확대 전략이 효과를 거두었다는 점에 주목. 전반적인 스마트폰 업황을 상회하는 차별적 수요 흐름과 우호적 환율 여건 수혜가 호실적으로 연결. 패키지솔루션은 높은 가동률이 유지되는 가운데 고부가 프리미엄 제품 중심 믹스 개선으로 마진 상승을 전망. 모빌리티솔루션은 수익성 개선으로 안정적 흐름을 유지</p>
+                    <h3 class="text-lg font-bold text-slate-100 mb-2">외국인 자금 '썰물' … 올해 국내 증시서 1102억弗 빠졌다</h3>
+                    <p class="text-sm text-slate-400 line-clamp-3 mb-4">외국인들이 국내 증권시장에서 지난 한 달 동안 47조원에 가까운 자금을 회수한 것으로 나타났다. 역대 최대 규모다. 인공지능(AI) 투자 과열에 대한 우려가 커진 데다 주가 상승으..</p>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
                             <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">기타</span>
+                                <span class="text-indigo-300">반도체, 금융 및 자본시장, 정보기술(IT)</span>
                                 <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-300">LG이노텍</span>
+                                <span class="font-semibold text-slate-100">삼성전자</span> <span class="text-xs text-emerald-400 font-medium">(263,000원 +3.34%)</span>, <span class="font-semibold text-slate-100">SK하이닉스</span> <span class="text-xs text-emerald-400 font-medium">(1,913,000원 +3.69%)</span>
                             </p>
                         </div>
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">해당 기업(LG이노텍)의 애널리스트 분석(Buy, 목표가 1,400,000원 제시) 정보가 주식 시장 수급 및 업종별 센티먼트에 개별적 영향 유발.</p>
+                            <p class="text-sm text-slate-200">외국인 자금의 기록적인 이탈로 인해 원/달러 환율 상승(원화 가치 하락) 압력이 크게 증가하고 있으며, 코스피 지수의 하락과 국내 금융시장 전반의 유동성 위축 우려가 심화되고 있습니다.</p>
                         </div>
                     </div>
                     
                     <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
                         <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">2Q26 Preview: 이번에도 확인될 서프라이즈2Q26 매출 4조 8,885억원(YoY +24.2%, QoQ -11.7%), 영업이익 1,977억원(OPM 4.0%)을 기록하며 이익 기준 컨센(1,599억)을 약 24%가량 상회하는 호실적을 전망. 광학솔루션은 우호적 환율 여건과 아이폰 17시리즈 매출 호조가 맞물리며 수익성이 재차 시장 기대치를 상회. 수요 환경은 녹록지 않으나 1H26 주 고객사의 MS 확대 전략이 효과를 거두었다는 점에 주목. 전반적인 스마트폰 업황을 상회하는 차별적 수요 흐름과 우호적 환율 여건 수혜가 호실적으로 연결. 패키지솔루션은 높은 가동률이 유지되는 가운데 고부가 프리미엄 제품 중심 믹스 개선으로 마진 상승을 전망. 모빌리티솔루션은 수익성 개선으로 안정적 흐름을 유지</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">외국인 투자자들이 최근 한 달 동안 역대 최대 규모인 약 47조 원의 자금을 국내 증시에서 회수하며 시장 불안을 고조시키고 있습니다. AI 투자 과열 우려와 차익 실현 매물이 맞물리면서 시가총액이 큰 대형 반도체주를 중심으로 매도세가 집중되었습니다. 이는 외환시장 불안과 코스피 하락의 직접적인 원인으로 작용하고 있습니다.</p>
                     </div>
                     
                     <div class="flex justify-between items-center text-xs text-slate-500">
-                        <span>관련성 분류 이유: 증권사(네이버 증권 리서치) 종목 분석 리포트 - 대상 기업: LG이노텍</span>
-                        <a href="https://finance.naver.com/research/company_read.naver?nid=93985&page=1" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
+                        <span>관련성 분류 이유: 국내 증시에서 외국인 자금이 대규모로 유출되는 현상은 한국 경제와 금융 시장에 직접적인 영향을 미치는 중요한 사안입니다.</span>
+                        <a href="https://www.mk.co.kr/news/economy/12098539" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
                     </div>
                     
                 </div>
                 
-                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["기타"]' data-search-text='[증권사 리포트 - 유안타증권] 이수페타시스: 2q26 pre: 수요가 캐파를 앞서는 중 2q26 preview: 노이즈 속 견조한 수요2q26 매출 3,509억원(yoy +45.4%, qoq +3.1%) 영업이익 765억원(opm 21.8%)을 기록하며 컨센(739억) 상회 전망. 핵심 고객사 관련 설계 다변화 및 hdi 적용 가능성 제기 등 노이즈에도 mlb 수요는 견조하게 유지되고 있으며 다중적층 비중 확대에 따른 asp 상향도 지속. 아직 전체 매출 내 다중적층 비중은 10% 초반 수준에 불과. 다만 3q26 800g 스위치, 4q26 핵심 고객사향 tpu 초도 양산 등 고객사 물량 확대가 예정되어 있으며 2h26는 물론 캐파 확대가 본격화되는 ‘27년부터 다중적층 비중 증가 속도는 가속화될 전망. 다중적층 증설 로드맵은 지난 3월과 5월 두 차례에 걸쳐 이미 공격적으로 상향 조정. 현재 예상되는 고객 수요 규모는 확보 예정 캐파를 이미 상회했으며 수주 가시성은 1h27까지 확보 완료 2q26 preview: 노이즈 속 견조한 수요2q26 매출 3,509억원(yoy +45.4%, qoq +3.1%) 영업이익 765억원(opm 21.8%)을 기록하며 컨센(739억) 상회 전망. 핵심 고객사 관련 설계 다변화 및 hdi 적용 가능성 제기 등 노이즈에도 mlb 수요는 견조하게 유지되고 있으며 다중적층 비중 확대에 따른 asp 상향도 지속. 아직 전체 매출 내 다중적층 비중은 10% 초반 수준에 불과. 다만 3q26 800g 스위치, 4q26 핵심 고객사향 tpu 초도 양산 등 고객사 물량 확대가 예정되어 있으며 2h26는 물론 캐파 확대가 본격화되는 ‘27년부터 다중적층 비중 증가 속도는 가속화될 전망. 다중적층 증설 로드맵은 지난 3월과 5월 두 차례에 걸쳐 이미 공격적으로 상향 조정. 현재 예상되는 고객 수요 규모는 확보 예정 캐파를 이미 상회했으며 수주 가시성은 1h27까지 확보 완료 기타 <span class=\"font-semibold text-slate-300\">이수페타시스</span> naver research'>
+                <div class="timeline-card glass-card rounded-2xl p-6 border border-amber-500/30 transition duration-300 hover:bg-slate-900/50" data-sectors='["Semiconductors", "Technology Hardware", "Exports"]' data-search-text='반도체 슈퍼사이클 자신감 … 정부, 실질성장률 3%로 높여 잡아 정부가 올해 한국의 실질 경제성장률을 3%로 전망했다. 반도체 수출 호조세에 힘입어 국제기구보다 더 높은 전망치를 제시한 것이다. 또 정부는 경제 대도약의 목표로 \'3·4·5 비전.. 정부가 반도체 수출 회복세와 슈퍼사이클에 대한 자신감을 바탕으로 올해 실질 경제성장률 전망치를 3%로 상향 조정했습니다. 이는 국제기구의 전망치를 상회하는 수준으로 수출 중심의 강한 경기 반등을 시사합니다. 삼성전자와 sk하이닉스 등 주요 반도체 기업들의 실적 개선이 한국 경제의 도약을 견인할 것으로 예상됩니다. semiconductors, technology hardware, exports <span class=\"font-semibold text-slate-300\">samsung electronics</span>, <span class=\"font-semibold text-slate-300\">sk hynix</span> maeil business economy'>
                     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
                         <div class="flex items-center space-x-3">
-                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Naver Research</span>
+                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Maeil Business Economy</span>
                             <span class="text-xs text-slate-400">
-                                <span class="text-indigo-400 font-medium">작성:</span> 2026-07-08 09:00:00
+                                <span class="text-indigo-400 font-medium">작성:</span> 2026-07-15 02:52:23
                                 <span class="mx-1 text-slate-600">|</span>
-                                <span class="text-slate-500">수집:</span> 2026-07-08 10:44:01
+                                <span class="text-slate-500">수집:</span> 2026-07-14 21:31:08
                             </span>
                         </div>
                         <div class="flex items-center space-x-2">
-                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 (+0.6)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">긍정 (+0.8)</span>
                             <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950">경보: 중간 (MEDIUM)</span>
                         </div>
                     </div>
                     
-                    <h3 class="text-lg font-bold text-slate-100 mb-2">[증권사 리포트 - 유안타증권] 이수페타시스: 2Q26 Pre: 수요가 캐파를 앞서는 중</h3>
-                    <p class="text-sm text-slate-400 line-clamp-3 mb-4">2Q26 Preview: 노이즈 속 견조한 수요2Q26 매출 3,509억원(YoY +45.4%, QoQ +3.1%) 영업이익 765억원(OPM 21.8%)을 기록하며 컨센(739억) 상회 전망. 핵심 고객사 관련 설계 다변화 및 HDI 적용 가능성 제기 등 노이즈에도 MLB 수요는 견조하게 유지되고 있으며 다중적층 비중 확대에 따른 ASP 상향도 지속. 아직 전체 매출 내 다중적층 비중은 10% 초반 수준에 불과. 다만 3Q26 800G 스위치, 4Q26 핵심 고객사향 TPU 초도 양산 등 고객사 물량 확대가 예정되어 있으며 2H26는 물론 캐파 확대가 본격화되는 ‘27년부터 다중적층 비중 증가 속도는 가속화될 전망. 다중적층 증설 로드맵은 지난 3월과 5월 두 차례에 걸쳐 이미 공격적으로 상향 조정. 현재 예상되는 고객 수요 규모는 확보 예정 캐파를 이미 상회했으며 수주 가시성은 1H27까지 확보 완료</p>
+                    <h3 class="text-lg font-bold text-slate-100 mb-2">반도체 슈퍼사이클 자신감 … 정부, 실질성장률 3%로 높여 잡아</h3>
+                    <p class="text-sm text-slate-400 line-clamp-3 mb-4">정부가 올해 한국의 실질 경제성장률을 3%로 전망했다. 반도체 수출 호조세에 힘입어 국제기구보다 더 높은 전망치를 제시한 것이다. 또 정부는 경제 대도약의 목표로 '3·4·5 비전..</p>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5 mb-4">
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">영향 대상 업종 / 수혜 기업</p>
                             <p class="text-sm text-slate-200 flex flex-wrap items-center gap-1.5">
-                                <span class="text-indigo-300">기타</span>
+                                <span class="text-indigo-300">Semiconductors, Technology Hardware, Exports</span>
                                 <span class="text-slate-500">|</span>
-                                <span class="font-semibold text-slate-300">이수페타시스</span>
+                                <span class="font-semibold text-slate-300">Samsung Electronics</span>, <span class="font-semibold text-slate-300">SK Hynix</span>
                             </p>
                         </div>
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">거시지표 및 증시(KOSPI) 영향</p>
-                            <p class="text-sm text-slate-200">해당 기업(이수페타시스)의 애널리스트 분석(Buy, 목표가 180,000원 제시) 정보가 주식 시장 수급 및 업종별 센티먼트에 개별적 영향 유발.</p>
+                            <p class="text-sm text-slate-200">반도체 수출 호조에 따른 경상수지 개선 및 KOSPI 지수 상승 압력 작용, 내수 회복 기여 및 원화 가치 안정화 가능성.</p>
                         </div>
                     </div>
                     
                     <div class="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/10 mb-4">
                         <p class="text-xs font-semibold text-indigo-400 mb-1">AI 요약 분석 (Gemini)</p>
-                        <p class="text-sm text-slate-300 leading-relaxed">2Q26 Preview: 노이즈 속 견조한 수요2Q26 매출 3,509억원(YoY +45.4%, QoQ +3.1%) 영업이익 765억원(OPM 21.8%)을 기록하며 컨센(739억) 상회 전망. 핵심 고객사 관련 설계 다변화 및 HDI 적용 가능성 제기 등 노이즈에도 MLB 수요는 견조하게 유지되고 있으며 다중적층 비중 확대에 따른 ASP 상향도 지속. 아직 전체 매출 내 다중적층 비중은 10% 초반 수준에 불과. 다만 3Q26 800G 스위치, 4Q26 핵심 고객사향 TPU 초도 양산 등 고객사 물량 확대가 예정되어 있으며 2H26는 물론 캐파 확대가 본격화되는 ‘27년부터 다중적층 비중 증가 속도는 가속화될 전망. 다중적층 증설 로드맵은 지난 3월과 5월 두 차례에 걸쳐 이미 공격적으로 상향 조정. 현재 예상되는 고객 수요 규모는 확보 예정 캐파를 이미 상회했으며 수주 가시성은 1H27까지 확보 완료</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">정부가 반도체 수출 회복세와 슈퍼사이클에 대한 자신감을 바탕으로 올해 실질 경제성장률 전망치를 3%로 상향 조정했습니다. 이는 국제기구의 전망치를 상회하는 수준으로 수출 중심의 강한 경기 반등을 시사합니다. 삼성전자와 SK하이닉스 등 주요 반도체 기업들의 실적 개선이 한국 경제의 도약을 견인할 것으로 예상됩니다.</p>
                     </div>
                     
                     <div class="flex justify-between items-center text-xs text-slate-500">
-                        <span>관련성 분류 이유: 증권사(네이버 증권 리서치) 종목 분석 리포트 - 대상 기업: 이수페타시스</span>
-                        <a href="https://finance.naver.com/research/company_read.naver?nid=93986&page=1" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
+                        <span>관련성 분류 이유: 정부가 한국의 경제성장률 전망치를 상향 조정하고 반도체 산업의 영향을 분석하고 있어 한국 경제와 직접적인 관련이 있습니다.</span>
+                        <a href="https://www.mk.co.kr/news/economy/12098540" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">원본 원문보기 ↗</a>
                     </div>
                     
                 </div>
@@ -782,6 +671,42 @@
             </div>
             <div class="pt-4 border-t border-slate-800 flex justify-end">
                 <button onclick="closeBriefing()" class="px-5 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+                    닫기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Feedback Suggestions Modal -->
+    <div id="feedbackModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+        <div class="glass-card w-full max-w-4xl rounded-3xl p-6 border border-slate-800 shadow-2xl flex flex-col max-h-[85vh]">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+                <h2 class="text-2xl font-bold bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent flex items-center gap-2">
+                    💡 Gemini AI 피드백 제안서
+                </h2>
+                <button onclick="closeFeedbackModal()" class="text-slate-400 hover:text-slate-200 text-xl font-bold">&times;</button>
+            </div>
+            
+            <div class="flex flex-col md:flex-row gap-4 mt-4 flex-1 overflow-hidden">
+                <!-- Left Sidebar: Date List -->
+                <div class="w-full md:w-52 border-b md:border-b-0 md:border-r border-slate-800 pb-4 md:pb-0 md:pr-4 flex flex-col gap-2 overflow-y-auto" id="feedbackDateList">
+                    <!-- Date items loaded dynamically -->
+                </div>
+                
+                <!-- Right Content: Suggestion Detail -->
+                <div class="flex-1 flex flex-col overflow-hidden">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-800/50 mb-3">
+                        <span class="text-xs text-slate-400 font-bold" id="feedbackSelectedDate">날짜 선택 필요</span>
+                        <span id="feedbackAppliedBadge"></span>
+                    </div>
+                    <div id="feedbackContent" class="overflow-y-auto text-slate-300 text-sm leading-relaxed flex-1 whitespace-pre-wrap font-mono bg-slate-950/40 p-4 rounded-xl border border-white/5">
+                        피드백 제안서를 선택해 주세요.
+                    </div>
+                </div>
+            </div>
+            
+            <div class="pt-4 border-t border-slate-800 flex justify-end">
+                <button onclick="closeFeedbackModal()" class="px-5 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
                     닫기
                 </button>
             </div>
@@ -1316,7 +1241,7 @@
                                 <div class="timeline-card glass-card rounded-2xl p-6 border ${glowClass} transition duration-300 hover:bg-slate-900/50" data-sectors='${sectorsJson}' data-search-text="${searchText}">
                                     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-4 mb-4">
                                         <div class="flex items-center space-x-3">
-                                            <span class="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">${r.source}</span>
+                                            <span class="px-2.5 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">${r.source}</span>
                                             <span class="text-xs text-slate-400">
                                                 <span class="text-indigo-400 font-medium">작성:</span> ${publishedAt}
                                                 <span class="mx-1 text-slate-600">|</span>
@@ -1418,7 +1343,6 @@
                 const text = await res.text();
                 try {
                     const parsed = JSON.parse(text);
-                    // Attach ok flag to the data
                     parsed._ok = res.ok;
                     return parsed;
                 } catch(e) {
@@ -1492,7 +1416,7 @@
         // Send Chat Message to Flask backend /api/chat
         function sendChatMessage() {
             const input = document.getElementById("chatInput");
-            const query = input.value.strip ? input.value.trim() : input.value;
+            const query = input.value.trim ? input.value.trim() : input.value;
             if (!query) return;
             
             input.value = "";
@@ -1528,11 +1452,10 @@
                 // Remove typing bubble
                 document.getElementById("typingIndicator").remove();
                 
-                // Append AI message bubble (parsed as simple HTML since markdown could contain basic blocks)
+                // Append AI message bubble
                 const aiBubble = document.createElement("div");
                 aiBubble.className = "bg-indigo-950/20 text-slate-300 p-3 rounded-2xl border border-indigo-500/10 max-w-[85%] leading-relaxed";
                 
-                // Simple markdown parser for bold and lists
                 let text = data.answer;
                 text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
                 text = text.replace(/\*(.*?)\n/g, '• $1<br>');
@@ -1581,6 +1504,9 @@
             document.getElementById("reasoningModal").classList.remove("hidden");
         }
 
+        // Force Pipeline Refresh manually via frontend API
+        var lastCount = 25;
+        
         function closeReasoningModal() {
             document.getElementById("reasoningModal").classList.add("hidden");
         }
@@ -1663,21 +1589,109 @@
             });
         }
         
+        let feedbackList = [];
+        
+        function openFeedbackModal() {
+            const modal = document.getElementById("feedbackModal");
+            modal.classList.remove("hidden");
+            
+            const dateListEl = document.getElementById("feedbackDateList");
+            dateListEl.innerHTML = `
+                <div class="text-xs text-slate-500 py-4 text-center">불러오는 중...</div>
+            `;
+            
+            fetch('/api/daily-feedback/list')
+            .then(res => res.json())
+            .then(data => {
+                if (data.status !== "success") {
+                    dateListEl.innerHTML = `<div class="text-xs text-rose-400 py-4 text-center">오류: ${data.message}</div>`;
+                    return;
+                }
+                
+                feedbackList = data.suggestions || [];
+                if (feedbackList.length === 0) {
+                    dateListEl.innerHTML = `<div class="text-xs text-slate-500 py-4 text-center">저장된 제안서 없음</div>`;
+                    document.getElementById("feedbackContent").textContent = "최근 7일 동안 기록된 피드백 제안서가 없습니다.";
+                    document.getElementById("feedbackSelectedDate").textContent = "";
+                    document.getElementById("feedbackAppliedBadge").innerHTML = "";
+                    return;
+                }
+                
+                renderFeedbackDates();
+                // Select the first one by default
+                selectFeedback(0);
+            })
+            .catch(err => {
+                dateListEl.innerHTML = `<div class="text-xs text-rose-400 py-4 text-center">오류가 발생했습니다.</div>`;
+            });
+        }
+        
+        function renderFeedbackDates() {
+            const dateListEl = document.getElementById("feedbackDateList");
+            dateListEl.innerHTML = "";
+            
+            feedbackList.forEach((item, idx) => {
+                const btn = document.createElement("button");
+                btn.onclick = () => selectFeedback(idx);
+                btn.id = "feedback-date-btn-" + idx;
+                
+                const appliedIcon = item.applied ? "🟢 반영됨" : "🔴 미반영";
+                const isAppliedClass = item.applied ? "text-emerald-400" : "text-amber-500";
+                
+                btn.className = "w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition flex flex-col gap-1";
+                btn.innerHTML = `
+                    <span class="text-slate-200">${item.date}</span>
+                    <span class="text-[10px] ${isAppliedClass}">${appliedIcon}</span>
+                `;
+                dateListEl.appendChild(btn);
+            });
+        }
+        
+        function selectFeedback(idx) {
+            // Remove active classes
+            document.querySelectorAll("#feedbackDateList button").forEach(btn => {
+                btn.className = "w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition flex flex-col gap-1";
+            });
+            
+            const activeBtn = document.getElementById("feedback-date-btn-" + idx);
+            if (activeBtn) {
+                activeBtn.className = "w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold bg-amber-600/20 text-amber-200 border border-amber-500/30 flex flex-col gap-1 shadow-lg shadow-amber-950/30";
+            }
+            
+            const item = feedbackList[idx];
+            if (!item) return;
+            
+            document.getElementById("feedbackSelectedDate").textContent = `제안일자: ${item.date} (${item.timestamp.substring(11, 19)})`;
+            
+            const badgeEl = document.getElementById("feedbackAppliedBadge");
+            if (item.applied) {
+                badgeEl.innerHTML = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">🟢 소스코드 반영 완료</span>`;
+            } else {
+                badgeEl.innerHTML = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">🔴 미반영 (대기 중)</span>`;
+            }
+            
+            // Render markdown suggestion content
+            let text = item.suggestion || "";
+            document.getElementById("feedbackContent").textContent = text;
+        }
+        
+        function closeFeedbackModal() {
+            document.getElementById("feedbackModal").classList.add("hidden");
+        }
+        
         // Client-side Bloomberg-like Timeline Filtering
         let activeSector = 'ALL';
         
-        function filterSector(sector) {
-            activeSector = sector;
+        function filterSector(sect) {
+            activeSector = sect;
             
-            // Clear other buttons active styles
-            const buttons = document.querySelectorAll('#sectorFilters button');
-            buttons.forEach(btn => {
-                btn.className = "px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95";
+            // Toggle active styles on buttons
+            document.querySelectorAll("#sectorFilters button").forEach(btn => {
+                btn.className = "sector-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800/60 hover:text-slate-200 transition duration-200 hover:scale-105 active:scale-95";
             });
             
-            // Highlight active button
-            const safeId = sector === 'ALL' ? 'all' : sector.replace(/[^a-zA-Z0-9-_]/g, '');
-            const activeBtn = document.getElementById('filter-' + safeId);
+            const safeId = Array.from(sect).filter(c => /[\p{L}\p{N}_-]/u.test(c)).join('');
+            const activeBtn = document.getElementById(sect === 'ALL' ? "filter-all" : "filter-" + safeId);
             if (activeBtn) {
                 activeBtn.className = "px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600 text-white border border-indigo-500/20 transition duration-200 shadow-lg shadow-indigo-950/50 hover:scale-105 active:scale-95";
             }
@@ -1686,46 +1700,46 @@
         }
         
         function filterTimeline() {
-            const query = document.getElementById("searchInput").value.toLowerCase().trim();
-            const cards = document.querySelectorAll(".timeline-card");
+            const searchInput = document.getElementById("searchInput");
+            const query = searchInput.value.toLowerCase().trim();
             
-            cards.forEach(card => {
-                const sectors = JSON.parse(card.getAttribute("data-sectors") || "[]");
-                const searchText = card.getAttribute("data-search-text") || "";
+            document.querySelectorAll("#timelineContainer .timeline-card").forEach(card => {
+                let show = true;
                 
-                const matchesSector = (activeSector === 'ALL') || sectors.includes(activeSector);
-                const matchesQuery = (query === '') || searchText.includes(query);
+                // 1. Sector filter
+                if (activeSector !== 'ALL') {
+                    const cardSectors = JSON.parse(card.getAttribute("data-sectors") || "[]");
+                    if (!cardSectors.includes(activeSector)) {
+                        show = false;
+                    }
+                }
                 
-                if (matchesSector && matchesQuery) {
-                    card.style.display = "block";
-                    // Reset display transition
-                    setTimeout(() => {
-                        card.style.opacity = "1";
-                        card.style.transform = "translateY(0) scale(1)";
-                    }, 10);
+                // 2. Search query filter
+                if (show && query) {
+                    const searchText = card.getAttribute("data-search-text") || "";
+                    if (!searchText.includes(query)) {
+                        show = false;
+                    }
+                }
+                
+                if (show) {
+                    card.classList.remove("hidden");
                 } else {
-                    card.style.display = "none";
-                    card.style.opacity = "0";
-                    card.style.transform = "translateY(4px) scale(0.98)";
+                    card.classList.add("hidden");
                 }
             });
         }
         
-        // Dynamic dynamic AJAX Fetch updates! (Runs every 15s in background, checks total item count, reloads if new)
-        let lastCount = 25;
+        // Dynamic automatic SSE refresh fallback (Checks count increase in background)
         setInterval(() => {
             fetch('/api/count')
             .then(res => res.json())
             .then(data => {
                 if (data.count > lastCount) {
-                    // Skip reload if user is actively viewing briefing, chatting, or searching/filtering
-                    const briefingOpen = !document.getElementById("briefingModal").classList.contains("hidden");
-                    const chatOpen = !document.getElementById("chatWindow").classList.contains("hidden");
-                    const reasoningOpen = !document.getElementById("reasoningModal").classList.contains("hidden");
-                    const searchInput = document.getElementById("searchInput");
-                    const searchActive = searchInput && (document.activeElement === searchInput || searchInput.value.trim() !== "");
+                    const isUserActive = document.activeElement === document.getElementById("chatInput") || 
+                                         document.activeElement === document.getElementById("searchInput");
                     
-                    if (briefingOpen || chatOpen || reasoningOpen || searchActive) {
+                    if (isUserActive) {
                         console.log("[Pipeline] New news processed, but skipping reload because user is active.");
                         return;
                     }
