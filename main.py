@@ -1868,50 +1868,71 @@ def handle_daily_feedback():
         else:
             critique = "Gemini API key is missing or invalid. Demonstration/Mock mode critique."
 
-        # 5. Deliver results via Email (and Telegram Fallback)
-        report_subject = f"[Daily AI Feedback] {now_kst.date()} 모의투자 피드백 & 코드 개선 리포트"
-        email_sent = False
-        email_err = None
-        
-        smtp_config = global_config.get("smtp", {})
-        recipient = "shoutofjoy@gmail.com"
-        
-        if smtp_config and smtp_config.get("email") and smtp_config.get("password"):
+        # 5. Save 피드백 제안서 to Firestore (No local files, only Firestore)
+        saved_to_db = False
+        db_error = None
+        if db.USE_FIREBASE and db.db_client is not None:
             try:
-                import email_helper
-                email_sent = email_helper.send_email(smtp_config, recipient, report_subject, critique)
-            except Exception as ex:
-                email_err = str(ex)
-                
-        # Send Telegram notification if email failed or smtp not configured
-        if not email_sent:
-            print("[Flask] Email configuration missing or failed. Sending report via Telegram...")
-            tg_header = f"🚨 *[Daily AI Feedback]*\n이메일 발송 실패(또는 설정 없음)로 인해 텔레그램으로 전송합니다.\n\n"
-            full_msg = tg_header + critique
-            
-            # Send in chunks of 4000 chars to satisfy Telegram limits
-            chunk_size = 4000
-            chunks = [full_msg[i:i+chunk_size] for i in range(0, len(full_msg), chunk_size)]
-            
-            tg_token = global_config.get("telegram_bot_token") or os.getenv("TELEGRAM_BOT_TOKEN")
-            tg_chat_id = global_config.get("telegram_chat_id") or os.getenv("TELEGRAM_CHAT_ID")
-            if tg_token and tg_chat_id:
-                import requests
-                for idx, chunk in enumerate(chunks):
-                    try:
-                        url = f"https://api.telegram.org/bot{tg_token.strip()}/sendMessage"
-                        requests.post(url, json={
-                            "chat_id": tg_chat_id,
-                            "text": chunk
-                        }, timeout=10)
-                    except Exception as ex:
-                        print(f"[Warning] Failed to send tg chunk {idx}: {ex}")
+                doc_id = now_kst.date().isoformat()
+                db.db_client.collection("daily_suggestions").document(doc_id).set({
+                    "date": doc_id,
+                    "suggestion": critique,
+                    "applied": False,
+                    "timestamp": now_kst.isoformat()
+                })
+                print(f"[Flask] 피드백 제안서 saved to Firestore: daily_suggestions/{doc_id}")
+                saved_to_db = True
+            except Exception as db_ex:
+                db_error = str(db_ex)
+                print(f"[Warning] Failed to save 피드백 제안서 to Firestore: {db_ex}")
+
+            # Purge suggestions older than 7 days
+            try:
+                from datetime import timedelta
+                cutoff_date = (now_kst - timedelta(days=7)).date().isoformat()
+                old_docs = db.db_client.collection("daily_suggestions")\
+                                      .where("date", "<", cutoff_date)\
+                                      .stream()
+                batch = db.db_client.batch()
+                purge_count = 0
+                for doc in old_docs:
+                    batch.delete(doc.reference)
+                    purge_count += 1
+                if purge_count > 0:
+                    batch.commit()
+                    print(f"[Firestore Purge] Deleted {purge_count} old 피드백 제안서 (older than 7 days).")
+            except Exception as purge_ex:
+                print(f"[Warning] Failed to purge old 피드백 제안서 from Firestore: {purge_ex}")
+
+        # Send Telegram notification (Short notice instead of full critique text)
+        tg_token = global_config.get("telegram_bot_token") or os.getenv("TELEGRAM_BOT_TOKEN")
+        tg_chat_id = global_config.get("telegram_chat_id") or os.getenv("TELEGRAM_CHAT_ID")
+        telegram_sent = False
         
+        if tg_token and tg_chat_id:
+            import requests
+            short_msg = (
+                f"📅 *[Daily AI Feedback]*\n"
+                f"{now_kst.date().isoformat()} 피드백 제안서가 데이터베이스(Firestore)에 안전하게 기록되었습니다.\n\n"
+                f"해당 피드백 내용을 조회하고 코드에 반영하시려면 에이전트에게 **\"오늘 피드백 제안서대로 수정 반영해줘\"**라고 요청해 주세요."
+            )
+            try:
+                url = f"https://api.telegram.org/bot{tg_token.strip()}/sendMessage"
+                requests.post(url, json={
+                    "chat_id": tg_chat_id,
+                    "text": short_msg,
+                    "parse_mode": "Markdown"
+                }, timeout=10)
+                telegram_sent = True
+            except Exception as ex:
+                print(f"[Warning] Failed to send Telegram daily feedback notification: {ex}")
+
         return jsonify({
             "status": "success",
             "date": now_kst.date().isoformat(),
-            "email_sent": email_sent,
-            "email_error": email_err,
+            "saved_to_db": saved_to_db,
+            "db_error": db_error,
+            "telegram_sent": telegram_sent,
             "report_preview": critique[:200] + "..."
         })
         
