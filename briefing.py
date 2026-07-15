@@ -81,6 +81,8 @@ def generate_daily_briefing(analyzer, db_path="data/monitor.db"):
             f"  위험도: {r['alert_level']}\n"
         )
         
+    context_text = "\n\n".join(context_list)
+        
     # 2.5. Fetch real-time market data to feed into LLM context to prevent hallucinations!
     market_str = ""
     usdkrw_rate = 1350.0
