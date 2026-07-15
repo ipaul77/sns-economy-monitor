@@ -27,16 +27,33 @@ class TradingDecision(BaseModel):
 def evaluate_macro_circuit_breaker(kospi_disparity: float, kospi_daily_change: float) -> str:
     """
     시장 데이터를 기반으로 기계적 서킷 브레이커 작동 여부를 판별합니다.
-    LLM의 개입 없이 즉각적으로 매수를 금지하거나 비상 청산을 명령합니다.
+    [반영] 금일 피드백 제안:
+    - 1. 초극단적 시스템 붕괴 상태 (이격도 < 88.0% 또는 당일 변동률 <= -4.5%): SYSTEM_CRASH_LOCKDOWN
+    - 2. 당일 급락 쇼크 (당일 변동률 -3.0% 이하): HARD_NO_BUY
+    - 3. 역사적 과매도/투매 구간 (이격도 < 90.0%): CONTRARIAN_VALUE_BUY (역발상 분할 매수 가동)
+    - 4. 약세/폭락장이지만 반등 기미가 보이지 않는 구간 (90.0% <= 이격도 < 95.0%):
+         - 당일 변동률 < -1.5% 이면 HARD_NO_BUY (매수 보류)
+         - 그렇지 않으면 CONSERVATIVE_BUY (보수적 매수 허용)
     """
     # 1. 초극단적 시스템 붕괴 상태 (블랙스완 국면)
     if kospi_disparity < 88.0 or kospi_daily_change <= -4.5:
         return "SYSTEM_CRASH_LOCKDOWN"  # 모든 매수 금지 및 즉시 보유주식 100% 현금화 후 시스템 다운타임 진입
         
-    # 2. 심각한 약세장 국면 (매수 전면 차단)
-    elif kospi_disparity < 93.0 or kospi_daily_change <= -3.0:
-        return "HARD_NO_BUY"  # 신규 매수 절대 불가 (LLM 토론 생략), 기존 보유분은 기계적 추적 청산만 허용
+    # 2. 당일 급락 쇼크 (당일 변동률 -3.0% 이하) -> 기계적 매수 금지
+    if kospi_daily_change <= -3.0:
+        return "HARD_NO_BUY"
+
+    # 3. 역사적 과매도/투매 구간 (이격도 90% 미만) -> 역발상 밸류 바잉 찬스
+    if kospi_disparity < 90.0:
+        return "CONTRARIAN_VALUE_BUY"
         
+    # 4. 약세 구간 (이격도 90% 이상 95% 미만)
+    if 90.0 <= kospi_disparity < 95.0:
+        if kospi_daily_change < -1.5:
+            return "HARD_NO_BUY"  # 리스크 관리를 위해 매수 보류
+        else:
+            return "CONSERVATIVE_BUY"  # 횡보/반등 시 보수적 매수 허용
+            
     return "NORMAL"
 
 def generate_trading_decision(
@@ -712,7 +729,8 @@ def _evaluate_mechanical_exits(
 def _evaluate_buy_guardrails(
     monitored_tickers, portfolio, balance, market_prices, market_indicators, 
     index_changes, usdkrw_price, usdkrw_change_pct, usdkrw_disparity, 
-    kospi_disparity, kosdaq_disparity, is_downtrend, config, news_context, now
+    kospi_disparity, kosdaq_disparity, is_downtrend, config, news_context, now,
+    macro_state: str = "NORMAL"
 ) -> dict:
     blocked_buy_reasons = {}
     total_asset = balance + sum(p.get("quantity", 0) * market_prices.get(t, 0.0) for t, p in portfolio.items())
@@ -786,7 +804,8 @@ def _evaluate_buy_guardrails(
         market_change = index_changes.get(ticker_market, 0.0)
         market_disp = kospi_disparity if ticker_market == "KOSPI" else kosdaq_disparity
         is_market_crash = (market_change <= -1.5) or (market_disp <= disp_limit)
-        if is_market_crash:
+        is_macro_bypass = macro_state in ["CONTRARIAN_VALUE_BUY", "CONSERVATIVE_BUY"]
+        if is_market_crash and not is_macro_bypass:
             rsi_val = market_indicators.get(ticker, {}).get("rsi", 50.0)
             rsi_prev = market_indicators.get(ticker, {}).get("rsi_prev", 50.0)
             daily_change = market_indicators.get(ticker, {}).get("daily_change_pct", 0.0)
@@ -797,6 +816,8 @@ def _evaluate_buy_guardrails(
             else:
                 blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 매크로 불안] 해당 시장({ticker_market}) 지수가 급락하거나 약세장 침체(당일 등락률: {market_change:+.2f}%, 20MA 이격도: {market_disp:.1f}%) 상태이므로 신규 매수가 차단됩니다."
                 continue
+        elif is_market_crash and is_macro_bypass:
+            print(f"[Trading Engine] Contrarian/Conservative Macro State ({macro_state}) bypasses crash guardrail for {ticker}.")
 
         ticker_news = []
         for n in news_context:
@@ -1009,6 +1030,9 @@ def _execute_trading_decision(
                     spend_cash = 0.0
                     bear_triggered = True
                     print(f"[{ticker}] 매크로 시스템 경보(HARD_NO_BUY) 작동: 매수 한도를 0원으로 강제 제한합니다.")
+                elif macro_state == "CONTRARIAN_VALUE_BUY":
+                    # [반영] 피드백 제안: CONTRARIAN_VALUE_BUY 구간에서는 분할 매수 비율(Scale)을 높이고, bear market 패널티(0.3x)를 적용하지 않음
+                    print(f"[{ticker}] 역발상 분할 매수 구간(CONTRARIAN_VALUE_BUY) 작동: Bear Market 패널티(0.3x)를 면제합니다.")
                 else:
                     if is_kospi_bear_market():
                         spend_cash *= 0.3
@@ -1390,7 +1414,8 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
     blocked_buy_reasons = _evaluate_buy_guardrails(
         monitored_tickers, portfolio, balance, market_prices, market_indicators, 
         index_changes, usdkrw_price, usdkrw_change_pct, usdkrw_disparity, 
-        kospi_disparity, kosdaq_disparity, is_downtrend, config, news_context, now
+        kospi_disparity, kosdaq_disparity, is_downtrend, config, news_context, now,
+        macro_state
     )
     # Add preflight cooldowns
     blocked_buy_reasons.update(pre_blocked_reasons)

@@ -181,6 +181,9 @@ def get_active_tickers(portfolio: Dict[str, Any], news_context: List[Dict[str, A
     print(f"[Market Analysis] Dynamic candidate ticker pool generated: {list(active_tickers)}")
     return list(active_tickers)
 
+# State to track consecutive zero changes from history (indicates data feed issue)
+_consecutive_zero_changes = {"KOSPI": 0, "KOSDAQ": 0}
+
 def get_market_index_change() -> Dict[str, float]:
     """
     Fetches the daily return (%) for KOSPI (^KS11) and KOSDAQ (^KQ11) from yfinance.
@@ -190,17 +193,40 @@ def get_market_index_change() -> Dict[str, float]:
     for name, ticker in indices.items():
         try:
             yt = yf.Ticker(ticker)
-            hist = yt.history(period="2d")
+            # Fetch 5 days of history to handle missing days/holidays robustly
+            hist = yt.history(period="5d")
+            
+            pct_change = None
             if len(hist) >= 2:
                 prev_close = float(hist["Close"].iloc[-2])
                 curr_close = float(hist["Close"].iloc[-1])
-                pct_change = ((curr_close - prev_close) / prev_close) * 100
-                results[name] = round(pct_change, 2)
-            else:
+                if prev_close > 0:
+                    pct_change = round(((curr_close - prev_close) / prev_close) * 100, 2)
+            
+            # Let's calculate backup change from fast_info as a validator
+            calc_change = 0.0
+            try:
                 info = yt.fast_info
-                change = info.get("regularMarketChangePercent") or info.get("regular_market_change_percent")
-                if change is not None:
-                    results[name] = round(float(change), 2)
+                last_price = info.last_price
+                prev_close = info.previous_close
+                if last_price is not None and prev_close is not None and prev_close > 0:
+                    calc_change = round(((last_price - prev_close) / prev_close) * 100, 2)
+            except Exception as fe:
+                print(f"[Market Analysis] [Warning] Failed to calculate backup change using fast_info: {fe}")
+            
+            # Final change determination with validation
+            final_change = pct_change if pct_change is not None else 0.0
+            
+            # If the calculated change from history is 0.0 but backup calculated change is non-zero
+            if final_change == 0.0 and calc_change != 0.0:
+                _consecutive_zero_changes[name] += 1
+                print(f"[Market Analysis] [Data Integrity] API change for {name} is 0.0%, but calculated is {calc_change}%. Substituting (consecutive count: {_consecutive_zero_changes[name]}).")
+                final_change = calc_change
+            else:
+                _consecutive_zero_changes[name] = 0
+                
+            results[name] = final_change
+            
         except Exception as e:
             print(f"[Market Analysis] [Warning] Failed to fetch index {name}: {e}")
     return results
