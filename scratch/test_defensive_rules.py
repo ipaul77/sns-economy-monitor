@@ -5,6 +5,9 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import trading_engine
+import db
+db.USE_FIREBASE = False
+trading_engine.db.USE_FIREBASE = False
 
 def run_defensive_rules_test():
     print("==================================================")
