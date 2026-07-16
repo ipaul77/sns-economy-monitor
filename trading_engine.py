@@ -550,11 +550,29 @@ def _handle_macro_circuit_breaker_liquidation(
                 "message": f"Emergency liquidation executed for {', '.join(emergency_orders_executed)}."
             }
             
+        reasoning = f"[매크로 서킷 브레이커: 시스템 락다운] KOSPI 이격도({kospi_disparity:.2f}%) 및 당일 변동률({kospi_change:+.2f}%)이 시스템 붕괴 수준에 도달하여 신규 매수가 전면 금지되고 관망 상태를 유지합니다."
+        snapshot = {
+            "prev_balance": balance,
+            "new_balance": balance,
+            "prev_total_asset": balance,
+            "new_total_asset": balance,
+            "transaction_fee": 0.0,
+            "market_prices": market_prices,
+            "circuit_breaker": True
+        }
+        save_transaction_to_db(
+            ticker="",
+            action="HOLD",
+            quantity=0,
+            price=0.0,
+            reasoning=reasoning,
+            snapshot_context=snapshot
+        )
         return {
             "status": "success",
             "action": "HOLD",
             "message": "System lockdown active. Portfolio is already empty. All buys are disabled.",
-            "reasoning": f"[매크로 서킷 브레이커: 시스템 락다운] KOSPI 이격도({kospi_disparity:.2f}%) 및 당일 변동률({kospi_change:+.2f}%)이 시스템 붕괴 수준에 도달하여 신규 매수가 전면 금지되고 관망 상태를 유지합니다."
+            "reasoning": reasoning
         }
     return None
 

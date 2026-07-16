@@ -473,9 +473,22 @@ def trigger_trading_simulation():
             print("[API] Starting synchronous trading cycle...")
             log_trigger_status("/api/trade", "started", "Simulated trading cycle requested.")
             
-            # 1. Skipped synchronous crawling to prevent 30s Render timeout.
-            # Scraped news is already periodically collected by the background scheduler thread.
-            print("[API] Running trade simulation cycle directly on existing database news cache...")
+            # 1. Spawn news crawling asynchronously in the background to prevent 30s Render timeout.
+            # It will update the database cache for subsequent trading executions.
+            def run_async_crawl():
+                try:
+                    from briefing import clear_briefing_cache
+                    clear_briefing_cache()
+                    print("[API] Background trading: Crawling fresh news...")
+                    run_pipeline(global_config, global_analyzer)
+                    print("[API] Background trading: Crawling finished successfully.")
+                except Exception as crawl_err:
+                    print(f"[API] [Warning] Background crawling failed: {crawl_err}")
+            
+            t_crawl = threading.Thread(target=run_async_crawl, daemon=True)
+            t_crawl.start()
+            
+            print("[API] Running trade simulation cycle directly on existing database news cache (async crawling triggered)...")
             
             # 2. Run simulation cycle on the fresh news!
             result = trading_engine.run_simulation_cycle(bypass_hours=bypass_hours)
