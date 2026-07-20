@@ -830,6 +830,13 @@ def _evaluate_buy_guardrails(
                 blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 매크로 불안] 해당 시장({ticker_market}) 지수가 급락하거나 약세장 침체(당일 등락률: {market_change:+.2f}%, 20MA 이격도: {market_disp:.1f}%) 상태이므로 신규 매수가 차단됩니다."
                 continue
         elif is_market_crash and is_macro_bypass:
+            if macro_state == "CONTRARIAN_VALUE_BUY":
+                rsi_val = market_indicators.get(ticker, {}).get("rsi", 50.0)
+                rsi_prev = market_indicators.get(ticker, {}).get("rsi_prev", 50.0)
+                # [반영] 2026-07-20 피드백 제안 (3번 항): 떨어지는 칼날 방지 (RSI < 30 이하에서 반등/지점 형성 없이 지속 급락 시 진입 차단)
+                if rsi_val < 30.0 and rsi_val < rsi_prev:
+                    blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 떨어지는 칼날 경보] 역발상 매수 구간(CONTRARIAN_VALUE_BUY)이나 RSI({rsi_val:.1f})가 지지선 형성 없이 지속 급락 중이므로 반등 시그널 확인 전까지 진입을 차단합니다."
+                    continue
             print(f"[Trading Engine] Contrarian/Conservative Macro State ({macro_state}) bypasses crash guardrail for {ticker}.")
 
         ticker_news = []
