@@ -231,9 +231,25 @@ def generate_trading_decision(
             model_name=model_name,
             system_instruction=system_instruction
         )
+        from google.generativeai.types import content_types
+        schema = content_types._schema_for_class(TradingDecision)
+        
+        def _sanitize_schema(d):
+            if isinstance(d, dict):
+                return {k: _sanitize_schema(v) for k, v in d.items() if k not in ["default", "title"]}
+            elif isinstance(d, list):
+                return [_sanitize_schema(i) for i in d]
+            return d
+            
+        schema = _sanitize_schema(schema)
+        schema["required"] = ["action", "ticker", "allocation_pct", "reasoning", "mode", "win_probability", "reward_to_risk_ratio"]
+
         response = model.generate_content(
             user_prompt,
-            generation_config={"response_mime_type": "application/json", "response_schema": TradingDecision}
+            generation_config=genai.GenerationConfig(
+                response_mime_type="application/json",
+                response_schema=schema
+            )
         )
         
         raw_text = response.text.strip()
