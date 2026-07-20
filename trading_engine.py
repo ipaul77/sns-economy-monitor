@@ -65,7 +65,6 @@ def generate_trading_decision(
     Formulates a structured trading decision via Gemini structured API.
     """
     import google.generativeai as genai
-    from google.genai import types
 
     # Setup API Key
     gemini_key = api_key or os.getenv("GEMINI_API_KEY")
