@@ -367,6 +367,7 @@ def handle_ping():
     Lightweight API endpoint for cron-job / ping services to wake up the server
     without fetching large HTML payload sizes.
     """
+    log_trigger_status("/api/ping", "success", "Keep-alive ping received.")
     return jsonify({"status": "ok", "message": "pong"})
 
 @app.route('/')
