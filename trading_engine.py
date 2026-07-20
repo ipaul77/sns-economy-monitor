@@ -27,29 +27,24 @@ class TradingDecision(BaseModel):
 def evaluate_macro_circuit_breaker(kospi_disparity: float, kospi_daily_change: float) -> str:
     """
     시장 데이터를 기반으로 기계적 서킷 브레이커 작동 여부를 판별합니다.
-    [반영] 금일 피드백 제안:
-    - 1. 초극단적 시스템 붕괴 상태 (이격도 < 88.0% 또는 당일 변동률 <= -4.5%): SYSTEM_CRASH_LOCKDOWN
-    - 2. 당일 급락 쇼크 (당일 변동률 -3.0% 이하): HARD_NO_BUY
-    - 3. 역사적 과매도/투매 구간 (이격도 < 90.0%): CONTRARIAN_VALUE_BUY (역발상 분할 매수 가동)
-    - 4. 약세/폭락장이지만 반등 기미가 보이지 않는 구간 (90.0% <= 이격도 < 95.0%):
-         - 당일 변동률 < -1.5% 이면 HARD_NO_BUY (매수 보류)
+    [반영] 2026-07-20 피드백 제안:
+    - 1. 초극단적 시스템 붕괴 상태 (이격도 <= 78.0% 또는 당일 변동률 <= -6.0%): SYSTEM_CRASH_LOCKDOWN (금융위기/블랙스완 수준)
+    - 2. 극단적 과매도/투매 구간 (이격도 <= 86.0% 또는 당일 변동률 <= -3.0%): CONTRARIAN_VALUE_BUY (공포 속 역발상 분할 매수 존, 매수금액 30% 제한 적용)
+    - 3. 약세/조정 구간 (86.0% < 이격도 < 95.0%):
+         - 당일 변동률 < -2.0% 이면 HARD_NO_BUY (매수 보류)
          - 그렇지 않으면 CONSERVATIVE_BUY (보수적 매수 허용)
     """
     # 1. 초극단적 시스템 붕괴 상태 (블랙스완 국면)
-    if kospi_disparity < 88.0 or kospi_daily_change <= -4.5:
+    if kospi_disparity <= 78.0 or kospi_daily_change <= -6.0:
         return "SYSTEM_CRASH_LOCKDOWN"  # 모든 매수 금지 및 즉시 보유주식 100% 현금화 후 시스템 다운타임 진입
         
-    # 2. 당일 급락 쇼크 (당일 변동률 -3.0% 이하) -> 기계적 매수 금지
-    if kospi_daily_change <= -3.0:
-        return "HARD_NO_BUY"
-
-    # 3. 역사적 과매도/투매 구간 (이격도 90% 미만) -> 역발상 밸류 바잉 찬스
-    if kospi_disparity < 90.0:
+    # 2. 극단적 과매도/투매 구간 (이격도 86.0% 이하 또는 당일 급락 -3.0% 이하) -> 역발상 분할 매수 존
+    if kospi_disparity <= 86.0 or kospi_daily_change <= -3.0:
         return "CONTRARIAN_VALUE_BUY"
         
-    # 4. 약세 구간 (이격도 90% 이상 95% 미만)
-    if 90.0 <= kospi_disparity < 95.0:
-        if kospi_daily_change < -1.5:
+    # 3. 약세 조정 구간 (이격도 86% 초과 95% 미만)
+    if 86.0 < kospi_disparity < 95.0:
+        if kospi_daily_change < -2.0:
             return "HARD_NO_BUY"  # 리스크 관리를 위해 매수 보류
         else:
             return "CONSERVATIVE_BUY"  # 횡보/반등 시 보수적 매수 허용
@@ -1049,8 +1044,10 @@ def _execute_trading_decision(
                     bear_triggered = True
                     print(f"[{ticker}] 매크로 시스템 경보(HARD_NO_BUY) 작동: 매수 한도를 0원으로 강제 제한합니다.")
                 elif macro_state == "CONTRARIAN_VALUE_BUY":
-                    # [반영] 피드백 제안: CONTRARIAN_VALUE_BUY 구간에서는 분할 매수 비율(Scale)을 높이고, bear market 패널티(0.3x)를 적용하지 않음
-                    print(f"[{ticker}] 역발상 분할 매수 구간(CONTRARIAN_VALUE_BUY) 작동: Bear Market 패널티(0.3x)를 면제합니다.")
+                    # [반영] 2026-07-20 피드백 제안: CONTRARIAN_VALUE_BUY 구간에서는 투자 비중을 30%(0.3x)로 제한하여 분할 매수로 대응
+                    spend_cash *= 0.3
+                    bear_triggered = True
+                    print(f"[{ticker}] 역발상 분할 매수 구간(CONTRARIAN_VALUE_BUY) 작동: 투자 비중을 30%(0.3x)로 제한하여 분할 매수를 집행합니다.")
                 else:
                     if is_kospi_bear_market():
                         spend_cash *= 0.3
