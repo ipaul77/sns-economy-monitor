@@ -54,39 +54,42 @@ def update_other_sources_in_db(url, new_source):
 
 def log_boot_status():
     """
-    Logs the server boot time to Firestore system/health.
-    Helps the user track cold starts and wake-ups.
+    Logs the server boot time to Firestore system/health asynchronously.
     """
-    if db.USE_FIREBASE and db.db_client is not None:
-        try:
-            now_str = db.get_kst_now().isoformat()
-            doc_ref = db.db_client.collection("system").document("health")
-            doc_ref.set({
-                "last_boot": now_str,
-                "status": "online",
-                "message": "Render Container cold-started successfully."
-            }, merge=True)
-            print(f"[System] Logged boot status to Firestore at {now_str}")
-        except Exception as e:
-            print(f"[Warning] Failed to log boot status to Firestore: {e}")
+    def _async_log():
+        if db.USE_FIREBASE and db.db_client is not None:
+            try:
+                now_str = db.get_kst_now().isoformat()
+                doc_ref = db.db_client.collection("system").document("health")
+                doc_ref.set({
+                    "last_boot": now_str,
+                    "status": "online",
+                    "message": "Render Container cold-started successfully."
+                }, merge=True)
+                print(f"[System] Logged boot status to Firestore at {now_str}")
+            except Exception as e:
+                print(f"[Warning] Failed to log boot status to Firestore: {e}")
+    threading.Thread(target=_async_log, daemon=True).start()
 
 def log_trigger_status(trigger_type, status, message=""):
     """
-    Logs API trigger events to Firestore to track Cron execution.
+    Logs API trigger events to Firestore asynchronously to ensure instant HTTP response times.
     """
-    if db.USE_FIREBASE and db.db_client is not None:
-        try:
-            now_str = db.get_kst_now().isoformat()
-            doc_ref = db.db_client.collection("system").document("health")
-            doc_ref.set({
-                "last_trigger_time": now_str,
-                "last_trigger_type": trigger_type,
-                "last_trigger_status": status,
-                "last_trigger_message": message
-            }, merge=True)
-            print(f"[System] Logged trigger event to Firestore: {trigger_type} ({status})")
-        except Exception as e:
-            pass
+    def _async_log():
+        if db.USE_FIREBASE and db.db_client is not None:
+            try:
+                now_str = db.get_kst_now().isoformat()
+                doc_ref = db.db_client.collection("system").document("health")
+                doc_ref.set({
+                    "last_trigger_time": now_str,
+                    "last_trigger_type": trigger_type,
+                    "last_trigger_status": status,
+                    "last_trigger_message": message
+                }, merge=True)
+                print(f"[System] Logged trigger event to Firestore: {trigger_type} ({status})")
+            except Exception as e:
+                pass
+    threading.Thread(target=_async_log, daemon=True).start()
 
 def generate_html_dashboard():
     from dashboard_generator import generate_html_dashboard as gen_html
