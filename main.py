@@ -904,8 +904,8 @@ except Exception as e:
 global_config = load_config()
 global_analyzer = GeminiEconomyAnalyzer()
 
-# Pre-generate dashboard.html from cache on startup
-generate_html_dashboard()
+# Pre-generate dashboard.html from cache on startup (Skipped heavy network call for fast cold-start)
+# dashboard.html is already committed and will be refreshed dynamically by the background thread.
 
 # --- LAZY SCHEDULER INITIALIZATION ---
 scheduler_started = False
