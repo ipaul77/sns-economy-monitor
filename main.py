@@ -221,9 +221,8 @@ def handle_daily_feedback():
             try:
                 with open(engine_path, "r", encoding="utf-8") as f:
                     lines = f.readlines()
-                # Extract key guardrail segment
-                # Sizing cap is around Line 2270-2340, we extract ~100 lines
-                core_code = "".join(lines[2260:2360])
+                # Extract key guardrail & macro circuit breaker segments from trading_engine.py
+                core_code = "".join(lines[25:60]) + "\n\n# --- BUY GUARDRAILS ---\n\n" + "".join(lines[820:880])
             except Exception as e:
                 core_code = f"# Failed to read trading_engine.py: {str(e)}"
         else:
