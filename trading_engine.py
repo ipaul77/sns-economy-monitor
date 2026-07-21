@@ -353,14 +353,28 @@ def _fetch_market_indices_and_trends(now) -> dict:
     print(f"[Trading Engine] USD_KRW exchange rate: {usdkrw_price:,.2f} KRW (당일 등락률: {usdkrw_change_pct:+.2f}%)")
 
     usdkrw_disparity = 100.0
+    usdkrw_high_3m = usdkrw_price
+    usdkrw_drop_from_high_pct = 0.0
+    usdkrw_trend_state = "STABLE"
     try:
         yt_krw = yf.Ticker("USDKRW=X")
-        hist_krw = yt_krw.history(period="1mo")
+        hist_krw = yt_krw.history(period="3mo")
         if not hist_krw.empty:
-            usdkrw_ma20 = hist_krw["Close"].mean()
+            usdkrw_ma20 = hist_krw["Close"].iloc[-20:].mean()
             usdkrw_disparity = (usdkrw_price / usdkrw_ma20) * 100
+            usdkrw_high_3m = float(hist_krw["High"].max())
+            if usdkrw_high_3m > 0:
+                usdkrw_drop_from_high_pct = ((usdkrw_price - usdkrw_high_3m) / usdkrw_high_3m) * 100.0
+            
+            # Classify Exchange Rate Peak-to-Trough Trend State
+            if usdkrw_drop_from_high_pct <= -2.5:
+                usdkrw_trend_state = "STABILIZING_WON_STRENGTH"  # 원화 강세 전환기 (전고점 대비 하락 중 -> 대형주/외인 수혜)
+            elif usdkrw_disparity >= 102.0 or usdkrw_change_pct >= 1.0:
+                usdkrw_trend_state = "SURGING_DOLLAR_WEAKNESS"  # 환율 급등 위험기
+            else:
+                usdkrw_trend_state = "STABLE"
     except Exception as e:
-        print(f"[Trading Engine] [Warning] Failed to calculate USD_KRW disparity: {e}")
+        print(f"[Trading Engine] [Warning] Failed to calculate USD_KRW trend metrics: {e}")
 
     kospi_disparity = 100.0
     kosdaq_disparity = 100.0
@@ -378,7 +392,7 @@ def _fetch_market_indices_and_trends(now) -> dict:
             kosdaq_disparity = (kosdaq_curr / kosdaq_ma20) * 100
     except Exception as e:
         print(f"[Trading Engine] [Warning] Failed to calculate index disparities: {e}")
-    print(f"[Trading Engine] 20MA Disparities -> USD_KRW: {usdkrw_disparity:.2f}%, KOSPI: {kospi_disparity:.2f}%, KOSDAQ: {kosdaq_disparity:.2f}%")
+    print(f"[Trading Engine] 20MA Disparities -> USD_KRW: {usdkrw_disparity:.2f}% (Trend: {usdkrw_trend_state}, High3M: {usdkrw_high_3m:,.1f}원, Drop: {usdkrw_drop_from_high_pct:+.2f}%), KOSPI: {kospi_disparity:.2f}%, KOSDAQ: {kosdaq_disparity:.2f}%")
 
     is_downtrend = False
     try:
@@ -393,6 +407,9 @@ def _fetch_market_indices_and_trends(now) -> dict:
         "usdkrw_price": usdkrw_price,
         "usdkrw_change_pct": usdkrw_change_pct,
         "usdkrw_disparity": usdkrw_disparity,
+        "usdkrw_high_3m": usdkrw_high_3m,
+        "usdkrw_drop_from_high_pct": usdkrw_drop_from_high_pct,
+        "usdkrw_trend_state": usdkrw_trend_state,
         "kospi_disparity": kospi_disparity,
         "kosdaq_disparity": kosdaq_disparity,
         "is_downtrend": is_downtrend

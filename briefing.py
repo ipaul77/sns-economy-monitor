@@ -83,43 +83,62 @@ def generate_daily_briefing(analyzer, db_path="data/monitor.db"):
         
     context_text = "\n\n".join(context_list)
         
-    # 2.5. Fetch real-time market data to feed into LLM context to prevent hallucinations!
+    # 2.5. Fetch real-time market data & exchange rate trend metrics to feed into LLM context
     market_str = ""
     usdkrw_rate = 1350.0
+    usdkrw_high_3m = 1350.0
+    usdkrw_drop_pct = 0.0
+    usdkrw_trend_state = "STABLE"
     try:
+        from trading_engine import _fetch_market_indices_and_trends
+        macro_info = _fetch_market_indices_and_trends(db.get_kst_now())
+        usdkrw_rate = macro_info.get("usdkrw_price", 1350.0)
+        usdkrw_high_3m = macro_info.get("usdkrw_high_3m", usdkrw_rate)
+        usdkrw_drop_pct = macro_info.get("usdkrw_drop_from_high_pct", 0.0)
+        usdkrw_trend_state = macro_info.get("usdkrw_trend_state", "STABLE")
+
         from market import get_market_indicators
         m_data = get_market_indicators()
         if m_data:
-            market_str = "=== 금일 주요 금융/경제 시장 실시간 지표 (Real-time Market Indicators) ===\n"
+            market_str = "=== 금일 주요 금융/외환 시장 실시간 및 추세 지표 (Real-time Market & Trend Vector) ===\n"
             for label, info in m_data.items():
                 unit = "pt" if label in ["KOSPI", "SOXX"] else "원"
                 change_sign = "+" if info["change"] > 0 else ""
                 market_str += f"- {label}: {info['price']:,}{unit} (당일 등락률: {change_sign}{info['percent']}%)\n"
-            if "USD_KRW" in m_data:
-                usdkrw_rate = m_data["USD_KRW"].get("price", 1350.0)
+            market_str += f"- 환율 3개월 전고점: {usdkrw_high_3m:,.2f}원 (전고점 대비 현재 등락률: {usdkrw_drop_pct:+.2f}%, 추세 상태: {usdkrw_trend_state})\n"
     except Exception as e:
         print(f"[Warning] Failed to fetch market indicators for daily briefing prompt: {e}")
 
     # 4. Request Gemini Synthesis (Stage 2 Model)
     if analyzer.api_configured:
         try:
-            pro_model_name = analyzer.config.get("models", {}).get("pro_model", "gemini-1.5-pro")
+            pro_model_name = analyzer.config.get("models", {}).get("pro_model", "gemini-2.0-flash-thinking-exp")
             system_instruction = (
-                "You are a world-class financial editor specializing in the South Korean economy. "
+                "You are a world-class financial editor and senior macro strategist specializing in the South Korean economy. "
                 "Synthesize the provided collection of 24-hour global news, securities research center consensus, and SNS intelligence. "
                 "You must write a comprehensive, highly credible daily macroeconomic briefing report in professional Korean. "
                 "Always act as if you are compiling consensus from major Korean securities firms (e.g. Samsung Securities, Mirae Asset, KB Securities, NH Investment, Shinhan) "
-                "and trusted institutions like the Bank of Korea (BOK) and KDI. Tone should be highly professional, structured, and objective."
+                "and trusted institutions like the Bank of Korea (BOK) and KDI. Tone should be highly professional, structured, decisive, and mathematically rigorous."
             )
             
             prompt = (
                 f"최근 24시간 동안 수집 및 분석된 주요 경제 뉴스 요약 정보는 다음과 같습니다:\n\n"
                 f"{context_text}\n\n"
-                f"또한, 현재 기준의 실시간 주요 금융/외환 시장 지표는 다음과 같습니다:\n"
-                f"{market_str}\n"
-                f"보고서 작성 시 반드시 위의 실시간 시장 지표(특히 환율 및 KOSPI 지수 등)를 반영하여 정확한 수치를 토대로 작성해야 하며, 과거의 낡은 환율 범위를 언급하는 등의 환각(hallucination)을 절대 방지하십시오 (환율 서술 시 반드시 실시간 지표인 {usdkrw_rate:,.2f}원선을 기준으로 서술하세요).\n\n"
-                f"위 정보들을 종합적으로 융합 분석하여 대한민국 투자자들을 위한 최고 수준의 신뢰도를 갖춘 거시경제 브리핑 보고서를 한글로 작성해 주십시오.\n\n"
-                f"다음과 같은 양식과 내용으로 반드시 작성해 주세요 (HTML 태그를 적절히 활용하여 스타일리시하게 만들어 주세요):\n"
+                f"또한, 현재 기준의 실시간 주요 금융/외환 시장 지표 및 추세 데이터는 다음과 같습니다:\n"
+                f"{market_str}\n\n"
+                f"[⚠️ 필수 보고서 작성 지침 (3대 엄격 규칙)]\n"
+                f"1. **환율 추세의 방향성 정밀 서술 (뒷북 분석 금지)**:\n"
+                f"   - 단일 환율 숫자({usdkrw_rate:,.2f}원)만 보고 기계적으로 '고환율 위기'라고 뒷북 분석하지 마십시오.\n"
+                f"   - 최근 3개월 전고점({usdkrw_high_3m:,.2f}원) 대비 현재 등락률({usdkrw_drop_pct:+.2f}%, 추세: {usdkrw_trend_state})을 반드시 파악하십시오.\n"
+                f"   - 환율이 전고점 대비 하강하는 원화 강세 전환기(STABILIZING_WON_STRENGTH)인 경우 '수출 수혜주' 언급 대신, '환차손 우려 해소 및 외국인 패시브 자금 유입 대형 IT 핵심주/원화 자산 수혜'로 정교하게 분석하십시오.\n\n"
+                f"2. **섹터 뭉뚱그리기 매수 권고 금지 (기업별 차별화 서술)**:\n"
+                f"   - 반도체나 이차전지를 섹터 전체로 뭉뚱그려 '반도체 전체 비축' 또는 '이차전지 바텀피싱 자제하되 분할매수' 같은 안이한 지침을 내리지 마십시오.\n"
+                f"   - HBM3e/NVIDIA Blackwell 밸류체인 진입 탑티어 기업(SK하이닉스 등)과 퀄테스트 지연 기업 간의 양극화를 명확히 구분하여 서술하십시오.\n\n"
+                f"3. **우유부단한 양다리 스탠스 금지 (명확한 단정 가이드)**:\n"
+                f"   - '바텀피싱 자제하되 분할매수 권고' 같은 중립적이고 책임 회피성 양다리 문장을 절대 쓰지 마십시오.\n"
+                f"   - 실적 하향 섹터는 '비중 축소(Underweight) 및 신규 매수 완전 보류'와 같이 명확하고 단정적인 투자 가이던스를 제공하십시오.\n\n"
+                f"위 정보들을 종합적으로 융합 분석하여 대한민국 투자자들을 위한 최고 수준의 거시경제 브리핑 보고서를 한글로 작성해 주십시오.\n\n"
+                f"다음과 같은 양식과 내용으로 작성해 주세요 (HTML 태그를 적절히 활용하여 스타일리시하게 만들어 주세요):\n"
                 f"1. '<div class=\"mb-6\"><h3 class=\"text-lg font-bold text-indigo-400 mb-2\">[1] 금일 한반도 경제 종합 요약 (증권사 및 주요 기관 컨센서스 반영)</h3>'과 함께 거시 분석을 3~4문장으로 서술해 주세요.\n"
                 f"2. '<div class=\"mb-6\"><h3 class=\"text-lg font-bold text-purple-400 mb-2\">[2] 금일 3대 고위험 핵심 전선 (기관 리서치 종합 분석)</h3>' 아래에 집중해야 할 3대 위험 요소나 기회를 목록형태로 서술해 주세요. 각 전선별로 주요 증권사의 매수/매도 센티먼트나 핵심 리서치 오피니언을 함께 결합해 설명해 주세요.\n"
                 f"3. '<div class=\"mb-6\"><h3 class=\"text-lg font-bold text-pink-400 mb-2\">[3] 내일 아침 증시(KOSPI) 개장 대응 가이드 (투자 전략 제언)</h3>' 아래에 투자자가 실질적으로 취해야 할 세부 투자 및 포트폴리오 헤징 전략을 서술해 주세요.\n"
