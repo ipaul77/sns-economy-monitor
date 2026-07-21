@@ -226,11 +226,10 @@ def generate_trading_decision(
         except Exception:
             pass
 
-        print(f"[Trading Engine] Invoking Gemini model '{model_name}' for consensus debate...")
-        model = genai.GenerativeModel(
-            model_name=model_name,
-            system_instruction=system_instruction
-        )
+        candidate_models = [model_name, "gemini-1.5-pro", "gemini-2.0-flash"]
+        # Remove duplicates while preserving order
+        candidate_models = list(dict.fromkeys(candidate_models))
+        
         from google.generativeai.types import content_types
         schema = content_types._schema_for_class(TradingDecision)
         
@@ -244,17 +243,29 @@ def generate_trading_decision(
         schema = _sanitize_schema(schema)
         schema["required"] = ["action", "ticker", "allocation_pct", "reasoning", "mode", "win_probability", "reward_to_risk_ratio"]
 
-        response = model.generate_content(
-            user_prompt,
-            generation_config=genai.GenerationConfig(
-                response_mime_type="application/json",
-                response_schema=schema
-            )
-        )
-        
-        raw_text = response.text.strip()
-        decision_dict = json.loads(raw_text)
-        return TradingDecision(**decision_dict)
+        last_err = None
+        for candidate in candidate_models:
+            try:
+                print(f"[Trading Engine] Invoking Gemini model '{candidate}' for consensus debate...")
+                model = genai.GenerativeModel(
+                    model_name=candidate,
+                    system_instruction=system_instruction
+                )
+                response = model.generate_content(
+                    user_prompt,
+                    generation_config=genai.GenerationConfig(
+                        response_mime_type="application/json",
+                        response_schema=schema
+                    )
+                )
+                raw_text = response.text.strip()
+                decision_dict = json.loads(raw_text)
+                return TradingDecision(**decision_dict)
+            except Exception as cand_ex:
+                print(f"[Trading Engine] Model '{candidate}' execution failed: {cand_ex}. Trying fallback...")
+                last_err = cand_ex
+
+        raise last_err or Exception("All candidate models failed.")
         
     except Exception as e:
         print(f"[Trading Engine] [Error] Gemini structured output generation or parse failed: {e}")

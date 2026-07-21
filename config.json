@@ -16,8 +16,8 @@
     "is_simulation": true
   },
   "models": {
-    "flash_model": "gemini-1.5-flash",
-    "pro_model": "gemini-1.5-pro"
+    "flash_model": "gemini-2.0-flash",
+    "pro_model": "gemini-2.0-flash-thinking-exp"
   },
   "scraping_interval_seconds": 1800,
   "realtime_monitoring_enabled": true,
