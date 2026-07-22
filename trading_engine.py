@@ -24,25 +24,32 @@ class TradingDecision(BaseModel):
     win_probability: float = Field(default=0.5, description="Estimated probability of a profitable outcome (0.0 to 1.0).")
     reward_to_risk_ratio: float = Field(default=1.0, description="Estimated reward-to-risk ratio (expected gain / expected loss, >= 0.1).")
 
-def evaluate_macro_circuit_breaker(kospi_disparity: float, kospi_daily_change: float) -> str:
+def evaluate_macro_circuit_breaker(
+    kospi_disparity: float, 
+    kospi_daily_change: float, 
+    disparity_mean: float = 100.0, 
+    disparity_std: float = 1.5
+) -> str:
     """
-    [수정됨] 매크로 회로 차단기: KOSPI 이격도 기준을 보수적으로 재조정
+    [수정됨 - 동적 리스크 적용] 매크로 회로 차단기: KOSPI 이격도 기준을 평균과 표준편차 기반의 동적 임계치로 판단
     """
-    # 1. 초극단적 시스템 붕괴 상태 (블랙스완)
-    if kospi_disparity <= 78.0 or kospi_daily_change <= -6.0:
+    # 1. 초극단적 시스템 붕괴 상태 (Mean - 2.5 * StdDev) 또는 당일 변동률 -6% 이하
+    crash_limit = disparity_mean - 2.5 * disparity_std
+    if kospi_disparity <= crash_limit or kospi_daily_change <= -6.0:
         return "SYSTEM_CRASH_LOCKDOWN"
         
-    # 2. 극단적 과매도/투매 구간 (역발상 매수 허용 구역)
-    if kospi_disparity <= 85.0 or kospi_daily_change <= -3.0:
+    # 2. 극단적 과매도/투매 구간 (Mean - 1.5 * StdDev) 또는 당일 급락 -3.0% 이하 -> 역발상 매수 허용 구역
+    value_buy_limit = disparity_mean - 1.5 * disparity_std
+    if kospi_disparity <= value_buy_limit or kospi_daily_change <= -3.0:
         return "CONTRARIAN_VALUE_BUY"
         
-    # 3. 마의 늪 구간 (애매한 하락장 - Whipsaw 방지를 위해 매수 강력 차단)
-    # 기존 86~95 구간을 너무 넓게 잡아 Bypass가 남용됨. 85~92는 절대 관망.
-    if 85.0 < kospi_disparity <= 92.0:
+    # 3. 마의 늪 구간 (애매한 하락장 - Whipsaw 방지 위해 매수 차단: Mean - 1.5 * StdDev ~ Mean - 0.5 * StdDev)
+    no_buy_limit = disparity_mean - 0.5 * disparity_std
+    if value_buy_limit < kospi_disparity <= no_buy_limit:
         return "HARD_NO_BUY" 
         
     # 4. 약한 조정/횡보 구간 (선별적 매수 허용)
-    if 92.0 < kospi_disparity < 95.0:
+    if no_buy_limit < kospi_disparity < 95.0:
         if kospi_daily_change < -1.5:
             return "HARD_NO_BUY"
         return "CONSERVATIVE_BUY"
@@ -393,9 +400,13 @@ def _fetch_market_indices_and_trends(now) -> dict:
     print(f"[Trading Engine] 20MA Disparities -> USD_KRW: {usdkrw_disparity:.2f}% (Trend: {usdkrw_trend_state}, High3M: {usdkrw_high_3m:,.1f}원, Drop: {usdkrw_drop_from_high_pct:+.2f}%), KOSPI: {kospi_disparity:.2f}%, KOSDAQ: {kosdaq_disparity:.2f}%")
 
     is_downtrend = False
+    kospi_disparity_std = 1.5
+    kospi_disparity_mean = 100.0
     try:
         regime = get_market_trend_regime()
         is_downtrend = regime.get("is_downtrend", False)
+        kospi_disparity_std = regime.get("disparity_std", 1.5)
+        kospi_disparity_mean = regime.get("disparity_mean", 100.0)
         print(f"[Trading Engine] Market Regime check: {'Downtrend' if is_downtrend else 'Uptrend'} - {regime.get('message')}")
     except Exception as e:
         print(f"[Trading Engine] [Warning] Failed to resolve market trend regime: {e}")
@@ -410,7 +421,9 @@ def _fetch_market_indices_and_trends(now) -> dict:
         "usdkrw_trend_state": usdkrw_trend_state,
         "kospi_disparity": kospi_disparity,
         "kosdaq_disparity": kosdaq_disparity,
-        "is_downtrend": is_downtrend
+        "is_downtrend": is_downtrend,
+        "kospi_disparity_std": kospi_disparity_std,
+        "kospi_disparity_mean": kospi_disparity_mean
     }
 
 def _apply_preflight_cooldown_filters(monitored_tickers, portfolio, now) -> tuple:
@@ -820,7 +833,7 @@ def _evaluate_buy_guardrails(
             except Exception as e:
                 print(f"[Trading Engine] Failed to evaluate cooldown for {ticker}: {e}")
 
-        # [수정됨] 분할 매수 (물타기/불타기) 가드레일 강화
+        # [수정됨] 분할 매수 (물타기/불타기) 가드레일 강화 (개별 종목 20일 변동성을 기반으로 동적 스케일링)
         last_tx = get_last_transaction_of_ticker(ticker)
         if last_tx and last_tx.get("action") == "BUY":
             try:
@@ -831,14 +844,18 @@ def _evaluate_buy_guardrails(
                 # 최소 대기 시간을 90분 -> 120분으로 늘려 장중 뇌동매매 억제
                 time_ok = time_diff >= timedelta(minutes=120)
                 
+                # 20일 일일 수익률 변동성 가져오기 (기본값 2.0%)
+                vol_20d = market_indicators.get(ticker, {}).get("volatility_20d", 2.0)
+                
                 is_downside = curr_price < last_price
                 if is_downside:
-                    # 물타기(Averaging Down): 직전 매수가 대비 최소 -3.0% 하락 시에만 허용 (기존 -2.0%는 너무 짧음)
-                    price_ok = curr_price <= last_price * 0.97
+                    # 물타기(Averaging Down): 변동성의 1.5배 이상 하락 시에만 허용
+                    averaging_down_pct = max(1.5, 1.5 * vol_20d)  # 최소 1.5% 이상 하락 조건 부여
+                    price_ok = curr_price <= last_price * (1.0 - averaging_down_pct / 100.0)
                 else:
-                    # 불타기(Pyramiding): 직전 매수가 대비 최소 +2.5% 이상 '확실한 돌파'가 나올 때만 허용
-                    # 이 로직이 없어서 오늘 294870 고점 추격 매수가 발생했음.
-                    price_ok = curr_price >= last_price * 1.025
+                    # 불타기(Pyramiding): 변동성의 1.2배 이상 확실한 돌파 시에만 허용
+                    pyramiding_pct = max(1.2, 1.2 * vol_20d)  # 최소 1.2% 이상 돌파 조건 부여
+                    price_ok = curr_price >= last_price * (1.0 + pyramiding_pct / 100.0)
                 
                 if not (time_ok and price_ok):
                     reasons = []
@@ -846,9 +863,9 @@ def _evaluate_buy_guardrails(
                         reasons.append(f"시간 대기 미달: {time_diff.total_seconds() / 60:.1f}분 (최소 120분 필요)")
                     if not price_ok:
                         if is_downside:
-                            reasons.append(f"물타기 낙폭 부족: 직전가 {last_price:,.0f}원 대비 {(curr_price-last_price)/last_price*100:+.2f}% (최소 -3.0% 필요)")
+                            reasons.append(f"물타기 낙폭 부족: 직전가 {last_price:,.0f}원 대비 {(curr_price-last_price)/last_price*100:+.2f}% (동적 하한선: -{averaging_down_pct:.2f}% 필요, 변동성: {vol_20d:.2f}%)")
                         else:
-                            reasons.append(f"불타기 돌파 부족: 직전가 {last_price:,.0f}원 대비 {(curr_price-last_price)/last_price*100:+.2f}% (최소 +2.5% 필요)")
+                            reasons.append(f"불타기 돌파 부족: 직전가 {last_price:,.0f}원 대비 {(curr_price-last_price)/last_price*100:+.2f}% (동적 상한선: +{pyramiding_pct:.2f}% 필요, 변동성: {vol_20d:.2f}%)")
                     
                     blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 분할매수 가드레일] {', '.join(reasons)}"
                     continue
@@ -1409,7 +1426,12 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
 
     # 5. Check macro circuit breakers
     kospi_change = index_changes.get("KOSPI", 0.0)
-    macro_state = evaluate_macro_circuit_breaker(kospi_disparity, kospi_change)
+    macro_state = evaluate_macro_circuit_breaker(
+        kospi_disparity, 
+        kospi_change,
+        disparity_mean=market_context.get("kospi_disparity_mean", 100.0),
+        disparity_std=market_context.get("kospi_disparity_std", 1.5)
+    )
     circuit_breaker_result = _handle_macro_circuit_breaker_liquidation(
         macro_state, portfolio, balance, market_prices, kospi_disparity, kospi_change
     )

@@ -233,7 +233,8 @@ def get_market_index_change() -> Dict[str, float]:
 
 def get_market_trend_regime() -> Dict[str, Any]:
     """
-    Fetches the last 20 days of KOSPI historical data and determines trend.
+    Fetches the last 20 days of KOSPI historical data and determines trend, 
+    calculating the rolling mean and standard deviation of disparity for dynamic risk guardrails.
     """
     try:
         yt = yf.Ticker("^KS11")
@@ -243,12 +244,22 @@ def get_market_trend_regime() -> Dict[str, Any]:
             ma_20 = float(close_slice.mean())
             current_price = float(hist["Close"].iloc[-1])
             is_downtrend = current_price < ma_20
+            
+            # Calculate standard deviation and mean of KOSPI disparity over the last 20 days
+            rolling_mean = hist["Close"].rolling(window=20).mean()
+            disparities = (hist["Close"] / rolling_mean) * 100
+            disparity_slice = disparities.dropna().iloc[-20:]
+            disparity_std = float(disparity_slice.std()) if len(disparity_slice) > 1 else 1.5
+            disparity_mean = float(disparity_slice.mean()) if len(disparity_slice) > 1 else 100.0
+            
             return {
                 "status": "success",
                 "current_price": round(current_price, 2),
                 "ma_20": round(ma_20, 2),
                 "is_downtrend": is_downtrend,
-                "message": f"KOSPI: {current_price:.2f} | 20 MA: {ma_20:.2f} ({'하락 국면' if is_downtrend else '상승 국면'})"
+                "disparity_std": round(disparity_std, 4),
+                "disparity_mean": round(disparity_mean, 4),
+                "message": f"KOSPI: {current_price:.2f} | 20 MA: {ma_20:.2f} ({'하락 국면' if is_downtrend else '상승 국면'} | Volatility Std: {disparity_std:.2f}%)"
             }
     except Exception as e:
         print(f"[Market Analysis] [Warning] Failed to fetch market trend regime: {e}")
@@ -364,6 +375,11 @@ def get_stock_indicators(ticker: str) -> Dict[str, Any]:
         close_prices = hist["Close"].tolist()
         if len(close_prices) > 0 and kis_price is not None:
             close_prices[-1] = kis_price
+        
+        # Calculate daily returns volatility (standard deviation of daily pct changes)
+        returns = hist["Close"].pct_change().dropna() * 100
+        vol_20d = float(returns.std()) if len(returns) > 1 else 2.0
+        result["volatility_20d"] = round(vol_20d, 4)
         
         rsi_today = calculate_rsi(close_prices, 14)
         rsi_prev = calculate_rsi(close_prices[:-1], 14) if len(close_prices) > 1 else rsi_today
