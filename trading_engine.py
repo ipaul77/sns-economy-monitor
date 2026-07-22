@@ -846,6 +846,8 @@ def _evaluate_buy_guardrails(
                 
                 # 20일 일일 수익률 변동성 가져오기 (기본값 2.0%)
                 vol_20d = market_indicators.get(ticker, {}).get("volatility_20d", 2.0)
+                if vol_20d is None or not isinstance(vol_20d, (int, float)) or vol_20d != vol_20d or vol_20d <= 0.0:
+                    vol_20d = 2.0
                 
                 is_downside = curr_price < last_price
                 if is_downside:

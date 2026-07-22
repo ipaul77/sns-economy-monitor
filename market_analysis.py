@@ -252,6 +252,11 @@ def get_market_trend_regime() -> Dict[str, Any]:
             disparity_std = float(disparity_slice.std()) if len(disparity_slice) > 1 else 1.5
             disparity_mean = float(disparity_slice.mean()) if len(disparity_slice) > 1 else 100.0
             
+            if pd.isna(disparity_std) or disparity_std <= 0:
+                disparity_std = 1.5
+            if pd.isna(disparity_mean) or disparity_mean <= 0:
+                disparity_mean = 100.0
+            
             return {
                 "status": "success",
                 "current_price": round(current_price, 2),
@@ -379,6 +384,8 @@ def get_stock_indicators(ticker: str) -> Dict[str, Any]:
         # Calculate daily returns volatility (standard deviation of daily pct changes)
         returns = hist["Close"].pct_change().dropna() * 100
         vol_20d = float(returns.std()) if len(returns) > 1 else 2.0
+        if pd.isna(vol_20d) or vol_20d <= 0.0:
+            vol_20d = 2.0
         result["volatility_20d"] = round(vol_20d, 4)
         
         rsi_today = calculate_rsi(close_prices, 14)
