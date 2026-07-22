@@ -247,7 +247,7 @@ def handle_daily_feedback():
         if global_analyzer.api_configured:
             try:
                 import google.generativeai as genai
-                model_name = global_config.get("models", {}).get("pro_model", "gemini-3.1-pro")
+                model_name = global_config.get("models", {}).get("pro_model", "gemini-3.1-pro-preview")
                 print(f"[Flask] Calling Gemini model '{model_name}' for daily critique...")
                 model = genai.GenerativeModel(
                     model_name=model_name,

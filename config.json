@@ -17,7 +17,7 @@
   },
   "models": {
     "flash_model": "gemini-3.5-flash",
-    "pro_model": "gemini-3.1-pro"
+    "pro_model": "gemini-3.1-pro-preview"
   },
   "scraping_interval_seconds": 1800,
   "realtime_monitoring_enabled": true,

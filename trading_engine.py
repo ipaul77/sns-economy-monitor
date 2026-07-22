@@ -218,15 +218,15 @@ def generate_trading_decision(
     )
 
     try:
-        model_name = "gemini-3.1-pro"
+        model_name = "gemini-3.1-pro-preview"
         try:
             with open("config.json", "r", encoding="utf-8") as f:
                 config = json.load(f)
-                model_name = config.get("models", {}).get("pro_model", "gemini-3.1-pro")
+                model_name = config.get("models", {}).get("pro_model", "gemini-3.1-pro-preview")
         except Exception:
             pass
 
-        candidate_models = [model_name, "gemini-3.1-pro", "gemini-3.5-flash"]
+        candidate_models = [model_name, "gemini-3.1-pro-preview", "gemini-3.5-flash"]
         # Remove duplicates while preserving order
         candidate_models = list(dict.fromkeys(candidate_models))
         

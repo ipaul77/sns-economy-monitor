@@ -133,7 +133,7 @@ class GeminiEconomyAnalyzer:
         """
         Stage 2: Deep evaluation using Gemini Pro if relevance is YES.
         """
-        pro_model_name = self.config.get("models", {}).get("pro_model", "gemini-3.1-pro")
+        pro_model_name = self.config.get("models", {}).get("pro_model", "gemini-3.1-pro-preview")
         
         if not self.api_configured:
             return self._mock_analyze_deep(item)
