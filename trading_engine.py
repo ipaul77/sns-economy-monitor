@@ -26,28 +26,26 @@ class TradingDecision(BaseModel):
 
 def evaluate_macro_circuit_breaker(kospi_disparity: float, kospi_daily_change: float) -> str:
     """
-    시장 데이터를 기반으로 기계적 서킷 브레이커 작동 여부를 판별합니다.
-    [반영] 2026-07-20 피드백 제안:
-    - 1. 초극단적 시스템 붕괴 상태 (이격도 <= 78.0% 또는 당일 변동률 <= -6.0%): SYSTEM_CRASH_LOCKDOWN (금융위기/블랙스완 수준)
-    - 2. 극단적 과매도/투매 구간 (이격도 <= 86.0% 또는 당일 변동률 <= -3.0%): CONTRARIAN_VALUE_BUY (공포 속 역발상 분할 매수 존, 매수금액 30% 제한 적용)
-    - 3. 약세/조정 구간 (86.0% < 이격도 < 95.0%):
-         - 당일 변동률 < -2.0% 이면 HARD_NO_BUY (매수 보류)
-         - 그렇지 않으면 CONSERVATIVE_BUY (보수적 매수 허용)
+    [수정됨] 매크로 회로 차단기: KOSPI 이격도 기준을 보수적으로 재조정
     """
-    # 1. 초극단적 시스템 붕괴 상태 (블랙스완 국면)
+    # 1. 초극단적 시스템 붕괴 상태 (블랙스완)
     if kospi_disparity <= 78.0 or kospi_daily_change <= -6.0:
-        return "SYSTEM_CRASH_LOCKDOWN"  # 모든 매수 금지 및 즉시 보유주식 100% 현금화 후 시스템 다운타임 진입
+        return "SYSTEM_CRASH_LOCKDOWN"
         
-    # 2. 극단적 과매도/투매 구간 (이격도 86.0% 이하 또는 당일 급락 -3.0% 이하) -> 역발상 분할 매수 존
-    if kospi_disparity <= 86.0 or kospi_daily_change <= -3.0:
+    # 2. 극단적 과매도/투매 구간 (역발상 매수 허용 구역)
+    if kospi_disparity <= 85.0 or kospi_daily_change <= -3.0:
         return "CONTRARIAN_VALUE_BUY"
         
-    # 3. 약세 조정 구간 (이격도 86% 초과 95% 미만)
-    if 86.0 < kospi_disparity < 95.0:
-        if kospi_daily_change < -2.0:
-            return "HARD_NO_BUY"  # 리스크 관리를 위해 매수 보류
-        else:
-            return "CONSERVATIVE_BUY"  # 횡보/반등 시 보수적 매수 허용
+    # 3. 마의 늪 구간 (애매한 하락장 - Whipsaw 방지를 위해 매수 강력 차단)
+    # 기존 86~95 구간을 너무 넓게 잡아 Bypass가 남용됨. 85~92는 절대 관망.
+    if 85.0 < kospi_disparity <= 92.0:
+        return "HARD_NO_BUY" 
+        
+    # 4. 약한 조정/횡보 구간 (선별적 매수 허용)
+    if 92.0 < kospi_disparity < 95.0:
+        if kospi_daily_change < -1.5:
+            return "HARD_NO_BUY"
+        return "CONSERVATIVE_BUY"
             
     return "NORMAL"
 
@@ -822,6 +820,7 @@ def _evaluate_buy_guardrails(
             except Exception as e:
                 print(f"[Trading Engine] Failed to evaluate cooldown for {ticker}: {e}")
 
+        # [수정됨] 분할 매수 (물타기/불타기) 가드레일 강화
         last_tx = get_last_transaction_of_ticker(ticker)
         if last_tx and last_tx.get("action") == "BUY":
             try:
@@ -829,20 +828,29 @@ def _evaluate_buy_guardrails(
                 last_time = datetime.fromisoformat(last_tx["timestamp"]).replace(tzinfo=None)
                 time_diff = now.replace(tzinfo=None) - last_time
                 
-                time_ok = time_diff >= timedelta(minutes=90)
-                price_ok = True
+                # 최소 대기 시간을 90분 -> 120분으로 늘려 장중 뇌동매매 억제
+                time_ok = time_diff >= timedelta(minutes=120)
+                
                 is_downside = curr_price < last_price
                 if is_downside:
-                    price_ok = curr_price <= last_price * 0.98
+                    # 물타기(Averaging Down): 직전 매수가 대비 최소 -3.0% 하락 시에만 허용 (기존 -2.0%는 너무 짧음)
+                    price_ok = curr_price <= last_price * 0.97
+                else:
+                    # 불타기(Pyramiding): 직전 매수가 대비 최소 +2.5% 이상 '확실한 돌파'가 나올 때만 허용
+                    # 이 로직이 없어서 오늘 294870 고점 추격 매수가 발생했음.
+                    price_ok = curr_price >= last_price * 1.025
                 
                 if not (time_ok and price_ok):
                     reasons = []
                     if not time_ok:
-                        reasons.append(f"시간 대기 미달: {time_diff.total_seconds() / 60:.1f}분 경과 (최소 90분 필요)")
+                        reasons.append(f"시간 대기 미달: {time_diff.total_seconds() / 60:.1f}분 (최소 120분 필요)")
                     if not price_ok:
-                        reasons.append(f"가격 낙폭 부족: 직전 매수가 {last_price:,.0f}원 대비 현재가 {curr_price:,.0f}원 (등락률: {((curr_price - last_price)/last_price)*100:+.2f}%, 최소 -2.0% 필요)")
+                        if is_downside:
+                            reasons.append(f"물타기 낙폭 부족: 직전가 {last_price:,.0f}원 대비 {(curr_price-last_price)/last_price*100:+.2f}% (최소 -3.0% 필요)")
+                        else:
+                            reasons.append(f"불타기 돌파 부족: 직전가 {last_price:,.0f}원 대비 {(curr_price-last_price)/last_price*100:+.2f}% (최소 +2.5% 필요)")
                     
-                    blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 분할매수 가드레일] 동일 종목 연속 매수 조건 미충족 ({', '.join(reasons)})"
+                    blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 분할매수 가드레일] {', '.join(reasons)}"
                     continue
             except Exception as e:
                 print(f"[Trading Engine] Failed to evaluate split-buy guardrail for {ticker}: {e}")
@@ -861,24 +869,29 @@ def _evaluate_buy_guardrails(
         market_disp = kospi_disparity if ticker_market == "KOSPI" else kosdaq_disparity
         is_market_crash = (market_change <= -1.5) or (market_disp <= disp_limit)
         is_macro_bypass = macro_state in ["CONTRARIAN_VALUE_BUY", "CONSERVATIVE_BUY"]
+        
         if is_market_crash and not is_macro_bypass:
             rsi_val = market_indicators.get(ticker, {}).get("rsi", 50.0)
             rsi_prev = market_indicators.get(ticker, {}).get("rsi_prev", 50.0)
-            daily_change = market_indicators.get(ticker, {}).get("daily_change_pct", 0.0)
-            is_rebound = (rsi_val <= 25 or rsi_prev <= 25) and (daily_change >= 1.5 and (rsi_val - rsi_prev) >= 1.5)
+            daily_change_pct = market_indicators.get(ticker, {}).get("daily_change_pct", 0.0)
+            
+            # [수정됨] 과매도 반등 요건 강화 (RSI 25 -> 30 완화하되, 확실한 상승 반전 확인)
+            is_rebound = (rsi_val <= 30.0) and (rsi_val > rsi_prev) and (daily_change_pct >= 1.0)
             
             if is_rebound:
                 print(f"[Trading Engine] Exception Triggered: Oversold Rebound for {ticker}. Bypassing market crash guardrail.")
             else:
-                blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 매크로 불안] 해당 시장({ticker_market}) 지수가 급락하거나 약세장 침체(당일 등락률: {market_change:+.2f}%, 20MA 이격도: {market_disp:.1f}%) 상태이므로 신규 매수가 차단됩니다."
+                blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 매크로 불안] 지수 약세(당일 {market_change:+.2f}%, 20MA 이격 {market_disp:.1f}%). 반등 시그널 없음."
                 continue
+                
         elif is_market_crash and is_macro_bypass:
             if macro_state == "CONTRARIAN_VALUE_BUY":
                 rsi_val = market_indicators.get(ticker, {}).get("rsi", 50.0)
                 rsi_prev = market_indicators.get(ticker, {}).get("rsi_prev", 50.0)
-                # [반영] 2026-07-20 피드백 제안 (3번 항): 떨어지는 칼날 방지 (RSI < 30 이하에서 반등/지점 형성 없이 지속 급락 시 진입 차단)
-                if rsi_val < 30.0 and rsi_val < rsi_prev:
-                    blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 떨어지는 칼날 경보] 역발상 매수 구간(CONTRARIAN_VALUE_BUY)이나 RSI({rsi_val:.1f})가 지지선 형성 없이 지속 급락 중이므로 반등 시그널 확인 전까지 진입을 차단합니다."
+                
+                # [수정됨] 떨어지는 칼날 완벽 방지: RSI가 35 미만이면서, 전일보다 하락중이면 절대 진입 불가 (지하실 파고드는 중)
+                if rsi_val < 35.0 and rsi_val <= rsi_prev:
+                    blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 떨어지는 칼날 방지] RSI({rsi_val:.1f})가 하락 진행 중. 바닥 확인 전까지 역발상 매수 차단."
                     continue
             print(f"[Trading Engine] Contrarian/Conservative Macro State ({macro_state}) bypasses crash guardrail for {ticker}.")
 
