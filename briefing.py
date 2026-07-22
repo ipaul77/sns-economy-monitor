@@ -112,7 +112,7 @@ def generate_daily_briefing(analyzer, db_path="data/monitor.db"):
     # 4. Request Gemini Synthesis (Stage 2 Model)
     if analyzer.api_configured:
         try:
-            pro_model_name = analyzer.config.get("models", {}).get("pro_model", "gemini-2.0-flash-thinking-exp")
+            pro_model_name = analyzer.config.get("models", {}).get("pro_model", "gemini-3.1-pro")
             system_instruction = (
                 "You are a world-class financial editor and senior macro strategist specializing in the South Korean economy. "
                 "Synthesize the provided collection of 24-hour global news, securities research center consensus, and SNS intelligence. "

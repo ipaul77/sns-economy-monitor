@@ -145,7 +145,7 @@ def query_local_history(query_text, analyzer, db_path="data/monitor.db"):
     # 5. Execute using configured Flash model (cost-efficient and low latency!)
     if analyzer.api_configured:
         try:
-            flash_model_name = analyzer.config.get("models", {}).get("flash_model", "gemini-1.5-flash")
+            flash_model_name = analyzer.config.get("models", {}).get("flash_model", "gemini-3.5-flash")
             model = genai.GenerativeModel(
                 model_name=flash_model_name,
                 system_instruction=system_instruction

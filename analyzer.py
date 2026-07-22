@@ -92,7 +92,7 @@ class GeminiEconomyAnalyzer:
         """
         Stage 1: Quick filtering using Gemini Flash to determine Korean economic relevance.
         """
-        flash_model_name = self.config.get("models", {}).get("flash_model", "gemini-1.5-flash")
+        flash_model_name = self.config.get("models", {}).get("flash_model", "gemini-3.5-flash")
         
         if not self.api_configured:
             return self._mock_check_relevance(item)
@@ -133,7 +133,7 @@ class GeminiEconomyAnalyzer:
         """
         Stage 2: Deep evaluation using Gemini Pro if relevance is YES.
         """
-        pro_model_name = self.config.get("models", {}).get("pro_model", "gemini-1.5-pro")
+        pro_model_name = self.config.get("models", {}).get("pro_model", "gemini-3.1-pro")
         
         if not self.api_configured:
             return self._mock_analyze_deep(item)
