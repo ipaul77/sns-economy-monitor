@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import yfinance as yf
+import pandas as pd
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 from pydantic import BaseModel, Field
