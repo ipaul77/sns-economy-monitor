@@ -430,16 +430,7 @@ def get_stock_indicators(ticker: str) -> Dict[str, Any]:
 
     try:
         fund = db.fetch_fundamentals(ticker)
-        needs_update = True
-        if fund and fund.get("last_updated"):
-            try:
-                last_up = datetime.fromisoformat(fund["last_updated"])
-                now_kst = db.get_kst_now()
-                if (now_kst - last_up).total_seconds() < 86400:
-                    needs_update = False
-            except Exception as dt_err:
-                print(f"[Market Analysis] Failed parsing fundamentals timestamp: {dt_err}")
-                
+        needs_update = False # [수정] Render HTTP 500 타임아웃 방지를 위해 yfinance .info 스크래핑을 전면 생략합니다.
         if needs_update:
             print(f"[Market Analysis] Fundamentals cache expired. Scraping yfinance for {ticker}...")
             try:
