@@ -396,6 +396,7 @@ def _fetch_market_indices_and_trends(now) -> dict:
     kospi_disparity = 100.0
     kosdaq_disparity = 100.0
     kospi_rsi = 50.0
+    kospi_ewma_vol = 1.2
     try:
         hist_kospi = yf.Ticker("^KS11").history(period="1mo")
         if not hist_kospi.empty:
@@ -408,6 +409,13 @@ def _fetch_market_indices_and_trends(now) -> dict:
             from market_analysis import calculate_rsi
             kospi_rsi = calculate_rsi(close_prices, 14)
             
+            # Calculate KOSPI EWMA daily return volatility
+            returns_kospi = hist_kospi["Close"].pct_change().dropna() * 100
+            if len(returns_kospi) > 1:
+                kospi_ewma_vol = float(returns_kospi.ewm(span=10).std().iloc[-1])
+            if pd.isna(kospi_ewma_vol) or kospi_ewma_vol <= 0:
+                kospi_ewma_vol = 1.2
+            
         hist_kosdaq = yf.Ticker("^KQ11").history(period="1mo")
         if not hist_kosdaq.empty:
             kosdaq_ma20 = hist_kosdaq["Close"].mean()
@@ -415,7 +423,7 @@ def _fetch_market_indices_and_trends(now) -> dict:
             kosdaq_disparity = (kosdaq_curr / kosdaq_ma20) * 100
     except Exception as e:
         print(f"[Trading Engine] [Warning] Failed to calculate index disparities: {e}")
-    print(f"[Trading Engine] 20MA Disparities -> USD_KRW: {usdkrw_disparity:.2f}% (Trend: {usdkrw_trend_state}, High3M: {usdkrw_high_3m:,.1f}원, Drop: {usdkrw_drop_from_high_pct:+.2f}%), KOSPI: {kospi_disparity:.2f}%, KOSPI RSI: {kospi_rsi:.1f}, KOSDAQ: {kosdaq_disparity:.2f}%")
+    print(f"[Trading Engine] 20MA Disparities -> USD_KRW: {usdkrw_disparity:.2f}% (Trend: {usdkrw_trend_state}, High3M: {usdkrw_high_3m:,.1f}원, Drop: {usdkrw_drop_from_high_pct:+.2f}%), KOSPI: {kospi_disparity:.2f}%, KOSPI RSI: {kospi_rsi:.1f}, KOSPI EWMA Vol: {kospi_ewma_vol:.2f}%, KOSDAQ: {kosdaq_disparity:.2f}%")
 
     is_downtrend = False
     kospi_disparity_std = 1.5
@@ -442,7 +450,8 @@ def _fetch_market_indices_and_trends(now) -> dict:
         "is_downtrend": is_downtrend,
         "kospi_disparity_std": kospi_disparity_std,
         "kospi_disparity_mean": kospi_disparity_mean,
-        "kospi_rsi": kospi_rsi
+        "kospi_rsi": kospi_rsi,
+        "kospi_ewma_vol": kospi_ewma_vol
     }
 
 def _apply_preflight_cooldown_filters(monitored_tickers, portfolio, now) -> tuple:
@@ -816,7 +825,8 @@ def _evaluate_buy_guardrails(
     monitored_tickers, portfolio, balance, market_prices, market_indicators, 
     index_changes, usdkrw_price, usdkrw_change_pct, usdkrw_disparity, 
     kospi_disparity, kosdaq_disparity, is_downtrend, config, news_context, now,
-    macro_state: str = "NORMAL"
+    macro_state: str = "NORMAL",
+    kospi_ewma_vol: float = 1.2
 ) -> dict:
     blocked_buy_reasons = {}
     total_asset = balance + sum(p.get("quantity", 0) * market_prices.get(t, 0.0) for t, p in portfolio.items())
@@ -860,9 +870,6 @@ def _evaluate_buy_guardrails(
                 last_time = datetime.fromisoformat(last_tx["timestamp"]).replace(tzinfo=None)
                 time_diff = now.replace(tzinfo=None) - last_time
                 
-                # 최소 대기 시간을 90분 -> 120분으로 늘려 장중 뇌동매매 억제
-                time_ok = time_diff >= timedelta(minutes=120)
-                
                 # 20일 일일 수익률 변동성 및 RSI 가져오기 (기본값 각각 2.0%, 50.0)
                 vol_20d = market_indicators.get(ticker, {}).get("volatility_20d", 2.0)
                 if vol_20d is None or not isinstance(vol_20d, (int, float)) or vol_20d != vol_20d or vol_20d <= 0.0:
@@ -870,6 +877,11 @@ def _evaluate_buy_guardrails(
                 ticker_rsi = market_indicators.get(ticker, {}).get("rsi", 50.0)
                 if ticker_rsi is None or not isinstance(ticker_rsi, (int, float)) or ticker_rsi != ticker_rsi:
                     ticker_rsi = 50.0
+                
+                # 지수 변동성에 연동하여 최소 대기 시간 동적 조정 (평균 1.2% 기준, 최대 240분 제한)
+                cooldown_mult = max(1.0, min(2.0, kospi_ewma_vol / 1.2))
+                cooldown_minutes = int(120 * cooldown_mult)
+                time_ok = time_diff >= timedelta(minutes=cooldown_minutes)
                 
                 is_downside = curr_price < last_price
                 if is_downside:
@@ -888,7 +900,7 @@ def _evaluate_buy_guardrails(
                 if not (time_ok and price_ok):
                     reasons = []
                     if not time_ok:
-                        reasons.append(f"시간 대기 미달: {time_diff.total_seconds() / 60:.1f}분 (최소 120분 필요)")
+                        reasons.append(f"시간 대기 미달: {time_diff.total_seconds() / 60:.1f}분 (최소 {cooldown_minutes}분 필요)")
                     if not price_ok:
                         if is_downside:
                             reasons.append(f"물타기 조건 미달: 낙폭 {(curr_price-last_price)/last_price*100:+.2f}% (요구: -{averaging_down_pct:.2f}%), RSI {ticker_rsi:.1f} (요구: 35.0 이하)")
@@ -1143,6 +1155,21 @@ def _execute_trading_decision(
                 max_new_cash = max(max_allowed_cash - owned_value, 0.0)
                 
                 spend_cash = min(allocated_cash, max_order_cash, max_new_cash)
+                
+                # [고도화] 변동성 조절 사이징 (Volatility-Targeting Sizing)
+                # 기준 종목 일일 변동성 = 2.0%. 기준 KOSPI 일일 변동성 = 1.2%
+                vol_20d = market_indicators.get(ticker, {}).get("volatility_20d", 2.0)
+                if vol_20d is None or not isinstance(vol_20d, (int, float)) or vol_20d != vol_20d or vol_20d <= 0.0:
+                    vol_20d = 2.0
+                kospi_vol = market_context.get("kospi_ewma_vol", 1.2)
+                
+                vol_factor = 2.0 / vol_20d
+                kospi_vol_factor = 1.2 / kospi_vol
+                sizing_mult = min(1.0, vol_factor) * min(1.0, kospi_vol_factor)
+                
+                if sizing_mult < 1.0:
+                    spend_cash *= sizing_mult
+                    print(f"[{ticker}] Volatility Sizing Activated: scaled cash by {sizing_mult:.2f}x (Stock Vol: {vol_20d:.2f}%, KOSPI Vol: {kospi_vol:.2f}%)")
                 sizing_triggered = allocated_cash > max_new_cash
                 order_limit_triggered = allocated_cash > max_order_cash
                 
@@ -1544,7 +1571,8 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
         monitored_tickers, portfolio, balance, market_prices, market_indicators, 
         index_changes, usdkrw_price, usdkrw_change_pct, usdkrw_disparity, 
         kospi_disparity, kosdaq_disparity, is_downtrend, config, news_context, now,
-        macro_state
+        macro_state,
+        kospi_ewma_vol=market_context.get("kospi_ewma_vol", 1.2)
     )
     # Add preflight cooldowns
     blocked_buy_reasons.update(pre_blocked_reasons)

@@ -245,11 +245,11 @@ def get_market_trend_regime() -> Dict[str, Any]:
             current_price = float(hist["Close"].iloc[-1])
             is_downtrend = current_price < ma_20
             
-            # Calculate standard deviation and mean of KOSPI disparity over the last 20 days
+            # Calculate EWMA standard deviation and mean of KOSPI disparity over the last 20 days
             rolling_mean = hist["Close"].rolling(window=20).mean()
             disparities = (hist["Close"] / rolling_mean) * 100
             disparity_slice = disparities.dropna().iloc[-20:]
-            disparity_std = float(disparity_slice.std()) if len(disparity_slice) > 1 else 1.5
+            disparity_std = float(disparity_slice.ewm(span=10).std().iloc[-1]) if len(disparity_slice) > 1 else 1.5
             disparity_mean = float(disparity_slice.mean()) if len(disparity_slice) > 1 else 100.0
             
             if pd.isna(disparity_std) or disparity_std <= 0:
@@ -381,9 +381,9 @@ def get_stock_indicators(ticker: str) -> Dict[str, Any]:
         if len(close_prices) > 0 and kis_price is not None:
             close_prices[-1] = kis_price
         
-        # Calculate daily returns volatility (standard deviation of daily pct changes)
+        # Calculate daily returns EWMA volatility (standard deviation of daily pct changes)
         returns = hist["Close"].pct_change().dropna() * 100
-        vol_20d = float(returns.std()) if len(returns) > 1 else 2.0
+        vol_20d = float(returns.ewm(span=10).std().iloc[-1]) if len(returns) > 1 else 2.0
         if pd.isna(vol_20d) or vol_20d <= 0.0:
             vol_20d = 2.0
         result["volatility_20d"] = round(vol_20d, 4)
