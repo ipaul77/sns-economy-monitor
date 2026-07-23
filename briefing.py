@@ -36,6 +36,24 @@ def save_to_cache(html_content):
 
 import threading
 
+def get_generating_placeholder_report():
+    return """
+    <div class="p-6 text-center text-slate-300">
+        <h2 class="text-xl font-bold text-indigo-400 mb-4">Gemini 일일 거시경제 브리핑 보고서를 생성 중입니다</h2>
+        <div class="flex justify-center mb-6" style="display: flex; justify-content: center; align-items: center;">
+            <div style="border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid #6366f1; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 20px;"></div>
+            <style>
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            </style>
+        </div>
+        <p class="text-sm text-slate-400">최초 1회 보고서 생성에는 실시간 금융 시장 데이터 수집 및 AI 거시 합성으로 인해 약 10~15초가 소요됩니다.</p>
+        <p class="text-xs text-indigo-300 mt-2">이 창을 닫으셨다가 10초 후에 다시 열어주시면 완성된 보고서가 즉시 나타납니다.</p>
+    </div>
+    """
+
 def generate_daily_briefing(analyzer, db_path="data/monitor.db"):
     """
     Synthesizes the last 24 hours of relevant collected news and generates
@@ -71,8 +89,19 @@ def generate_daily_briefing(analyzer, db_path="data/monitor.db"):
         except Exception as e:
             print(f"[Warning] Failed to read briefing cache: {str(e)}")
 
-    # No cache exists. Generate synchronously once (first load penalty)
-    return _generate_daily_briefing_fresh(analyzer, db_path)
+    # No cache exists. Return placeholder immediately and spawn background generation thread!
+    print(f"[Briefing Cache] No cache exists. Serving placeholder report and spawning revalidation thread.")
+    placeholder = get_generating_placeholder_report()
+    save_to_cache(placeholder)
+    
+    def first_generation_job():
+        try:
+            _generate_daily_briefing_fresh(analyzer, db_path)
+        except Exception as gen_err:
+            print(f"[Briefing Initial Generation] Failed: {gen_err}")
+            
+    threading.Thread(target=first_generation_job, daemon=True).start()
+    return placeholder
 
 def _generate_daily_briefing_fresh(analyzer, db_path="data/monitor.db"):
 
