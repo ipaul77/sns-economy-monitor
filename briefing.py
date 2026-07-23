@@ -34,11 +34,14 @@ def save_to_cache(html_content):
     except Exception as e:
         print(f"[Warning] Failed to write briefing cache: {str(e)}")
 
+import threading
+
 def generate_daily_briefing(analyzer, db_path="data/monitor.db"):
     """
     Synthesizes the last 24 hours of relevant collected news and generates
     a comprehensive, highly professional macroeconomic executive report.
     Supports caching (30 minutes expiry) and offline fallback mode.
+    Stale-While-Revalidate (SWR) pattern avoids Render gateway timeouts.
     """
     # 1. Check cache first!
     if os.path.exists(CACHE_PATH):
@@ -53,8 +56,25 @@ def generate_daily_briefing(analyzer, db_path="data/monitor.db"):
                 if (db.get_kst_now() - cached_time).total_seconds() < 1800:
                     print(f"[Briefing Cache] Serving cached briefing report. (Generated at {cached_time.strftime('%H:%M:%S')})")
                     return cache_data.get("html_content", "")
+                else:
+                    # Cache is expired. Serve stale cache immediately, revalidate in background thread!
+                    print(f"[Briefing Cache] Cache expired. Serving stale briefing report and spawning background revalidation thread.")
+                    
+                    def revalidate_job():
+                        try:
+                            _generate_daily_briefing_fresh(analyzer, db_path)
+                        except Exception as reval_err:
+                            print(f"[Briefing Revalidation] Failed: {reval_err}")
+                            
+                    threading.Thread(target=revalidate_job, daemon=True).start()
+                    return cache_data.get("html_content", "")
         except Exception as e:
             print(f"[Warning] Failed to read briefing cache: {str(e)}")
+
+    # No cache exists. Generate synchronously once (first load penalty)
+    return _generate_daily_briefing_fresh(analyzer, db_path)
+
+def _generate_daily_briefing_fresh(analyzer, db_path="data/monitor.db"):
 
     # 2. Fetch relevant articles from the last 24 hours
     rows = db.fetch_recent_relevant(hours=24)
