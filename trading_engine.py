@@ -27,29 +27,41 @@ class TradingDecision(BaseModel):
 def evaluate_macro_circuit_breaker(
     kospi_disparity: float, 
     kospi_daily_change: float, 
+    kospi_rsi: float = 50.0,
     disparity_mean: float = 100.0, 
-    disparity_std: float = 1.5
+    disparity_std: float = 3.0
 ) -> str:
     """
-    [수정됨 - 동적 리스크 적용] 매크로 회로 차단기: KOSPI 이격도 기준을 평균과 표준편차 기반의 동적 임계치로 판단
+    [전면수정] 지연지표(이격도)와 선행/동행지표(당일 변동률, RSI)의 괴리를 해결한 다차원 매크로 필터
     """
-    # 1. 초극단적 시스템 붕괴 상태 (Mean - 2.5 * StdDev) 또는 당일 변동률 -6% 이하
-    crash_limit = disparity_mean - 2.5 * disparity_std
-    if kospi_disparity <= crash_limit or kospi_daily_change <= -6.0:
+    crash_limit = disparity_mean - 2.5 * disparity_std        # 100 - 7.5 = 92.5
+    value_buy_limit = disparity_mean - 1.5 * disparity_std    # 100 - 4.5 = 95.5
+    no_buy_limit = disparity_mean - 0.5 * disparity_std       # 100 - 1.5 = 98.5
+
+    # [핵심 1] V자 반등 (Short-covering / Rebound) 보호 가드레일
+    # 이격도는 박살났지만 당일 변동률이 +1.5% 이상 강하게 튀어오를 때 -> 청산 금지 및 역발상 매수
+    if kospi_disparity <= value_buy_limit and kospi_daily_change >= 1.5:
+        return "V_SHAPE_REBOUND_BUY"
+
+    # [핵심 2] 진짜 시스템 붕괴 조건 (AND 조건으로 변경)
+    # 이격도도 무너지고 '동시에' 당일 폭락이 나와야 락다운
+    if (kospi_disparity <= crash_limit and kospi_daily_change <= -2.0) or (kospi_daily_change <= -5.0):
         return "SYSTEM_CRASH_LOCKDOWN"
         
-    # 2. 극단적 과매도/투매 구간 (Mean - 1.5 * StdDev) 또는 당일 급락 -3.0% 이하 -> 역발상 매수 허용 구역
-    value_buy_limit = disparity_mean - 1.5 * disparity_std
-    if kospi_disparity <= value_buy_limit or kospi_daily_change <= -3.0:
-        return "CONTRARIAN_VALUE_BUY"
+    # [핵심 3] 투매 구간 (역발상 매수) - RSI 과매도 필터 추가
+    # 가격만 싸다고 사는게 아니라, RSI 30 이하로 투매가 나왔을 때만 진입
+    if (kospi_disparity <= value_buy_limit) or (kospi_daily_change <= -3.0):
+        if kospi_rsi <= 30.0:
+            return "CONTRARIAN_VALUE_BUY"
+        else:
+            return "HARD_NO_BUY" # 이격도는 낮으나 RSI가 애매하면 추가 하락 여지 있음
         
-    # 3. 마의 늪 구간 (애매한 하락장 - Whipsaw 방지 위해 매수 차단: Mean - 1.5 * StdDev ~ Mean - 0.5 * StdDev)
-    no_buy_limit = disparity_mean - 0.5 * disparity_std
+    # 4. 마의 늪 구간 (애매한 하락장 - Whipsaw 방지)
     if value_buy_limit < kospi_disparity <= no_buy_limit:
         return "HARD_NO_BUY" 
         
-    # 4. 약한 조정/횡보 구간 (선별적 매수 허용)
-    if no_buy_limit < kospi_disparity < 95.0:
+    # 5. 약한 조정/횡보 구간
+    if no_buy_limit < kospi_disparity < 99.0:
         if kospi_daily_change < -1.5:
             return "HARD_NO_BUY"
         return "CONSERVATIVE_BUY"
@@ -383,12 +395,18 @@ def _fetch_market_indices_and_trends(now) -> dict:
 
     kospi_disparity = 100.0
     kosdaq_disparity = 100.0
+    kospi_rsi = 50.0
     try:
         hist_kospi = yf.Ticker("^KS11").history(period="1mo")
         if not hist_kospi.empty:
             kospi_ma20 = hist_kospi["Close"].mean()
             kospi_curr = hist_kospi["Close"].iloc[-1]
             kospi_disparity = (kospi_curr / kospi_ma20) * 100
+            
+            # Calculate KOSPI RSI
+            close_prices = hist_kospi["Close"].tolist()
+            from market_analysis import calculate_rsi
+            kospi_rsi = calculate_rsi(close_prices, 14)
             
         hist_kosdaq = yf.Ticker("^KQ11").history(period="1mo")
         if not hist_kosdaq.empty:
@@ -397,7 +415,7 @@ def _fetch_market_indices_and_trends(now) -> dict:
             kosdaq_disparity = (kosdaq_curr / kosdaq_ma20) * 100
     except Exception as e:
         print(f"[Trading Engine] [Warning] Failed to calculate index disparities: {e}")
-    print(f"[Trading Engine] 20MA Disparities -> USD_KRW: {usdkrw_disparity:.2f}% (Trend: {usdkrw_trend_state}, High3M: {usdkrw_high_3m:,.1f}원, Drop: {usdkrw_drop_from_high_pct:+.2f}%), KOSPI: {kospi_disparity:.2f}%, KOSDAQ: {kosdaq_disparity:.2f}%")
+    print(f"[Trading Engine] 20MA Disparities -> USD_KRW: {usdkrw_disparity:.2f}% (Trend: {usdkrw_trend_state}, High3M: {usdkrw_high_3m:,.1f}원, Drop: {usdkrw_drop_from_high_pct:+.2f}%), KOSPI: {kospi_disparity:.2f}%, KOSPI RSI: {kospi_rsi:.1f}, KOSDAQ: {kosdaq_disparity:.2f}%")
 
     is_downtrend = False
     kospi_disparity_std = 1.5
@@ -423,7 +441,8 @@ def _fetch_market_indices_and_trends(now) -> dict:
         "kosdaq_disparity": kosdaq_disparity,
         "is_downtrend": is_downtrend,
         "kospi_disparity_std": kospi_disparity_std,
-        "kospi_disparity_mean": kospi_disparity_mean
+        "kospi_disparity_mean": kospi_disparity_mean,
+        "kospi_rsi": kospi_rsi
     }
 
 def _apply_preflight_cooldown_filters(monitored_tickers, portfolio, now) -> tuple:
@@ -833,7 +852,7 @@ def _evaluate_buy_guardrails(
             except Exception as e:
                 print(f"[Trading Engine] Failed to evaluate cooldown for {ticker}: {e}")
 
-        # [수정됨] 분할 매수 (물타기/불타기) 가드레일 강화 (개별 종목 20일 변동성을 기반으로 동적 스케일링)
+        # [수정됨] 분할 매수 (물타기/불타기) 가드레일 강화 (개별 종목 20일 변동성 및 RSI를 기반으로 동적 스케일링)
         last_tx = get_last_transaction_of_ticker(ticker)
         if last_tx and last_tx.get("action") == "BUY":
             try:
@@ -844,20 +863,27 @@ def _evaluate_buy_guardrails(
                 # 최소 대기 시간을 90분 -> 120분으로 늘려 장중 뇌동매매 억제
                 time_ok = time_diff >= timedelta(minutes=120)
                 
-                # 20일 일일 수익률 변동성 가져오기 (기본값 2.0%)
+                # 20일 일일 수익률 변동성 및 RSI 가져오기 (기본값 각각 2.0%, 50.0)
                 vol_20d = market_indicators.get(ticker, {}).get("volatility_20d", 2.0)
                 if vol_20d is None or not isinstance(vol_20d, (int, float)) or vol_20d != vol_20d or vol_20d <= 0.0:
                     vol_20d = 2.0
+                ticker_rsi = market_indicators.get(ticker, {}).get("rsi", 50.0)
+                if ticker_rsi is None or not isinstance(ticker_rsi, (int, float)) or ticker_rsi != ticker_rsi:
+                    ticker_rsi = 50.0
                 
                 is_downside = curr_price < last_price
                 if is_downside:
-                    # 물타기(Averaging Down): 변동성의 1.5배 이상 하락 시에만 허용
-                    averaging_down_pct = max(1.5, 1.5 * vol_20d)  # 최소 1.5% 이상 하락 조건 부여
-                    price_ok = curr_price <= last_price * (1.0 - averaging_down_pct / 100.0)
+                    # 물타기(Averaging Down): 낙폭 + RSI 과매도(35 이하) 조건 '동시' 만족 시에만 허용
+                    averaging_down_pct = max(1.5, 1.5 * vol_20d)
+                    price_dropped_enough = curr_price <= last_price * (1.0 - averaging_down_pct / 100.0)
+                    rsi_oversold = ticker_rsi <= 35.0
+                    price_ok = price_dropped_enough and rsi_oversold
                 else:
-                    # 불타기(Pyramiding): 변동성의 1.2배 이상 확실한 돌파 시에만 허용
-                    pyramiding_pct = max(1.2, 1.2 * vol_20d)  # 최소 1.2% 이상 돌파 조건 부여
-                    price_ok = curr_price >= last_price * (1.0 + pyramiding_pct / 100.0)
+                    # 불타기(Pyramiding): 돌파 시 RSI가 과매수(70 이상)가 아닐 때만 허용
+                    pyramiding_pct = max(1.2, 1.2 * vol_20d)
+                    price_surged_enough = curr_price >= last_price * (1.0 + pyramiding_pct / 100.0)
+                    rsi_not_overbought = ticker_rsi < 70.0
+                    price_ok = price_surged_enough and rsi_not_overbought
                 
                 if not (time_ok and price_ok):
                     reasons = []
@@ -865,11 +891,11 @@ def _evaluate_buy_guardrails(
                         reasons.append(f"시간 대기 미달: {time_diff.total_seconds() / 60:.1f}분 (최소 120분 필요)")
                     if not price_ok:
                         if is_downside:
-                            reasons.append(f"물타기 낙폭 부족: 직전가 {last_price:,.0f}원 대비 {(curr_price-last_price)/last_price*100:+.2f}% (동적 하한선: -{averaging_down_pct:.2f}% 필요, 변동성: {vol_20d:.2f}%)")
+                            reasons.append(f"물타기 조건 미달: 낙폭 {(curr_price-last_price)/last_price*100:+.2f}% (요구: -{averaging_down_pct:.2f}%), RSI {ticker_rsi:.1f} (요구: 35.0 이하)")
                         else:
-                            reasons.append(f"불타기 돌파 부족: 직전가 {last_price:,.0f}원 대비 {(curr_price-last_price)/last_price*100:+.2f}% (동적 상한선: +{pyramiding_pct:.2f}% 필요, 변동성: {vol_20d:.2f}%)")
+                            reasons.append(f"불타기 조건 미달: 돌파 {(curr_price-last_price)/last_price*100:+.2f}% (요구: +{pyramiding_pct:.2f}%), RSI {ticker_rsi:.1f} (요구: 70.0 미만)")
                     
-                    blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 분할매수 가드레일] {', '.join(reasons)}"
+                    blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 스마트 분할매수 가드레일] {', '.join(reasons)}"
                     continue
             except Exception as e:
                 print(f"[Trading Engine] Failed to evaluate split-buy guardrail for {ticker}: {e}")
@@ -887,7 +913,7 @@ def _evaluate_buy_guardrails(
         market_change = index_changes.get(ticker_market, 0.0)
         market_disp = kospi_disparity if ticker_market == "KOSPI" else kosdaq_disparity
         is_market_crash = (market_change <= -1.5) or (market_disp <= disp_limit)
-        is_macro_bypass = macro_state in ["CONTRARIAN_VALUE_BUY", "CONSERVATIVE_BUY"]
+        is_macro_bypass = macro_state in ["CONTRARIAN_VALUE_BUY", "CONSERVATIVE_BUY", "V_SHAPE_REBOUND_BUY"]
         
         if is_market_crash and not is_macro_bypass:
             rsi_val = market_indicators.get(ticker, {}).get("rsi", 50.0)
@@ -1125,11 +1151,11 @@ def _execute_trading_decision(
                     spend_cash = 0.0
                     bear_triggered = True
                     print(f"[{ticker}] 매크로 시스템 경보(HARD_NO_BUY) 작동: 매수 한도를 0원으로 강제 제한합니다.")
-                elif macro_state == "CONTRARIAN_VALUE_BUY":
-                    # [반영] 2026-07-20 피드백 제안: CONTRARIAN_VALUE_BUY 구간에서는 투자 비중을 30%(0.3x)로 제한하여 분할 매수로 대응
+                elif macro_state in ["CONTRARIAN_VALUE_BUY", "V_SHAPE_REBOUND_BUY"]:
+                    # [반영] 2026-07-20 피드백 제안: 역발상 분할 매수 구간(CONTRARIAN_VALUE_BUY, V_SHAPE_REBOUND_BUY)에서는 투자 비중을 30%(0.3x)로 제한하여 분할 매수로 대응
                     spend_cash *= 0.3
                     bear_triggered = True
-                    print(f"[{ticker}] 역발상 분할 매수 구간(CONTRARIAN_VALUE_BUY) 작동: 투자 비중을 30%(0.3x)로 제한하여 분할 매수를 집행합니다.")
+                    print(f"[{ticker}] 역발상 분할 매수 구간({macro_state}) 작동: 투자 비중을 30%(0.3x)로 제한하여 분할 매수를 집행합니다.")
                 else:
                     if is_kospi_bear_market():
                         spend_cash *= 0.3
@@ -1431,8 +1457,9 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
     macro_state = evaluate_macro_circuit_breaker(
         kospi_disparity, 
         kospi_change,
+        kospi_rsi=market_context.get("kospi_rsi", 50.0),
         disparity_mean=market_context.get("kospi_disparity_mean", 100.0),
-        disparity_std=market_context.get("kospi_disparity_std", 1.5)
+        disparity_std=market_context.get("kospi_disparity_std", 3.0)
     )
     circuit_breaker_result = _handle_macro_circuit_breaker_liquidation(
         macro_state, portfolio, balance, market_prices, kospi_disparity, kospi_change
