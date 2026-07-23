@@ -1050,7 +1050,8 @@ def _formulate_decision(
 def _execute_trading_decision(
     decision, portfolio, balance, market_prices, market_indicators, 
     index_changes, news_context, blocked_buy_reasons, prev_total_asset, 
-    config, is_downtrend, kospi_disparity, kospi_change, macro_state, now
+    config, is_downtrend, kospi_disparity, kospi_change, macro_state, now,
+    kospi_ewma_vol: float = 1.2
 ) -> dict:
     action = decision.action
     ticker = decision.ticker
@@ -1162,7 +1163,7 @@ def _execute_trading_decision(
                 vol_20d = market_indicators.get(ticker, {}).get("volatility_20d", 2.0)
                 if vol_20d is None or not isinstance(vol_20d, (int, float)) or vol_20d != vol_20d or vol_20d <= 0.0:
                     vol_20d = 2.0
-                kospi_vol = market_context.get("kospi_ewma_vol", 1.2)
+                kospi_vol = kospi_ewma_vol
                 
                 vol_factor = 2.0 / vol_20d
                 kospi_vol_factor = 1.2 / kospi_vol
@@ -1589,7 +1590,8 @@ def run_simulation_cycle(bypass_hours: bool = False) -> dict:
     return _execute_trading_decision(
         decision, portfolio, balance, market_prices, market_indicators, 
         index_changes, news_context, blocked_buy_reasons, prev_total_asset, 
-        config, is_downtrend, kospi_disparity, kospi_change, macro_state, now
+        config, is_downtrend, kospi_disparity, kospi_change, macro_state, now,
+        kospi_ewma_vol=market_context.get("kospi_ewma_vol", 1.2)
     )
 
 if __name__ == "__main__":
