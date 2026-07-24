@@ -157,14 +157,11 @@ def run_pipeline(config, analyzer):
     from news_pipeline import run_pipeline as run_pipe
     return run_pipe(config, analyzer)
 
-@app.route('/api/daily-feedback', methods=['GET', 'POST'])
-def handle_daily_feedback():
+def _run_daily_feedback_worker():
     """
-    Triggers the daily AI feedback and code improvement loop at KOSPI market close (15:40 KST).
-    Gathers today's KOSPI index and disparity data, queries Firestore for today's transactions,
-    sends this plus key code parts to Gemini API, and emails/telegrams the critique.
+    Background worker thread for generating daily feedback critique and saving to Firestore.
     """
-    print("[Flask] Daily feedback endpoint triggered!")
+    print("[Flask Background Worker] Starting daily feedback process...")
     try:
         # 1. Gather Today's Transactions from Firestore
         import trading_engine
@@ -214,21 +211,20 @@ def handle_daily_feedback():
                 data_summary += f"[{idx+1}] 일시: {tx['timestamp']} | 종목: {tx['ticker']} | 주문: {tx['action']} | 수량: {tx['quantity']} | 가격: {tx['price']}\n"
                 data_summary += f"    결정사유: {tx['reasoning']}\n\n"
 
-        # 3. Read current core trading code part (Specifically the buy decision guardrails part)
+        # 3. Read current core trading code part
         core_code = ""
         engine_path = "trading_engine.py"
         if os.path.exists(engine_path):
             try:
                 with open(engine_path, "r", encoding="utf-8") as f:
                     lines = f.readlines()
-                # Extract key guardrail & macro circuit breaker segments from trading_engine.py
                 core_code = "".join(lines[25:60]) + "\n\n# --- BUY GUARDRAILS ---\n\n" + "".join(lines[820:880])
             except Exception as e:
                 core_code = f"# Failed to read trading_engine.py: {str(e)}"
         else:
             core_code = "# trading_engine.py not found locally"
 
-        # 4. Construct Gemini API query with system instructions
+        # 4. Construct Gemini API query
         system_instruction = (
             "너는 냉철하고 엄격한 주식 투자 전문가이자 시니어 파이썬 개발자야. "
             "오늘 거래 로그에서 수수료를 낭비한 엇박자 매매(Whipsaw), 잘못된 타이밍의 물타기, 매크로 필터의 오작동을 찾아내고 비판해줘. "
@@ -242,13 +238,12 @@ def handle_daily_feedback():
             "위의 실제 데이터와 소스코드를 바탕으로 비판적인 투자 피드백과 소스코드 수정 제안을 작성해줘."
         )
 
-        # Call Gemini via generator analyzer
         critique = "Critique generation failed."
         if global_analyzer.api_configured:
             try:
                 import google.generativeai as genai
                 model_name = global_config.get("models", {}).get("pro_model", "gemini-3.1-pro-preview")
-                print(f"[Flask] Calling Gemini model '{model_name}' for daily critique...")
+                print(f"[Flask Background Worker] Calling Gemini model '{model_name}'...")
                 model = genai.GenerativeModel(
                     model_name=model_name,
                     system_instruction=system_instruction
@@ -260,9 +255,7 @@ def handle_daily_feedback():
         else:
             critique = "Gemini API key is missing or invalid. Demonstration/Mock mode critique."
 
-        # 5. Save 피드백 제안서 to Firestore (No local files, only Firestore)
-        saved_to_db = False
-        db_error = None
+        # 5. Save 피드백 제안서 to Firestore
         if db.USE_FIREBASE and db.db_client is not None:
             try:
                 doc_id = now_kst.date().isoformat()
@@ -272,13 +265,10 @@ def handle_daily_feedback():
                     "applied": False,
                     "timestamp": now_kst.isoformat()
                 })
-                print(f"[Flask] 피드백 제안서 saved to Firestore: daily_suggestions/{doc_id}")
-                saved_to_db = True
+                print(f"[Flask Background Worker] Saved to Firestore: daily_suggestions/{doc_id}")
             except Exception as db_ex:
-                db_error = str(db_ex)
                 print(f"[Warning] Failed to save 피드백 제안서 to Firestore: {db_ex}")
 
-            # Purge suggestions older than 7 days
             try:
                 from datetime import timedelta
                 cutoff_date = (now_kst - timedelta(days=7)).date().isoformat()
@@ -292,14 +282,13 @@ def handle_daily_feedback():
                     purge_count += 1
                 if purge_count > 0:
                     batch.commit()
-                    print(f"[Firestore Purge] Deleted {purge_count} old 피드백 제안서 (older than 7 days).")
+                    print(f"[Firestore Purge] Deleted {purge_count} old 피드백 제안서.")
             except Exception as purge_ex:
-                print(f"[Warning] Failed to purge old 피드백 제안서 from Firestore: {purge_ex}")
+                print(f"[Warning] Failed to purge old 피드백 제안서: {purge_ex}")
 
-        # Send Telegram notification (Short notice instead of full critique text)
+        # Send Telegram notification
         tg_token = global_config.get("telegram_bot_token") or os.getenv("TELEGRAM_BOT_TOKEN")
         tg_chat_id = global_config.get("telegram_chat_id") or os.getenv("TELEGRAM_CHAT_ID")
-        telegram_sent = False
         
         if tg_token and tg_chat_id:
             import requests
@@ -315,22 +304,28 @@ def handle_daily_feedback():
                     "text": short_msg,
                     "parse_mode": "Markdown"
                 }, timeout=10)
-                telegram_sent = True
             except Exception as ex:
-                print(f"[Warning] Failed to send Telegram daily feedback notification: {ex}")
+                print(f"[Warning] Failed to send Telegram notification: {ex}")
+                
+        print("[Flask Background Worker] Daily feedback process completed successfully.")
 
-        return jsonify({
-            "status": "success",
-            "date": now_kst.date().isoformat(),
-            "saved_to_db": saved_to_db,
-            "db_error": db_error,
-            "telegram_sent": telegram_sent,
-            "report_preview": critique[:200] + "..."
-        })
-        
     except Exception as e:
-        print(f"[Error] Daily feedback loop crash: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        print(f"[Error] Daily feedback background worker crash: {str(e)}")
+
+@app.route('/api/daily-feedback', methods=['GET', 'POST'])
+def handle_daily_feedback():
+    """
+    Triggers the daily AI feedback loop at KOSPI market close (15:40 KST).
+    Executes in a background thread to return 200 OK immediately and prevent Render Cron HTTP timeouts.
+    """
+    print("[Flask] Daily feedback endpoint triggered!")
+    import threading
+    worker_thread = threading.Thread(target=_run_daily_feedback_worker, daemon=True)
+    worker_thread.start()
+    return jsonify({
+        "status": "accepted",
+        "message": "Daily feedback process started in background to prevent HTTP timeout."
+    }), 200
 
 @app.route('/api/daily-feedback/list', methods=['GET'])
 def get_feedback_list():

@@ -25,6 +25,25 @@ class TradingDecision(BaseModel):
     win_probability: float = Field(default=0.5, description="Estimated probability of a profitable outcome (0.0 to 1.0).")
     reward_to_risk_ratio: float = Field(default=1.0, description="Estimated reward-to-risk ratio (expected gain / expected loss, >= 0.1).")
 
+def get_strategy_param(key: str, default_val: float) -> float:
+    """Helper to dynamically fetch strategy parameter from env var or config.json"""
+    env_val = os.getenv(key.upper())
+    if env_val is not None:
+        try:
+            return float(env_val)
+        except ValueError:
+            pass
+    try:
+        if os.path.exists("config.json"):
+            with open("config.json", "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+                sp = cfg.get("strategy_parameters", {})
+                if key in sp:
+                    return float(sp[key])
+    except Exception:
+        pass
+    return default_val
+
 def evaluate_macro_circuit_breaker(
     kospi_disparity: float, 
     kospi_daily_change: float, 
@@ -33,8 +52,12 @@ def evaluate_macro_circuit_breaker(
     disparity_std: float = 3.0
 ) -> str:
     """
-    [전면수정] 지연지표(이격도)와 선행/동행지표(당일 변동률, RSI)의 괴리를 해결한 다차원 매크로 필터
+    [전면수정] 지연지표(이격도)와 선행/동행지표(당일 변동률, RSI)의 괴리를 해결한 다차원 매크로 필터 (환경변수/Config 동적 파라미터 지원)
     """
+    disparity_mean = get_strategy_param("kospi_disparity_mean", disparity_mean)
+    disparity_std = get_strategy_param("kospi_disparity_std", disparity_std)
+    rsi_oversold_limit = get_strategy_param("rsi_oversold", 30.0)
+
     crash_limit = disparity_mean - 2.5 * disparity_std        # 100 - 7.5 = 92.5
     value_buy_limit = disparity_mean - 1.5 * disparity_std    # 100 - 4.5 = 95.5
     no_buy_limit = disparity_mean - 0.5 * disparity_std       # 100 - 1.5 = 98.5
@@ -52,7 +75,7 @@ def evaluate_macro_circuit_breaker(
     # [핵심 3] 투매 구간 (역발상 매수) - RSI 과매도 필터 추가
     # 가격만 싸다고 사는게 아니라, RSI 30 이하로 투매가 나왔을 때만 진입
     if (kospi_disparity <= value_buy_limit) or (kospi_daily_change <= -3.0):
-        if kospi_rsi <= 30.0:
+        if kospi_rsi <= rsi_oversold_limit:
             return "CONTRARIAN_VALUE_BUY"
         else:
             return "HARD_NO_BUY" # 이격도는 낮으나 RSI가 애매하면 추가 하락 여지 있음
@@ -852,13 +875,14 @@ def _evaluate_buy_guardrails(
             blocked_buy_reasons[ticker] = "실시간 시세 조회가 불가능합니다."
             continue
 
+        base_cooldown_min = int(get_strategy_param("rebuy_cooldown_minutes", 120))
         last_exit = get_last_sell_transaction(ticker)
         if last_exit and last_exit.get("action") in ["STOP_LOSS_EXIT", "TRAILING_STOP_EXIT"]:
             try:
                 last_time = datetime.fromisoformat(last_exit["timestamp"]).replace(tzinfo=None)
                 time_diff = now.replace(tzinfo=None) - last_time
-                if time_diff < timedelta(minutes=120):
-                    blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 청산 후 쿨다운] 직전 손절/트레일링스탑 청산({last_exit['action']}) 후 120분 재매수 제한(쿨타임)이 진행 중입니다. (남은 시간: {120 - time_diff.total_seconds() / 60:.1f}분)"
+                if time_diff < timedelta(minutes=base_cooldown_min):
+                    blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 청산 후 쿨다운] 직전 손절/트레일링스탑 청산({last_exit['action']}) 후 {base_cooldown_min}분 재매수 제한(쿨타임)이 진행 중입니다. (남은 시간: {base_cooldown_min - time_diff.total_seconds() / 60:.1f}분)"
                     continue
             except Exception as e:
                 print(f"[Trading Engine] Failed to evaluate cooldown for {ticker}: {e}")
@@ -879,17 +903,18 @@ def _evaluate_buy_guardrails(
                 if ticker_rsi is None or not isinstance(ticker_rsi, (int, float)) or ticker_rsi != ticker_rsi:
                     ticker_rsi = 50.0
                 
-                # 지수 변동성에 연동하여 최소 대기 시간 동적 조정 (평균 1.2% 기준, 최대 240분 제한)
+                # 지수 변동성에 연동하여 최소 대기 시간 동적 조정 (평균 1.2% 기준)
                 cooldown_mult = max(1.0, min(2.0, kospi_ewma_vol / 1.2))
-                cooldown_minutes = int(120 * cooldown_mult)
+                cooldown_minutes = int(base_cooldown_min * cooldown_mult)
                 time_ok = time_diff >= timedelta(minutes=cooldown_minutes)
                 
+                contrarian_rsi_limit = get_strategy_param("contrarian_rsi_buy", 35.0)
                 is_downside = curr_price < last_price
                 if is_downside:
-                    # 물타기(Averaging Down): 낙폭 + RSI 과매도(35 이하) 조건 '동시' 만족 시에만 허용
+                    # 물타기(Averaging Down): 낙폭 + RSI 과매도 조건 '동시' 만족 시에만 허용
                     averaging_down_pct = max(1.5, 1.5 * vol_20d)
                     price_dropped_enough = curr_price <= last_price * (1.0 - averaging_down_pct / 100.0)
-                    rsi_oversold = ticker_rsi <= 35.0
+                    rsi_oversold = ticker_rsi <= contrarian_rsi_limit
                     price_ok = price_dropped_enough and rsi_oversold
                 else:
                     # 불타기(Pyramiding): 돌파 시 RSI가 과매수(70 이상)가 아닐 때만 허용

@@ -1,6 +1,13 @@
 {
   "GEMINI_API_KEY": "",
-  "risk_profile": 3,
+  "risk_profile": 5,
+  "strategy_parameters": {
+    "kospi_disparity_mean": 100.0,
+    "kospi_disparity_std": 3.0,
+    "rsi_oversold": 30.0,
+    "contrarian_rsi_buy": 35.0,
+    "rebuy_cooldown_minutes": 120
+  },
   "smtp": {
     "server": "smtp.gmail.com",
     "port": 587,
