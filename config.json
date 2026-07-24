@@ -23,7 +23,7 @@
     "is_simulation": true
   },
   "models": {
-    "flash_model": "gemini-3.5-flash",
+    "flash_model": "gemini-3.6-flash",
     "pro_model": "gemini-3.1-pro-preview"
   },
   "scraping_interval_seconds": 1800,
