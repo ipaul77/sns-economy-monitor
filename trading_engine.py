@@ -67,6 +67,11 @@ def evaluate_macro_circuit_breaker(
     if kospi_disparity <= value_buy_limit and kospi_daily_change >= 1.5:
         return "V_SHAPE_REBOUND_BUY"
 
+    # [핵심 1-2] 다차원 반등장 오버라이드 (지연지표 맹점 해결)
+    # 이격도가 약세권(<= no_buy_limit)에 위치하더라도 당일 지수가 +0.5% 이상 반등 중이고 RSI > 30이면 매수 허용
+    if kospi_disparity <= no_buy_limit and kospi_daily_change >= 0.5 and kospi_rsi > 30.0:
+        return "REBOUND_ALLOWED"
+
     # [핵심 2] 진짜 시스템 붕괴 조건 (AND 조건으로 변경)
     # 이격도도 무너지고 '동시에' 당일 폭락이 나와야 락다운
     if (kospi_disparity <= crash_limit and kospi_daily_change <= -2.0) or (kospi_daily_change <= -5.0):
@@ -869,11 +874,34 @@ def _evaluate_buy_guardrails(
     for sect, val in sector_values.items():
         sector_weights[sect] = (val / total_asset) if total_asset > 0 else 0.0
 
+    min_pyramiding_dist_pct = float(get_strategy_param("min_pyramiding_distance_pct", 3.0))
+    rsi_no_trade_low = float(get_strategy_param("rsi_no_trade_zone_low", 35.0))
+    rsi_no_trade_high = float(get_strategy_param("rsi_no_trade_zone_high", 55.0))
+
     for ticker in monitored_tickers:
         curr_price = market_prices.get(ticker, 0.0)
         if curr_price <= 0:
             blocked_buy_reasons[ticker] = "실시간 시세 조회가 불가능합니다."
             continue
+
+        ticker_rsi = market_indicators.get(ticker, {}).get("rsi", 50.0)
+        if ticker_rsi is None or not isinstance(ticker_rsi, (int, float)) or ticker_rsi != ticker_rsi:
+            ticker_rsi = 50.0
+
+        # [수정됨] 횡보 노이즈 구간 (Whipsaw) 진입 원천 차단
+        if rsi_no_trade_low < ticker_rsi < rsi_no_trade_high and macro_state not in ["CONTRARIAN_VALUE_BUY", "V_SHAPE_REBOUND_BUY", "REBOUND_ALLOWED"]:
+            blocked_buy_reasons[ticker] = f"[Python 시스템 차단: WHIPSAW 방지] Ticker RSI({ticker_rsi:.1f})가 방향성 없는 횡보 노이즈 구간({rsi_no_trade_low:.0f}~{rsi_no_trade_high:.0f})에 위치하여 무의미한 핑퐁 진입이 차단됩니다."
+            continue
+
+        # [수정됨] 평단가 대비 최소 이격 미달 시 추가 매수(물타기/불타기) 차단
+        holding = portfolio.get(ticker, {})
+        if holding.get("quantity", 0) > 0:
+            avg_price = holding.get("average_price", 0.0)
+            if avg_price > 0:
+                price_diff_pct = abs(curr_price - avg_price) / avg_price * 100.0
+                if price_diff_pct < min_pyramiding_dist_pct:
+                    blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 추가매수 이격 미달] 현재가({curr_price:,.0f}원)가 평단가({avg_price:,.0f}원) 대비 변동률({price_diff_pct:.2f}%)이 최소 요구치({min_pyramiding_dist_pct:.1f}%) 미만이므로 뇌동 추가매수가 차단됩니다."
+                    continue
 
         base_cooldown_min = int(get_strategy_param("rebuy_cooldown_minutes", 120))
         last_exit = get_last_sell_transaction(ticker)
@@ -899,9 +927,6 @@ def _evaluate_buy_guardrails(
                 vol_20d = market_indicators.get(ticker, {}).get("volatility_20d", 2.0)
                 if vol_20d is None or not isinstance(vol_20d, (int, float)) or vol_20d != vol_20d or vol_20d <= 0.0:
                     vol_20d = 2.0
-                ticker_rsi = market_indicators.get(ticker, {}).get("rsi", 50.0)
-                if ticker_rsi is None or not isinstance(ticker_rsi, (int, float)) or ticker_rsi != ticker_rsi:
-                    ticker_rsi = 50.0
                 
                 # 지수 변동성에 연동하여 최소 대기 시간 동적 조정 (평균 1.2% 기준)
                 cooldown_mult = max(1.0, min(2.0, kospi_ewma_vol / 1.2))
@@ -951,7 +976,7 @@ def _evaluate_buy_guardrails(
         market_change = index_changes.get(ticker_market, 0.0)
         market_disp = kospi_disparity if ticker_market == "KOSPI" else kosdaq_disparity
         is_market_crash = (market_change <= -1.5) or (market_disp <= disp_limit)
-        is_macro_bypass = macro_state in ["CONTRARIAN_VALUE_BUY", "CONSERVATIVE_BUY", "V_SHAPE_REBOUND_BUY"]
+        is_macro_bypass = macro_state in ["CONTRARIAN_VALUE_BUY", "CONSERVATIVE_BUY", "V_SHAPE_REBOUND_BUY", "REBOUND_ALLOWED"]
         
         if is_market_crash and not is_macro_bypass:
             rsi_val = market_indicators.get(ticker, {}).get("rsi", 50.0)
