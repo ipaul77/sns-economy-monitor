@@ -17,10 +17,10 @@ from market_analysis import *
 # PHASE 2: GEMINI API STRUCTURED INVESTMENT DECISION FORMULATION
 # ---------------------------------------------------------------------------
 class TradingDecision(BaseModel):
-    action: Literal["BUY", "SELL", "HOLD"] = Field(description="The trading action to execute: BUY, SELL, or HOLD.")
-    ticker: str = Field(description="A 6-digit stock ticker code to trade (e.g. '005930' for Samsung Electronics, '000660' for SK Hynix).")
-    allocation_pct: float = Field(description="Percentage of cash balance (for BUY) or owned shares (for SELL) to allocate (0.0 to 100.0).")
-    reasoning: str = Field(description="Detailed multi-agent debate and reasoning behind the decision.")
+    action: Literal["BUY", "SELL", "HOLD"] = Field(default="HOLD", description="The trading action to execute: BUY, SELL, or HOLD.")
+    ticker: str = Field(default="", description="A 6-digit stock ticker code to trade (e.g. '005930' for Samsung Electronics, '000660' for SK Hynix).")
+    allocation_pct: float = Field(default=0.0, description="Percentage of cash balance (for BUY) or owned shares (for SELL) to allocate (0.0 to 100.0).")
+    reasoning: str = Field(default="", description="Detailed multi-agent debate and reasoning behind the decision.")
     mode: Literal["VALUE", "TECHNICAL"] = Field(default="VALUE", description="Investment style: 'VALUE' (fundamental focus) or 'TECHNICAL' (momentum/breakout focus).")
     win_probability: float = Field(default=0.5, description="Estimated probability of a profitable outcome (0.0 to 1.0).")
     reward_to_risk_ratio: float = Field(default=1.0, description="Estimated reward-to-risk ratio (expected gain / expected loss, >= 0.1).")
@@ -43,6 +43,175 @@ def get_strategy_param(key: str, default_val: float) -> float:
     except Exception:
         pass
     return default_val
+
+# ===========================================================================
+# DAILY TRADING STATE & WHIPSAW PREVENTION (2026-10-28 REFACTOR)
+# ===========================================================================
+daily_state = {
+    "date": None,
+    "recent_buy_decisions": set(),
+}
+_daily_state = daily_state  # alias
+
+def reset_daily_state(now=None):
+    """매일 장 시작 전 또는 날짜 변경 시 당일 상태 초기화"""
+    global daily_state
+    if now is None:
+        now = datetime.now()
+    today_str = now.strftime("%Y-%m-%d")
+    daily_state["date"] = today_str
+    daily_state["recent_buy_decisions"] = set()
+    print(f"[Trading Engine] Daily state reset for {today_str}.")
+
+def reset_daily_state_if_needed(now=None):
+    """날짜 변경 감지 시 상태 초기화 및 당일 트랜잭션 DB로부터 웜스타트"""
+    global daily_state
+    if now is None:
+        now = datetime.now()
+    today_str = now.strftime("%Y-%m-%d")
+    if daily_state.get("date") != today_str:
+        daily_state["date"] = today_str
+        daily_state["recent_buy_decisions"] = set()
+        try:
+            import sqlite3
+            conn = sqlite3.connect(db.DB_PATH)
+            c = conn.cursor()
+            c.execute(
+                "SELECT DISTINCT ticker FROM transactions WHERE action = 'BUY' AND timestamp LIKE ?",
+                (f"{today_str}%",)
+            )
+            for row in c.fetchall():
+                if row[0]:
+                    daily_state["recent_buy_decisions"].add(row[0])
+            conn.close()
+            if daily_state["recent_buy_decisions"]:
+                print(f"[Trading Engine] Warm-started daily buy decisions from DB: {daily_state['recent_buy_decisions']}")
+        except Exception as e:
+            print(f"[Trading Engine] [Warning] Failed to warm-start daily_state from DB: {e}")
+
+def should_evaluate_ticker(ticker: str) -> bool:
+    """최근 매수 결정이 내려진 종목인지 확인하여 중복 평가를 방지한다."""
+    reset_daily_state_if_needed()
+    if ticker in daily_state["recent_buy_decisions"]:
+        print(f"[Trading Engine] Skipping evaluation for {ticker}: Already decided to BUY today.")
+        return False
+    return True
+
+def record_buy_decision(ticker: str, now=None):
+    """매수 결정이 성공적으로 내려지면 (실제 주문 여부와 관계없이) 상태에 기록"""
+    reset_daily_state_if_needed(now)
+    daily_state["recent_buy_decisions"].add(ticker)
+    print(f"[Trading Engine] Added {ticker} to recent_buy_decisions set for today ({daily_state.get('date')}).")
+
+# ===========================================================================
+# COUNTER-TREND BOTTOM-FISHING GUARDRAIL (2026-10-28 REFACTOR)
+# ===========================================================================
+def evaluate_counter_trend_buy(
+    ticker_data: dict, 
+    tech_indicators: dict
+) -> tuple:
+    """
+    RSI 과매도 기반의 역추세 매수 전략을 더 엄격하게 평가한다.
+    떨어지는 칼날(명백한 하락 추세 + 이격도 붕괴) 방지.
+    """
+    curr_price = tech_indicators.get("current_price", 0.0) or ticker_data.get("current_price", 0.0)
+    ma_20 = tech_indicators.get("ma_20", 0.0)
+    price_vs_20ma_ratio = (curr_price / ma_20) if ma_20 > 0 else tech_indicators.get("price_vs_20ma_ratio", 1.0)
+    
+    is_price_below_20ma = price_vs_20ma_ratio < 1.0
+    rsi = tech_indicators.get("rsi", 50.0)
+    if rsi is None or not isinstance(rsi, (int, float)) or rsi != rsi:
+        rsi = 50.0
+        
+    rsi_oversold_threshold = get_strategy_param("rsi_oversold", 30.0)
+    is_rsi_oversold = rsi < rsi_oversold_threshold
+    
+    # 이격도 임계치 (예: 90% 이하는 너무 위험하니 최소 95%는 회복해야 진입)
+    min_disparity_for_counter_trend = get_strategy_param("counter_trend_min_disparity", 95.0)
+    current_disparity = tech_indicators.get("disparity_20d", tech_indicators.get("disparity", 100.0))
+    if current_disparity is None or not isinstance(current_disparity, (int, float)) or current_disparity != current_disparity:
+        current_disparity = 100.0
+
+    if is_price_below_20ma and is_rsi_oversold:
+        reasoning = f"Counter-trend signal detected (RSI: {rsi:.2f}). "
+        
+        # 조건 강화: 이격도가 최소 임계치를 넘었는지 확인
+        if current_disparity >= min_disparity_for_counter_trend:
+            reasoning += f"Disparity ({current_disparity:.2f}%) recovered above threshold ({min_disparity_for_counter_trend}%). Approved."
+            return True, reasoning
+        else:
+            reasoning += f"BUT Disparity ({current_disparity:.2f}%) is too low (below {min_disparity_for_counter_trend}%). Blocked."
+            return False, reasoning
+            
+    return True, "No falling knife risk detected."
+
+# ===========================================================================
+# DEFENSIVE ORDER QUANTITY CALCULATION (2026-10-28 REFACTOR)
+# ===========================================================================
+def calculate_buy_order_quantity(
+    ticker: str,
+    current_price: float,
+    balance: float,
+    total_asset: float,
+    portfolio: dict,
+    config: dict
+) -> tuple:
+    """
+    [전면수정] 방어적이고 명확한 매수 주문 수량 계산 로직
+    """
+    if current_price <= 0:
+        return 0, "Price is zero or negative. Cannot calculate quantity."
+
+    # 1. 설정값 가져오기 (가드레일)
+    strat_params = config.get("strategy_parameters", {}) if isinstance(config, dict) else {}
+    max_order_ratio = strat_params.get("max_order_per_stock_ratio", config.get("max_order_per_stock_ratio", 0.10))  # 1회 주문 한도 (e.g., 10%)
+    max_position_ratio = strat_params.get("max_position_per_stock_ratio", config.get("max_position_per_stock_ratio", 0.20)) # 총 보유 한도 (e.g., 20%)
+    
+    # 2. 주문 가능 금액 계산
+    # 2-1. 1회 주문 한도에 따른 최대 금액
+    order_limit_by_ratio = total_asset * max_order_ratio
+    
+    # 2-2. 종목별 보유 한도에 따른 추가 매수 가능 금액
+    current_holding_value = portfolio.get(ticker, {}).get("quantity", 0) * current_price
+    max_position_value = total_asset * max_position_ratio
+    room_for_more = max(0.0, max_position_value - current_holding_value)
+    
+    # 3. 실제 투입 가능 금액 결정 (1회 주문 한도, 보유 한도 여유분, 예수금 잔고 중 최소값)
+    investable_amount = min(order_limit_by_ratio, room_for_more, balance)
+    
+    if investable_amount <= 0:
+        return 0, f"Investable amount is zero or negative. Balance: {balance:,.0f}, OrderLimit: {order_limit_by_ratio:,.0f}, RoomForMore: {room_for_more:,.0f}"
+
+    # 4. 최종 주문 수량 계산 (소수점 버림, 거래 수수료 0.1% 반영)
+    fee_rate = 0.001
+    order_quantity = int(investable_amount // (current_price * (1 + fee_rate)))
+
+    # 단가 높은 우량주(예: SK하이닉스 등) 예외 허용:
+    # 1주 가격이 1회 주문 한도(10%)를 다소 초과하더라도, 총 보유 한도(20%)와 가용 잔고 내에 충분히 진입 가능하면 최소 1주 매수 허용
+    single_share_cost = current_price * (1 + fee_rate)
+    is_single_share_override = False
+    if order_quantity <= 0 and (current_holding_value == 0) and (single_share_cost <= max_position_value) and (single_share_cost <= balance):
+        order_quantity = 1
+        is_single_share_override = True
+
+    reasoning = (
+        f"Order Qty Calculation:\n"
+        f"- Total Asset: {total_asset:,.0f}\n"
+        f"- Balance: {balance:,.0f}\n"
+        f"- Order Limit ({max_order_ratio*100:.0f}%): {order_limit_by_ratio:,.0f}\n"
+        f"- Max Position ({max_position_ratio*100:.0f}%): {max_position_value:,.0f}\n"
+        f"- Current Holding: {current_holding_value:,.0f}\n"
+        f"- Room for More: {room_for_more:,.0f}\n"
+        f"-> Investable Amount: {investable_amount:,.0f}\n"
+        f"-> Order Quantity (@{current_price:,.0f}): {order_quantity}"
+    )
+    if is_single_share_override:
+        reasoning += f"\n- [우량주 1주 예외 허용] 1주 가격({current_price:,.0f}원)이 1회 주문 한도({order_limit_by_ratio:,.0f}원)를 초과하나 총 보유 한도({max_position_ratio*100:.0f}%) 및 잔고 내 충족하여 1주 주문을 생성합니다."
+
+    if order_quantity <= 0:
+        return 0, "Calculated order quantity is zero. " + reasoning
+
+    return order_quantity, reasoning
 
 def evaluate_macro_circuit_breaker(
     kospi_disparity: float, 
@@ -272,12 +441,24 @@ def generate_trading_decision(
         except Exception:
             pass
 
-        candidate_models = [model_name, "gemini-3.1-pro-preview", "gemini-3.5-flash"]
+        candidate_models = [model_name, "gemini-2.5-pro", "gemini-3.1-pro-preview", "gemini-2.5-flash", "gemini-3.6-flash"]
         # Remove duplicates while preserving order
         candidate_models = list(dict.fromkeys(candidate_models))
         
-        from google.generativeai.types import content_types
-        schema = content_types._schema_for_class(TradingDecision)
+        def _sanitize_schema(d):
+            if isinstance(d, dict):
+                return {k: _sanitize_schema(v) for k, v in d.items() if k not in ["default", "title"]}
+            elif isinstance(d, list):
+                return [_sanitize_schema(i) for i in d]
+            return d
+
+        if hasattr(TradingDecision, "model_json_schema"):
+            schema = TradingDecision.model_json_schema()
+        elif hasattr(TradingDecision, "schema"):
+            schema = TradingDecision.schema()
+        else:
+            from google.generativeai.types import content_types
+            schema = content_types._schema_for_class(TradingDecision)
         
         def _sanitize_schema(d):
             if isinstance(d, dict):
@@ -484,9 +665,14 @@ def _fetch_market_indices_and_trends(now) -> dict:
     }
 
 def _apply_preflight_cooldown_filters(monitored_tickers, portfolio, now) -> tuple:
+    reset_daily_state_if_needed(now)
     filtered_tickers = []
     pre_blocked_reasons = {}
     for ticker in monitored_tickers:
+        if not should_evaluate_ticker(ticker):
+            pre_blocked_reasons[ticker] = f"[Python 시스템 차단: 당일 중복 매수 방지] 당일({daily_state.get('date')}) 이미 매수 결정이 내려진 종목이므로 중복 AI 위원회 소집 및 엇박자 매매를 방지하기 위해 평가를 스킵합니다."
+            continue
+
         if ticker in portfolio:
             filtered_tickers.append(ticker)
             continue
@@ -893,6 +1079,15 @@ def _evaluate_buy_guardrails(
             blocked_buy_reasons[ticker] = f"[Python 시스템 차단: WHIPSAW 방지] Ticker RSI({ticker_rsi:.1f})가 방향성 없는 횡보 노이즈 구간({rsi_no_trade_low:.0f}~{rsi_no_trade_high:.0f})에 위치하여 무의미한 핑퐁 진입이 차단됩니다."
             continue
 
+        # [신규 추가: 역추세 매매 가드레일 / 떨어지는 칼날 방지 (2026-10-28)]
+        is_counter_trend_ok, counter_trend_reason = evaluate_counter_trend_buy(
+            {"ticker": ticker, "current_price": curr_price},
+            market_indicators.get(ticker, {})
+        )
+        if not is_counter_trend_ok:
+            blocked_buy_reasons[ticker] = f"[Python 시스템 차단: 역추세 바닥 낚시 금지] {counter_trend_reason}"
+            continue
+
         # [수정됨] 평단가 대비 최소 이격 미달 시 추가 매수(물타기/불타기) 차단
         holding = portfolio.get(ticker, {})
         if holding.get("quantity", 0) > 0:
@@ -1087,7 +1282,7 @@ def _formulate_decision(
             reward_to_risk_ratio=1.0
         )
     else:
-        return generate_trading_decision(
+        dec = generate_trading_decision(
             portfolio=portfolio,
             balance=balance,
             market_prices=market_prices,
@@ -1096,6 +1291,9 @@ def _formulate_decision(
             index_changes=index_changes,
             blocked_buy_reasons=blocked_buy_reasons
         )
+        if dec.action == "BUY" and dec.ticker:
+            record_buy_decision(dec.ticker, datetime.now())
+        return dec
 
 def _execute_trading_decision(
     decision, portfolio, balance, market_prices, market_indicators, 
@@ -1184,67 +1382,27 @@ def _execute_trading_decision(
             if r_r <= 0.0:
                 r_r = 0.1
             expectation = win_p - (1.0 - win_p) / r_r
-            
-            kelly_multipliers = {1: 0.25, 2: 0.35, 3: 0.50, 4: 0.75, 5: 1.00}
-            kelly_multiplier = kelly_multipliers.get(risk_profile, 0.50)
-            half_kelly = kelly_multiplier * expectation
-            
+
             if expectation <= 0.0:
                 action = "HOLD"
                 reasoning = f"[Kelly 가드레일 기각: 기대치 음수] 기대치(기대 승률 {win_p:.1%}, 손익비 {r_r:.1f})가 음수여서 자산 보호를 위해 매수를 기각하고 HOLD 처리했습니다."
                 quantity = 0
-                spend_cash = 0.0
+            elif macro_state == "HARD_NO_BUY":
+                action = "HOLD"
+                reasoning = f"[{ticker}] 매크로 시스템 경보(HARD_NO_BUY) 작동: 매수 한도를 0원으로 강제 제한하여 HOLD 처리했습니다."
+                quantity = 0
             else:
-                allocated_cash = balance * (allocation_pct / 100.0)
-                allocated_cash *= half_kelly
-                
-                max_order_cash = total_asset * 0.10
-                
-                max_allowed_cash_ratio = 0.15 if is_downtrend else 0.30
-                max_allowed_cash = total_asset * max_allowed_cash_ratio
-                
-                owned_value = portfolio.get(ticker, {}).get("quantity", 0) * current_price
-                max_new_cash = max(max_allowed_cash - owned_value, 0.0)
-                
-                spend_cash = min(allocated_cash, max_order_cash, max_new_cash)
-                
-                # [고도화] 변동성 조절 사이징 (Volatility-Targeting Sizing)
-                # 기준 종목 일일 변동성 = 2.0%. 기준 KOSPI 일일 변동성 = 1.2%
-                vol_20d = market_indicators.get(ticker, {}).get("volatility_20d", 2.0)
-                if vol_20d is None or not isinstance(vol_20d, (int, float)) or vol_20d != vol_20d or vol_20d <= 0.0:
-                    vol_20d = 2.0
-                kospi_vol = kospi_ewma_vol
-                
-                vol_factor = 2.0 / vol_20d
-                kospi_vol_factor = 1.2 / kospi_vol
-                sizing_mult = min(1.0, vol_factor) * min(1.0, kospi_vol_factor)
-                
-                if sizing_mult < 1.0:
-                    spend_cash *= sizing_mult
-                    print(f"[{ticker}] Volatility Sizing Activated: scaled cash by {sizing_mult:.2f}x (Stock Vol: {vol_20d:.2f}%, KOSPI Vol: {kospi_vol:.2f}%)")
-                sizing_triggered = allocated_cash > max_new_cash
-                order_limit_triggered = allocated_cash > max_order_cash
-                
-                bear_triggered = False
-                if macro_state == "HARD_NO_BUY":
-                    spend_cash = 0.0
-                    bear_triggered = True
-                    print(f"[{ticker}] 매크로 시스템 경보(HARD_NO_BUY) 작동: 매수 한도를 0원으로 강제 제한합니다.")
-                elif macro_state in ["CONTRARIAN_VALUE_BUY", "V_SHAPE_REBOUND_BUY"]:
-                    # [반영] 2026-07-20 피드백 제안: 역발상 분할 매수 구간(CONTRARIAN_VALUE_BUY, V_SHAPE_REBOUND_BUY)에서는 투자 비중을 30%(0.3x)로 제한하여 분할 매수로 대응
-                    spend_cash *= 0.3
-                    bear_triggered = True
-                    print(f"[{ticker}] 역발상 분할 매수 구간({macro_state}) 작동: 투자 비중을 30%(0.3x)로 제한하여 분할 매수를 집행합니다.")
-                else:
-                    if is_kospi_bear_market():
-                        spend_cash *= 0.3
-                        bear_triggered = True
-                    
-                disparity_50_triggered = False
-                if 108.0 <= disparity < 115.0:
-                    spend_cash *= 0.3
-                    disparity_50_triggered = True
+                # [전면수정: 2026-10-28 피드백 반영] 방어적이고 명확한 매수 주문 수량 계산 로직 호출
+                order_quantity, qty_reasoning = calculate_buy_order_quantity(
+                    ticker=ticker,
+                    current_price=current_price,
+                    balance=balance,
+                    total_asset=total_asset,
+                    portfolio=portfolio,
+                    config=config
+                )
 
+                # 섹터 비중 가드레일 (기존 안전장치 보존)
                 target_sector = TICKER_TO_SECTOR.get(ticker, "기타")
                 current_sector_value = sum(
                     info.get("quantity", 0) * market_prices.get(t, 0.0)
@@ -1253,87 +1411,21 @@ def _execute_trading_decision(
                 )
                 max_sector_ratio = 0.20 if is_downtrend else 0.50
                 max_sector_allowed_value = total_asset * max_sector_ratio
-                max_additional_sector_cash = max(max_sector_allowed_value - current_sector_value, 0.0)
-                
-                sector_cap_triggered = False
-                if spend_cash > max_additional_sector_cash:
-                    spend_cash = max_additional_sector_cash
-                    sector_cap_triggered = True
-                    
-                vol_stop = get_stock_volatility_multiplier(ticker, fallback_vol=0.045)
-                risk_parity_cash = (total_asset * 0.0125) / vol_stop
-                risk_parity_triggered = False
-                if spend_cash > risk_parity_cash:
-                    spend_cash = risk_parity_cash
-                    risk_parity_triggered = True
-                    
-                min_cash_reserves = {
-                    1: (0.50, 0.20), 2: (0.45, 0.15), 3: (0.40, 0.10), 4: (0.30, 0.05), 5: (0.10, 0.00)
-                }
-                bear_cash, bull_cash = min_cash_reserves.get(risk_profile, (0.40, 0.10))
-                min_cash_ratio = bear_cash if is_downtrend else bull_cash
-                max_spend_due_to_cash_reserve = max(balance - (total_asset * min_cash_ratio), 0.0)
-                cash_reserve_triggered = False
-                if spend_cash > max_spend_due_to_cash_reserve:
-                    spend_cash = max_spend_due_to_cash_reserve
-                    cash_reserve_triggered = True
+                if (current_sector_value + (order_quantity * current_price)) > max_sector_allowed_value:
+                    available_sector_cash = max(0.0, max_sector_allowed_value - current_sector_value)
+                    adjusted_qty = int(available_sector_cash // (current_price * (1 + fee_rate)))
+                    if adjusted_qty < order_quantity:
+                        order_quantity = adjusted_qty
+                        qty_reasoning += f"\n- [섹터 비중 제한] 섹터({target_sector}) 비중 한도({max_sector_ratio*100:.0f}%) 적용으로 {adjusted_qty}주로 조정되었습니다."
 
-                rsi_val = market_indicators.get(ticker, {}).get("rsi", 50.0)
-                rsi_prev = market_indicators.get(ticker, {}).get("rsi_prev", 50.0)
-                daily_change = market_indicators.get(ticker, {}).get("daily_change_pct", 0.0)
-                is_rsi_rebound_triggered = (rsi_val <= 25 or rsi_prev <= 25) and (daily_change >= 1.5 and (rsi_val - rsi_prev) >= 1.5)
-                
-                rsi_rebound_cap_triggered = False
-                if is_rsi_rebound_triggered:
-                    max_rebound_cash = balance * 0.02
-                    if spend_cash > max_rebound_cash:
-                        spend_cash = max_rebound_cash
-                        rsi_rebound_cap_triggered = True
-
-                is_recovery_phase = (not is_ticker_market_shock and not is_sugeup_dump) and (kospi_disparity < 100.0)
-                recovery_cap_triggered = False
-                if is_recovery_phase and not is_rsi_rebound_triggered:
-                    max_recovery_cash = balance * 0.15
-                    if spend_cash > max_recovery_cash:
-                        spend_cash = max_recovery_cash
-                        recovery_cap_triggered = True
-
-                quantity = int(spend_cash / (current_price * (1 + fee_rate)))
-                
-                gate_reasons = []
-                profile_names = {1: "극단안정", 2: "안정", 3: "중립", 4: "공격", 5: "극단공격"}
-                p_name = profile_names.get(risk_profile, "중립")
-                gate_reasons.append(f"[{p_name}] 켈리비율 {half_kelly:.2f}배")
-                if order_limit_triggered:
-                    gate_reasons.append("1회 주문 10% 제한")
-                if sizing_triggered:
-                    gate_reasons.append(f"보유 한도 {max_allowed_cash_ratio*100:.0f}% 제한")
-                if bear_triggered:
-                    gate_reasons.append("약세장 방어")
-                if disparity_50_triggered:
-                    gate_reasons.append("이격 과열 50% 감폭")
-                if sector_cap_triggered:
-                    gate_reasons.append(f"섹터 비중 {max_sector_ratio*100:.0f}% 제한")
-                if risk_parity_triggered:
-                    gate_reasons.append(f"변동성 리스크 리미트(최대 손실 1.25% 제한)")
-                if cash_reserve_triggered:
-                    gate_reasons.append(f"예수금 {min_cash_ratio*100:.0f}% 의무 적립 적용")
-                if rsi_rebound_cap_triggered:
-                    gate_reasons.append("극단침체 RSI 반등 분할매수 2% 한도 제한")
-                if recovery_cap_triggered:
-                    gate_reasons.append("가드레일 해제 회복 과도기 분할매수 15% 한도 적용")
-                    
-                if gate_reasons:
-                    reasoning += f" [가드레일 작동: {', '.join(gate_reasons)}]"
-                    
+                quantity = order_quantity
                 if quantity <= 0:
                     action = "HOLD"
-                    if sector_cap_triggered:
-                        reasoning += f" (섹터 비중 {max_sector_ratio*100:.0f}% 초과로 인해 HOLD 처리됨)"
-                    elif cash_reserve_triggered:
-                        reasoning += f" (예수금 {min_cash_ratio*100:.0f}% 보존 규칙 충족을 위한 가용자금 부족으로 HOLD 처리됨)"
-                    else:
-                        reasoning += " (매수 가용 자금 또는 수량 부족으로 HOLD 처리됨)"
+                    reasoning += f" (주문수량 계산 결과 0주로 인해 HOLD 처리됨)\n[상세 내역]\n{qty_reasoning}"
+                else:
+                    reasoning += f"\n[주문수량 계산 승인: {quantity}주]\n{qty_reasoning}"
+                    # 매수 결정 성공 시 당일 상태에 기록 (Whipsaw 및 중복 AI 호출 방지)
+                    record_buy_decision(ticker, now)
 
     elif action == "SELL":
         owned_quantity = portfolio.get(ticker, {}).get("quantity", 0)
